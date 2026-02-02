@@ -5,7 +5,8 @@
 `detex` detects Jacobian sparsity patterns in JAX.
 
 > [!CAUTION]
-> Curretly, the primary purpose of this package is to **evaluate the capabilities of coding agents** on a [familiar task](https://github.com/adrhill/SparseConnectivityTracer.jl) I consider to be out-of-distribution from the usual training data.
+> Currently, the primary purpose of this package is to **evaluate the capabilities of coding agents** [on a familiar task I consider to be out-of-distribution](https://github.com/adrhill/SparseConnectivityTracer.jl) from the usual training data.
+>
 > Use `detex` at your own risk. 
 
 For a function $f: \mathbb{R}^n \to \mathbb{R}^m$, the Jacobian $J \in \mathbb{R}^{m \times n}$ is defined as $J_{ij} = \frac{\partial f_i}{\partial x_j}$.
@@ -48,6 +49,7 @@ print(pattern.toarray().astype(int))
 `detex` uses `jax.make_jaxpr` to trace the function into a jaxpr — JAX's intermediate representation that captures the computation as a sequence of primitive operations. It then walks this graph, propagating **index sets** through each primitive. Each input element starts with its own index `{i}`, and operations combine these sets (e.g., `z = x * y` means `z`'s indices are the union of `x`'s and `y`'s). Output index sets reveal which inputs affect each output.
 The result is a global sparsity pattern, valid for all input values.
 
-## See also
+## Related work
 
-- [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl): detex is primitive port of this package.
+- [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl): `detex` is a primitive port of this Julia package, which provides {global and local} {Jacobian and Hessian} sparsity detection via operator overloading.
+
