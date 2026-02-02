@@ -7,8 +7,6 @@
 > Its primary purpose is to **evaluate the capabilities of coding agents** on a familiar task I consider to be out-of-distribution from the usual training data.
 > Use `detex` at your own risk. 
 
-___
-
 For a function $f: \mathbb{R}^n \to \mathbb{R}^m$, the Jacobian $J \in \mathbb{R}^{m \times n}$ is defined as:
 
 $$
@@ -50,15 +48,21 @@ print(pattern.toarray().astype(int))
 
 The function
 
-$$f(x) = \begin{bmatrix} x_1^2 \\ 2 x_1 x_2^2 \\ \sin(x_3) \end{bmatrix}$$
+$$
+f(x) = \begin{bmatrix} x_1^2 \\\\ 2 x_1 x_2^2 \\\\ \sin(x_3) \end{bmatrix}
+$$
 
 has the Jacobian
 
-$$J_f = \begin{bmatrix} 2x_1 & 0 & 0 \\ 2x_2^2 & 4x_1 x_2 & 0 \\ 0 & 0 & \cos(x_3) \end{bmatrix}$$
+$$
+J_f = \begin{bmatrix} 2x_1 & 0 & 0 \\\\ 2x_2^2 & 4x_1 x_2 & 0 \\\\ 0 & 0 & \cos(x_3) \end{bmatrix}
+$$
 
 `detex` detects the corresponding sparsity pattern
 
-$$\begin{bmatrix} 1 & 0 & 0 \\ 1 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix}$$
+$$
+\begin{bmatrix} 1 & 0 & 0 \\\\ 1 & 1 & 0 \\\\ 0 & 0 & 1 \end{bmatrix}
+$$
 
 ## How it works
 
