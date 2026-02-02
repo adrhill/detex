@@ -1,6 +1,6 @@
 # detex
 
-`detex` detects Jacobian sparsity patterns in JAX without computing derivatives.
+`detex` detects Jacobian sparsity patterns in JAX.
 
 > [!WARNING]
 > This project is an LLM-assisted port of some basic functionality from my Julia package [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl).
