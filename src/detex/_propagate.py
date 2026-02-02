@@ -1,18 +1,23 @@
-"""Global Jacobian sparsity detection via jaxpr graph analysis."""
+"""Propagate index sets through a jaxpr to determine sparsity.
+
+Each JAX primitive has a handler that maps input index sets to output index sets.
+For example, element-wise ops preserve per-element dependencies, while reductions
+union all input dependencies into a single output.
+
+The main entry point is `_propagate_jaxpr`, which walks the computation graph
+and applies the appropriate handler for each equation.
+"""
 
 import math
 from collections.abc import Callable, Sequence
 from typing import Any
 
-import jax
-import jax.numpy as jnp
 from jax._src.core import Jaxpr, JaxprEqn, Literal, Var
-from scipy.sparse import coo_matrix
 
-from detex.bitset import AnyIndexSet, IndexSetOps, create_index_set_ops
+from detex._indexset import IdxSet
 
 # Type aliases for readability
-IndexSets = list[AnyIndexSet]
+IndexSets = list[IdxSet]
 ReadFn = Callable[[Var | Literal], IndexSets]
 WriteFn = Callable[[Var, IndexSets], None]
 GetSizeFn = Callable[[Var | Literal], int]
@@ -37,9 +42,6 @@ ZERO_DERIVATIVE_PRIMITIVES = frozenset(
 # Primitives that contain nested jaxprs we should trace into
 NESTED_JAXPR_PRIMITIVES = frozenset(["jit", "pjit", "xla_call", "named_call"])
 
-# Module-level ops (set during jacobian_sparsity call)
-_ops: IndexSetOps
-
 
 def _shape_size(shape: Sequence[int]) -> int:
     """Compute the total number of elements from a shape tuple."""
@@ -52,7 +54,7 @@ def _propagate_zero_derivative(
     """Zero-derivative ops: output has no dependence on inputs."""
     for outvar in eqn.outvars:
         size = get_var_size(outvar)
-        write(outvar, [_ops.empty() for _ in range(size)])
+        write(outvar, [IdxSet.empty() for _ in range(size)])
 
 
 def _propagate_slice(
@@ -66,7 +68,7 @@ def _propagate_slice(
         out_indices = in_indices[start[0] : limit[0]]
     else:
         # Multi-dimensional: conservative fallback
-        all_deps = _ops.union_all(in_indices)
+        all_deps = IdxSet.union_all(in_indices)
         out_size = get_var_size(eqn.outvars[0])
         out_indices = [all_deps.copy() for _ in range(out_size)]
     write(eqn.outvars[0], out_indices)
@@ -90,7 +92,7 @@ def _propagate_broadcast_in_dim(
         write(eqn.outvars[0], [in_indices[0].copy() for _ in range(out_size)])
     else:
         # Array broadcast: conservative (could be smarter)
-        all_deps = _ops.union_all(in_indices)
+        all_deps = IdxSet.union_all(in_indices)
         write(eqn.outvars[0], [all_deps.copy() for _ in range(out_size)])
 
 
@@ -114,7 +116,7 @@ def _propagate_reshape(
         write(eqn.outvars[0], in_indices)
     else:
         # Size mismatch: conservative
-        all_deps = _ops.union_all(in_indices)
+        all_deps = IdxSet.union_all(in_indices)
         write(eqn.outvars[0], [all_deps.copy() for _ in range(out_size)])
 
 
@@ -125,7 +127,7 @@ def _propagate_integer_pow(
     power = eqn.params.get("y", 1)
     in_indices = read(eqn.invars[0])
     if power == 0:
-        write(eqn.outvars[0], [_ops.empty() for _ in range(len(in_indices))])
+        write(eqn.outvars[0], [IdxSet.empty() for _ in range(len(in_indices))])
     else:
         write(eqn.outvars[0], [s.copy() for s in in_indices])
 
@@ -149,7 +151,7 @@ def _propagate_binary_elementwise(
             to_merge.append(in2[0])
         elif i < len(in2):
             to_merge.append(in2[i])
-        out_indices.append(_ops.union_all(to_merge))
+        out_indices.append(IdxSet.union_all(to_merge))
     write(eqn.outvars[0], out_indices)
 
 
@@ -166,7 +168,7 @@ def _propagate_reduce_sum(
 ) -> None:
     """Reduction: output depends on all input elements."""
     in_indices = read(eqn.invars[0])
-    all_deps = _ops.union_all(in_indices)
+    all_deps = IdxSet.union_all(in_indices)
     write(eqn.outvars[0], [all_deps])
 
 
@@ -185,7 +187,7 @@ def _propagate_default(
     all_inputs: list[Any] = []
     for invar in eqn.invars:
         all_inputs.extend(read(invar))
-    all_deps = _ops.union_all(all_inputs)
+    all_deps = IdxSet.union_all(all_inputs)
     for outvar in eqn.outvars:
         out_size = get_var_size(outvar)
         write(outvar, [all_deps.copy() for _ in range(out_size)])
@@ -218,8 +220,8 @@ def _propagate_jaxpr(jaxpr: Jaxpr, input_indices: list[IndexSets]) -> list[Index
     def read(v: Var | Literal) -> IndexSets:
         if isinstance(v, Literal):
             size = _get_var_size(v)
-            return [_ops.empty() for _ in range(size)]
-        return env.get(v, [_ops.empty()])
+            return [IdxSet.empty() for _ in range(size)]
+        return env.get(v, [IdxSet.empty()])
 
     def write(v: Var, indices: IndexSets) -> None:
         env[v] = indices
@@ -305,51 +307,3 @@ def _propagate_equation(eqn: JaxprEqn, read: ReadFn, write: WriteFn) -> None:
             _propagate_convert_element_type(eqn, read, write, _get_var_size)
         case _:
             _propagate_default(eqn, read, write, _get_var_size)
-
-
-def jacobian_sparsity(f, n: int) -> coo_matrix:
-    """
-    Detect GLOBAL Jacobian sparsity pattern for f: R^n -> R^m.
-
-    This analyzes the computation graph structure directly, without evaluating
-    any derivatives. The result is valid for ALL inputs (global sparsity).
-
-    The approach:
-    1. Get the jaxpr (computation graph) for the function
-    2. Propagate per-element index sets through each primitive
-    3. Build the sparsity pattern from output dependencies
-
-    Args:
-        f: Function taking a 1D array of length n
-        n: Input dimension
-
-    Returns:
-        Sparse boolean matrix of shape (m, n) where entry (i,j) is True
-        if output i depends on input j
-    """
-    global _ops
-    _ops = create_index_set_ops(n)
-
-    dummy_input = jnp.zeros(n)
-    closed_jaxpr = jax.make_jaxpr(f)(dummy_input)
-    jaxpr = closed_jaxpr.jaxpr
-    m = int(jax.eval_shape(f, dummy_input).size)
-
-    # Initialize: input element i depends on input index i
-    input_indices = [[_ops.single(i) for i in range(n)]]
-
-    # Propagate through the jaxpr
-    output_indices_list = _propagate_jaxpr(jaxpr, input_indices)
-
-    # Extract output dependencies (first output variable)
-    out_indices = output_indices_list[0] if output_indices_list else []
-
-    # Build sparse matrix
-    rows = []
-    cols = []
-    for i, deps in enumerate(out_indices):
-        for j in deps:
-            rows.append(i)
-            cols.append(j)
-
-    return coo_matrix(([True] * len(rows), (rows, cols)), shape=(m, n), dtype=bool)

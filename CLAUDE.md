@@ -25,7 +25,6 @@ uv run pre-commit install
 uv run pytest
 
 # Lint and format
-uv run ruff check .          # lint
 uv run ruff check --fix .    # lint + auto-fix
 uv run ruff format .         # format
 
