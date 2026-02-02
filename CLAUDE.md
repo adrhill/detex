@@ -11,16 +11,22 @@ The implementation uses **jaxpr graph analysis** to detect global sparsity patte
 - `jacobian_sparsity.py` - Working implementation with tests
 - `jacobian_sparsity_jax.md` - Detailed explanation and theory
 
-## Running
+## Development
 
 ```bash
-# Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate
-pip install jax jaxlib scipy numpy
+# Install dependencies
+uv sync --group dev
 
 # Run tests
-python jacobian_sparsity.py
+uv run python jacobian_sparsity.py
+
+# Lint and format
+uv run ruff check .          # lint
+uv run ruff check --fix .    # lint + auto-fix
+uv run ruff format .         # format
+
+# Type check
+uv run ty check
 ```
 
 ## Key Concepts

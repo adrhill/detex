@@ -7,18 +7,26 @@ structure without evaluating derivatives, so results are valid for ALL inputs.
 
 import jax
 import jax.numpy as jnp
-from jax._src.core import Var, Literal
-from scipy.sparse import coo_matrix
-from typing import Dict, Set, List
 import numpy as np
-
+from jax._src.core import Literal, Var
+from scipy.sparse import coo_matrix
 
 # Primitives with zero derivatives (output doesn't depend on input)
-ZERO_DERIVATIVE_PRIMITIVES = frozenset([
-    'floor', 'ceil', 'round', 'sign',
-    'eq', 'ne', 'lt', 'le', 'gt', 'ge',
-    'is_finite',
-])
+ZERO_DERIVATIVE_PRIMITIVES = frozenset(
+    [
+        "floor",
+        "ceil",
+        "round",
+        "sign",
+        "eq",
+        "ne",
+        "lt",
+        "le",
+        "gt",
+        "ge",
+        "is_finite",
+    ]
+)
 
 
 def jacobian_sparsity(f, n: int) -> coo_matrix:
@@ -48,29 +56,29 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
 
     # env maps variable -> list of index sets (one per element)
     # This is the key data structure for element-wise tracking
-    env: Dict[Var, List[Set[int]]] = {}
+    env: dict[Var, list[set[int]]] = {}
 
     def get_var_size(v) -> int:
         """Get the total number of elements in a variable."""
         if isinstance(v, Literal):
             val = v.val
-            if hasattr(val, 'shape'):
+            if hasattr(val, "shape"):
                 return int(np.prod(val.shape)) if val.shape else 1
             return 1
         aval = v.aval
-        if hasattr(aval, 'shape'):
+        if hasattr(aval, "shape"):
             shape = aval.shape
             return int(np.prod(shape)) if shape else 1
         return 1
 
-    def read(v) -> List[Set[int]]:
+    def read(v) -> list[set[int]]:
         """Get list of index sets for variable v (one per element)."""
         if isinstance(v, Literal):
             size = get_var_size(v)
             return [set() for _ in range(size)]
         return env.get(v, [set()])
 
-    def write(v, indices: List[Set[int]]):
+    def write(v, indices: list[set[int]]):
         """Set index sets for variable v."""
         env[v] = indices
 
@@ -90,14 +98,14 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
                 size = get_var_size(outvar)
                 write(outvar, [set() for _ in range(size)])
 
-        elif prim == 'slice':
+        elif prim == "slice":
             # Slice extracts elements [start:limit] - preserve element structure
             in_indices = read(invars[0])
-            start = eqn.params['start_indices']
-            limit = eqn.params['limit_indices']
+            start = eqn.params["start_indices"]
+            limit = eqn.params["limit_indices"]
             if len(start) == 1:
                 # 1D slice: extract the specific range
-                out_indices = in_indices[start[0]:limit[0]]
+                out_indices = in_indices[start[0] : limit[0]]
             else:
                 # Multi-dimensional: conservative fallback
                 all_deps = set().union(*in_indices)
@@ -105,14 +113,14 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
                 out_indices = [all_deps.copy() for _ in range(out_size)]
             write(outvars[0], out_indices)
 
-        elif prim == 'squeeze':
+        elif prim == "squeeze":
             # Squeeze removes size-1 dims, preserves element dependencies
             write(outvars[0], read(invars[0]))
 
-        elif prim == 'broadcast_in_dim':
+        elif prim == "broadcast_in_dim":
             # Broadcast: replicate dependencies to match output shape
             in_indices = read(invars[0])
-            out_shape = eqn.params['shape']
+            out_shape = eqn.params["shape"]
             out_size = int(np.prod(out_shape))
             if len(in_indices) == 1:
                 # Scalar broadcast: all outputs get same deps
@@ -122,14 +130,14 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
                 all_deps = set().union(*in_indices)
                 write(outvars[0], [all_deps.copy() for _ in range(out_size)])
 
-        elif prim == 'concatenate':
+        elif prim == "concatenate":
             # Concatenate: join element lists in order
             out_indices = []
             for invar in invars:
                 out_indices.extend(read(invar))
             write(outvars[0], out_indices)
 
-        elif prim == 'reshape':
+        elif prim == "reshape":
             # Reshape preserves total elements and their dependencies
             in_indices = read(invars[0])
             out_size = get_var_size(outvars[0])
@@ -140,16 +148,16 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
                 all_deps = set().union(*in_indices)
                 write(outvars[0], [all_deps.copy() for _ in range(out_size)])
 
-        elif prim == 'integer_pow':
+        elif prim == "integer_pow":
             # x^n: element-wise, preserves structure (unless n=0)
-            power = eqn.params.get('y', 1)
+            power = eqn.params.get("y", 1)
             in_indices = read(invars[0])
             if power == 0:
                 write(outvars[0], [set() for _ in range(len(in_indices))])
             else:
                 write(outvars[0], [s.copy() for s in in_indices])
 
-        elif prim in ('add', 'sub', 'mul', 'div', 'pow', 'max', 'min'):
+        elif prim in ("add", "sub", "mul", "div", "pow", "max", "min"):
             # Binary element-wise: merge corresponding elements
             in1 = read(invars[0])
             in2 = read(invars[1])
@@ -169,19 +177,32 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
                 out_indices.append(deps)
             write(outvars[0], out_indices)
 
-        elif prim in ('neg', 'exp', 'log', 'sin', 'cos', 'tan', 'sqrt', 'abs',
-                      'sinh', 'cosh', 'tanh', 'log1p', 'expm1'):
+        elif prim in (
+            "neg",
+            "exp",
+            "log",
+            "sin",
+            "cos",
+            "tan",
+            "sqrt",
+            "abs",
+            "sinh",
+            "cosh",
+            "tanh",
+            "log1p",
+            "expm1",
+        ):
             # Unary element-wise: preserve element structure
             in_indices = read(invars[0])
             write(outvars[0], [s.copy() for s in in_indices])
 
-        elif prim == 'reduce_sum':
+        elif prim == "reduce_sum":
             # Reduction: output depends on all input elements
             in_indices = read(invars[0])
             all_deps = set().union(*in_indices)
             write(outvars[0], [all_deps])
 
-        elif prim == 'convert_element_type':
+        elif prim == "convert_element_type":
             # Type conversion: preserve dependencies
             in_indices = read(invars[0])
             write(outvars[0], [s.copy() for s in in_indices])
@@ -207,11 +228,7 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
             rows.append(i)
             cols.append(j)
 
-    return coo_matrix(
-        ([True] * len(rows), (rows, cols)),
-        shape=(m, n),
-        dtype=bool
-    )
+    return coo_matrix(([True] * len(rows), (rows, cols)), shape=(m, n), dtype=bool)
 
 
 # ============================================================
@@ -238,18 +255,19 @@ if __name__ == "__main__":
 
     # Test 1: Simple dependencies
     def f1(x):
-        return jnp.array([
-            x[0] + x[1],      # depends on x[0], x[1]
-            x[1] * x[2],      # depends on x[1], x[2]
-            x[2]              # depends on x[2]
-        ])
+        return jnp.array(
+            [
+                x[0] + x[1],  # depends on x[0], x[1]
+                x[1] * x[2],  # depends on x[1], x[2]
+                x[2],  # depends on x[2]
+            ]
+        )
 
     all_passed &= test_sparsity(
         "Test 1: f(x) = [x0+x1, x1*x2, x2]",
-        f1, n=3,
-        expected=[[1, 1, 0],
-                  [0, 1, 1],
-                  [0, 0, 1]]
+        f1,
+        n=3,
+        expected=[[1, 1, 0], [0, 1, 1], [0, 0, 1]],
     )
 
     # Test 2: More complex
@@ -261,23 +279,20 @@ if __name__ == "__main__":
 
     all_passed &= test_sparsity(
         "Test 2: f(x) = [x0*x1 + sin(x2), x3, x0*x1*x3]",
-        f2, n=4,
-        expected=[[1, 1, 1, 0],
-                  [0, 0, 0, 1],
-                  [1, 1, 0, 1]]
+        f2,
+        n=4,
+        expected=[[1, 1, 1, 0], [0, 0, 0, 1], [1, 1, 0, 1]],
     )
 
     # Test 3: Diagonal Jacobian (element-wise)
     def f3(x):
-        return x ** 2
+        return x**2
 
     all_passed &= test_sparsity(
         "Test 3: f(x) = x^2 (element-wise)",
-        f3, n=4,
-        expected=[[1, 0, 0, 0],
-                  [0, 1, 0, 0],
-                  [0, 0, 1, 0],
-                  [0, 0, 0, 1]]
+        f3,
+        n=4,
+        expected=[[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
     )
 
     # Test 4: Dense Jacobian
@@ -285,26 +300,18 @@ if __name__ == "__main__":
         return jnp.array([jnp.sum(x), jnp.prod(x)])
 
     all_passed &= test_sparsity(
-        "Test 4: f(x) = [sum(x), prod(x)]",
-        f4, n=3,
-        expected=[[1, 1, 1],
-                  [1, 1, 1]]
+        "Test 4: f(x) = [sum(x), prod(x)]", f4, n=3, expected=[[1, 1, 1], [1, 1, 1]]
     )
 
     # Test 5: SCT README example
     def f5(x):
-        return jnp.array([
-            x[0]**2,
-            2 * x[0] * x[1]**2,
-            jnp.sin(x[2])
-        ])
+        return jnp.array([x[0] ** 2, 2 * x[0] * x[1] ** 2, jnp.sin(x[2])])
 
     all_passed &= test_sparsity(
         "Test 5: SCT README - f(x) = [x1^2, 2*x1*x2^2, sin(x3)]",
-        f5, n=3,
-        expected=[[1, 0, 0],
-                  [1, 1, 0],
-                  [0, 0, 1]]
+        f5,
+        n=3,
+        expected=[[1, 0, 0], [1, 1, 0], [0, 0, 1]],
     )
 
     print("=" * 50)
