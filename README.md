@@ -2,6 +2,11 @@
 
 `detex` detects Jacobian sparsity patterns in JAX without computing derivatives.
 
+> [!WARNING]
+> This project is an LLM-assisted port of some basic functionality from my Julia package [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl).
+> Its primary purpose is to evaluate the capabilities of coding assistants on a task I consider to be out-of-distribution from the usual training data.
+> Use `detex` at your own risk. 
+
 ___
 
 For a function $f: \mathbb{R}^n \to \mathbb{R}^m$, the Jacobian $J \in \mathbb{R}^{m \times n}$ is defined as:
@@ -12,7 +17,7 @@ $$
 
 Computing the full Jacobian requires $n$ forward-mode AD passes or $m$ reverse-mode passes. But many Jacobians are **sparse**—most entries are structurally zero for all inputs.
 
-`detex` detects this sparsity pattern in a single forward pass by analyzing the computation graph. This enables [automatic sparse differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) via graph coloring,
+`detex` detects this sparsity pattern in a single forward pass by analyzing the computation graph. This enables [automatic sparse differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) after graph coloring,
 i.e. using [sparsediffax](https://github.com/gdalle/sparsediffax).
 
 ## Installation
@@ -59,4 +64,4 @@ This is a global sparsity pattern and valid for all input values.
 
 ## See also
 
-- [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl): detext is a very basic port of this package. 
+- [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl): detex is a very basic port of this package. 
