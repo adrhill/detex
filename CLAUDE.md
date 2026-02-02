@@ -59,6 +59,14 @@ For each primitive equation:
 Extract output dependencies -> sparse COO matrix
 ```
 
+## Design philosophy
+
+When writing new code, adhere to these design principles:
+
+- **Minimize complexity**: The primary goal of software design is to minimize complexity—anything that makes a system hard to understand and modify.
+- **Information hiding**: Each module should encapsulate design decisions that other modules don't need to know about, preventing information leakage across boundaries.
+- **Pull complexity downward**: It's better for a module to be internally complex if it keeps the interface simple for others. Don't expose complexity to callers.
+
 ## Limitations
 
 - Multi-dimensional slicing is conservative

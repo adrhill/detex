@@ -2,6 +2,7 @@
 
 ## Immediate
 
+- [ ] Add more test cases from SparseConnectivityTracer's "Jacobian Global" testset: https://github.com/adrhill/SparseConnectivityTracer.jl/blob/main/test/test_gradient.jl
 - [ ] Add more test cases (matrix operations, neural network layers)
 - [ ] Handle `dynamic_slice` primitive precisely
 - [ ] Handle `gather` and `scatter` with static indices
@@ -26,7 +27,6 @@ Missing precise handlers for:
 ## Comparison with SCT
 
 - [ ] Benchmark against SparseConnectivityTracer.jl on same functions
-- [ ] Test on NLPModels problems
 - [ ] Compare operator classification schemes
 
 ## Potential Extensions
@@ -38,6 +38,6 @@ Missing precise handlers for:
 
 ## References
 
-- SparseConnectivityTracer.jl: `../src/README.md`
+- SparseConnectivityTracer.jl: https://github.com/adrhill/SparseConnectivityTracer.jl
 - JAX jaxpr docs: https://jax.readthedocs.io/en/latest/jaxpr.html
 - SparseDiffTools.jl for coloring algorithms
