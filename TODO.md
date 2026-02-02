@@ -34,6 +34,12 @@ Missing precise handlers for:
 - [ ] Coloring algorithms for efficient Jacobian computation
 - [ ] Export to sparse AD libraries
 
+## Known Limitations
+
+- Multi-dimensional slicing is conservative
+- Control flow unions all branches (global sparsity)
+- Not all JAX primitives have precise handlers (falls back to conservative union)
+
 ## References
 
 - SparseConnectivityTracer.jl: https://github.com/adrhill/SparseConnectivityTracer.jl

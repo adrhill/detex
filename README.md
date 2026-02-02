@@ -4,7 +4,7 @@
 
 `detex` detects Jacobian sparsity patterns in JAX.
 
-> [!CAUTION]
+> [!WARNING]
 > Currently, the primary purpose of this package is to **evaluate the capabilities of coding agents** [on a familiar task I consider to be out-of-distribution](https://github.com/adrhill/SparseConnectivityTracer.jl) from the usual language model training data.
 >
 > Use `detex` at your own risk. 

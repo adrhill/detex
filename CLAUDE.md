@@ -9,9 +9,16 @@ The implementation uses **jaxpr graph analysis** to detect global sparsity patte
 ## Structure
 
 ```
-src/detex/          # Package source
-tests/              # pytest tests
-jacobian_sparsity_jax.md  # Detailed explanation and theory
+src/detex/
+├── __init__.py         # Public API (jacobian_sparsity)
+├── _indexset.py        # IndexSet and BitSet implementations
+└── _propagate.py       # Jaxpr traversal and primitive handlers
+
+tests/
+├── test_jacobian_sparsity.py   # Core sparsity detection tests
+├── test_benchmarks.py          # Performance benchmarks
+├── test_bitset.py              # BitSet unit tests
+└── test_conv.py                # Convolution tests
 ```
 
 ## Development
@@ -45,20 +52,21 @@ uv run ty check
 ## Architecture
 
 ```
-Input: f(x), n (input dimension)
-  |
-  v
-make_jaxpr(f) -> computation graph
-  |
-  v
-For each primitive equation:
-  - Read input dependencies (list[set[int]] per variable)
-  - Apply primitive-specific propagation rule
-  - Write output dependencies
-  |
-  v
-Extract output dependencies -> sparse COO matrix
+jacobian_sparsity(f, n)
+  │
+  ├─ make_jaxpr(f) → computation graph
+  │
+  ├─ Initialize env: input[i] depends on {i}
+  │
+  ├─ _propagate_jaxpr(jaxpr, input_indices)
+  │     │
+  │     └─ For each equation:
+  │          _propagate_equation(eqn, env) → primitive-specific handler
+  │
+  └─ Build sparse COO matrix from output dependencies
 ```
+
+The `env` maps each `Var` to its per-element dependency sets (`list[IdxSet]`).
 
 ## Design philosophy
 
@@ -68,8 +76,3 @@ When writing new code, adhere to these design principles:
 - **Information hiding**: Each module should encapsulate design decisions that other modules don't need to know about, preventing information leakage across boundaries.
 - **Pull complexity downward**: It's better for a module to be internally complex if it keeps the interface simple for others. Don't expose complexity to callers.
 
-## Limitations
-
-- Multi-dimensional slicing is conservative
-- Control flow unions all branches (global sparsity)
-- Not all JAX primitives have precise handlers (falls back to conservative union)
