@@ -1,22 +1,28 @@
 """Index set implementations for sparsity tracking.
 
 Provides a unified interface with two backends:
-- set[int]: Fast for sparse patterns, O(k) where k = bits set
-- bytearray: Fixed memory O(n/8), better for dense patterns at large n
-
-The `create_index_set_ops` factory returns operations tuned for input size.
+- IdxSet: Fast for sparse patterns, O(k) where k = bits set
+- IdxBitset: Fixed memory O(n/8), better for dense patterns at large n
 """
 
-from collections.abc import Callable, Iterator
-from typing import Protocol
+from abc import ABC, abstractmethod
+from collections.abc import Iterator
+from typing import Self
 
 
-class IndexSet(Protocol):
-    """Protocol for index set operations."""
+class AbstractIdx(ABC):
+    """Abstract base class for index set operations."""
 
-    def copy(self) -> "IndexSet": ...
+    __slots__ = ()
+
+    @abstractmethod
+    def copy(self) -> Self: ...
+
+    @abstractmethod
     def __iter__(self) -> Iterator[int]: ...
-    def __ior__(self, other: "IndexSet") -> "IndexSet": ...
+
+    @abstractmethod
+    def __ior__(self, other: Self) -> Self: ...
 
 
 # =============================================================================
@@ -24,21 +30,40 @@ class IndexSet(Protocol):
 # =============================================================================
 
 
-def _set_empty() -> set[int]:
-    return set()
+class IdxSet(AbstractIdx):
+    """Index set backed by Python set[int]."""
 
+    __slots__ = ("_data",)
 
-def _set_single(i: int) -> set[int]:
-    return {i}
+    def __init__(self, data: set[int] | None = None) -> None:
+        self._data: set[int] = data if data is not None else set()
 
+    def copy(self) -> "IdxSet":
+        return IdxSet(self._data.copy())
 
-def _set_union_all(sets: list[set[int]]) -> set[int]:
-    if not sets:
-        return set()
-    result = sets[0].copy()
-    for s in sets[1:]:
-        result |= s
-    return result
+    def __iter__(self) -> Iterator[int]:
+        return iter(self._data)
+
+    def __ior__(self, other: "IdxSet") -> "IdxSet":  # type: ignore[override]
+        self._data |= other._data
+        return self
+
+    @staticmethod
+    def empty() -> "IdxSet":
+        return IdxSet()
+
+    @staticmethod
+    def single(i: int) -> "IdxSet":
+        return IdxSet({i})
+
+    @staticmethod
+    def union_all(sets: list["IdxSet"]) -> "IdxSet":
+        if not sets:
+            return IdxSet()
+        result = sets[0].copy()
+        for s in sets[1:]:
+            result |= s
+        return result
 
 
 # =============================================================================
@@ -46,8 +71,8 @@ def _set_union_all(sets: list[set[int]]) -> set[int]:
 # =============================================================================
 
 
-class BitSet:
-    """Mutable bitset backed by bytearray."""
+class IdxBitset(AbstractIdx):
+    """Index set backed by bytearray for fixed memory usage."""
 
     __slots__ = ("_data", "_nbytes")
 
@@ -55,10 +80,10 @@ class BitSet:
         self._data = data
         self._nbytes = nbytes
 
-    def copy(self) -> "BitSet":
-        return BitSet(bytearray(self._data), self._nbytes)
+    def copy(self) -> "IdxBitset":
+        return IdxBitset(bytearray(self._data), self._nbytes)
 
-    def __ior__(self, other: "BitSet") -> "BitSet":
+    def __ior__(self, other: "IdxBitset") -> "IdxBitset":  # type: ignore[override]
         a = int.from_bytes(self._data, "little")
         b = int.from_bytes(other._data, "little")
         self._data[:] = (a | b).to_bytes(self._nbytes, "little")
@@ -75,90 +100,21 @@ class BitSet:
                 byte >>= 1
                 base += 1
 
+    @staticmethod
+    def empty(nbytes: int) -> "IdxBitset":
+        return IdxBitset(bytearray(nbytes), nbytes)
 
-def _make_bitset_ops(
-    n: int,
-) -> tuple[
-    Callable[[], BitSet],
-    Callable[[int], BitSet],
-    Callable[[list[BitSet]], BitSet],
-]:
-    nbytes = (n + 7) // 8
-
-    def empty() -> BitSet:
-        return BitSet(bytearray(nbytes), nbytes)
-
-    def single(i: int) -> BitSet:
+    @staticmethod
+    def single(i: int, nbytes: int) -> "IdxBitset":
         data = bytearray(nbytes)
         data[i // 8] = 1 << (i % 8)
-        return BitSet(data, nbytes)
+        return IdxBitset(data, nbytes)
 
-    def union_all(bitsets: list[BitSet]) -> BitSet:
+    @staticmethod
+    def union_all(bitsets: list["IdxBitset"]) -> "IdxBitset":
         if not bitsets:
-            return empty()
+            raise ValueError("Cannot union empty list without nbytes")
         result = bitsets[0].copy()
         for bs in bitsets[1:]:
             result |= bs
         return result
-
-    return empty, single, union_all
-
-
-# =============================================================================
-# Factory function
-# =============================================================================
-
-# Threshold for switching to bitsets (based on benchmarks, sets are faster below this)
-_BITSET_THRESHOLD = 10000  # Sets win up to at least n=4000 in benchmarks
-
-# Type alias for index sets (either implementation)
-type AnyIndexSet = set[int] | BitSet
-
-
-class IndexSetOps:
-    """Operations for creating and manipulating index sets."""
-
-    __slots__ = ("empty", "single", "union_all", "n", "using_bitset")
-
-    empty: Callable[[], AnyIndexSet]
-    single: Callable[[int], AnyIndexSet]
-    union_all: Callable[[list[AnyIndexSet]], AnyIndexSet]
-    n: int
-    using_bitset: bool
-
-    def __init__(
-        self,
-        empty: Callable[[], AnyIndexSet],
-        single: Callable[[int], AnyIndexSet],
-        union_all: Callable[[list[AnyIndexSet]], AnyIndexSet],
-        n: int,
-        using_bitset: bool,
-    ) -> None:
-        self.empty = empty
-        self.single = single
-        self.union_all = union_all
-        self.n = n
-        self.using_bitset = using_bitset
-
-
-def create_index_set_ops(n: int, force_bitset: bool = False) -> IndexSetOps:
-    """Create index set operations for the given input dimension.
-
-    Args:
-        n: Input dimension (number of bits needed)
-        force_bitset: Force bitset implementation regardless of n
-
-    Returns:
-        IndexSetOps with empty(), single(i), and union_all(sets) functions
-    """
-    if force_bitset or n >= _BITSET_THRESHOLD:
-        empty, single, union_all = _make_bitset_ops(n)
-        return IndexSetOps(empty, single, union_all, n, using_bitset=True)  # type: ignore[arg-type]
-    else:
-        return IndexSetOps(
-            _set_empty,
-            _set_single,
-            _set_union_all,
-            n,
-            using_bitset=False,  # type: ignore[arg-type]
-        )
