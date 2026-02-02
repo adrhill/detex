@@ -10,3 +10,6 @@ uv.lock
 
 # Virtual environments
 .venv
+
+# Claude Code
+.claude
