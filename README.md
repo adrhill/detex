@@ -5,7 +5,7 @@
 `detex` detects Jacobian sparsity patterns in JAX.
 
 > [!CAUTION]
-> Currently, the primary purpose of this package is to **evaluate the capabilities of coding agents** [on a familiar task I consider to be out-of-distribution](https://github.com/adrhill/SparseConnectivityTracer.jl) from the usual training data.
+> Currently, the primary purpose of this package is to **evaluate the capabilities of coding agents** [on a familiar task I consider to be out-of-distribution](https://github.com/adrhill/SparseConnectivityTracer.jl) from the usual language model training data.
 >
 > Use `detex` at your own risk. 
 
@@ -51,5 +51,5 @@ The result is a global sparsity pattern, valid for all input values.
 
 ## Related work
 
-- [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl): `detex` is a primitive port of this Julia package, which provides {global and local} {Jacobian and Hessian} sparsity detection via operator overloading.
+- [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl): `detex` is a primitive port of this Julia package, which provides global and local Jacobian and Hessian sparsity detection via operator overloading.
 
