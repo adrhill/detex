@@ -7,13 +7,9 @@
 > Its primary purpose is to **evaluate the capabilities of coding agents** on a familiar task I consider to be out-of-distribution from the usual training data.
 > Use `detex` at your own risk. 
 
-For a function $f: \mathbb{R}^n \to \mathbb{R}^m$, the Jacobian $J \in \mathbb{R}^{m \times n}$ is defined as:
-
-$$
-J_{ij} = \frac{\partial f_i}{\partial x_j}
-$$
-
+For a function $f: \mathbb{R}^n \to \mathbb{R}^m$, the Jacobian $J \in \mathbb{R}^{m \times n}$ is defined as $J_{ij} = \frac{\partial f_i}{\partial x_j}$.
 Computing the full Jacobian requires $n$ forward-mode AD passes or $m$ reverse-mode passes. But many Jacobians are *sparse*—most entries are structurally zero for all inputs.
+
 `detex` detects this sparsity pattern in a single forward pass by analyzing the computation graph. This enables [automatic sparse differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) after graph coloring,
 i.e. using [sparsediffax](https://github.com/gdalle/sparsediffax).
 
