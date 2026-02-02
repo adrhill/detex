@@ -3,8 +3,8 @@
 `detex` detects Jacobian sparsity patterns in JAX.
 
 > [!WARNING]
-> This project is an LLM-assisted port of some basic functionality from my Julia package [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl).
-> Its primary purpose is to evaluate the capabilities of coding assistants on a task I consider to be out-of-distribution from the usual training data.
+> This project is an agentic port of my Julia package [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl).
+> Its primary purpose is to **evaluate the capabilities of coding agents** on a familiar task I consider to be out-of-distribution from the usual training data.
 > Use `detex` at your own risk. 
 
 ___
@@ -15,8 +15,7 @@ $$
 J_{ij} = \frac{\partial f_i}{\partial x_j}
 $$
 
-Computing the full Jacobian requires $n$ forward-mode AD passes or $m$ reverse-mode passes. But many Jacobians are **sparse**—most entries are structurally zero for all inputs.
-
+Computing the full Jacobian requires $n$ forward-mode AD passes or $m$ reverse-mode passes. But many Jacobians are *sparse*—most entries are structurally zero for all inputs.
 `detex` detects this sparsity pattern in a single forward pass by analyzing the computation graph. This enables [automatic sparse differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) after graph coloring,
 i.e. using [sparsediffax](https://github.com/gdalle/sparsediffax).
 
@@ -32,7 +31,7 @@ Or with [uv](https://docs.astral.sh/uv/):
 uv add detex
 ```
 
-## Usage
+## Example
 
 ```python
 import jax.numpy as jnp
@@ -49,9 +48,17 @@ print(pattern.toarray().astype(int))
 #  [0 0 1]]
 ```
 
-The function $f(x) = \begin{bmatrix} x_1^2 \\ 2 x_1 x_2^2 \\ \sin(x_3) \end{bmatrix}$ has the Jacobian $J_f|_x = \begin{bmatrix} 2x_1 & 0 & 0 \\ 2x_2^2 & 4x_1 x_2 & 0 \\ 0 & 0 & \cos(x_3) \end{bmatrix}$.
+The function
 
-`detex` detects the corresponding sparsity pattern $\begin{bmatrix} 1 & 0 & 0 \\ 1 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix}$.
+$$f(x) = \begin{bmatrix} x_1^2 \\ 2 x_1 x_2^2 \\ \sin(x_3) \end{bmatrix}$$
+
+has the Jacobian
+
+$$J_f = \begin{bmatrix} 2x_1 & 0 & 0 \\ 2x_2^2 & 4x_1 x_2 & 0 \\ 0 & 0 & \cos(x_3) \end{bmatrix}$$
+
+`detex` detects the corresponding sparsity pattern
+
+$$\begin{bmatrix} 1 & 0 & 0 \\ 1 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix}$$
 
 ## How it works
 
