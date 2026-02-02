@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv sync:*)",
+      "Bash(uv run ty:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.astral.sh)",
+      "Bash(uv run ruff check:*)",
+      "Bash(uv run ruff:*)",
+      "Bash(uv run pytest:*)"
+    ]
+  }
+}

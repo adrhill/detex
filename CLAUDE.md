@@ -6,10 +6,13 @@ This folder contains an exploration of Jacobian sparsity detection implemented i
 
 The implementation uses **jaxpr graph analysis** to detect global sparsity patterns. Unlike JVP-based approaches, this analyzes the computation graph structure directly, producing results valid for ALL inputs.
 
-## Files
+## Structure
 
-- `jacobian_sparsity.py` - Working implementation with tests
-- `jacobian_sparsity_jax.md` - Detailed explanation and theory
+```
+src/detex/          # Package source
+tests/              # pytest tests
+jacobian_sparsity_jax.md  # Detailed explanation and theory
+```
 
 ## Development
 
@@ -18,7 +21,7 @@ The implementation uses **jaxpr graph analysis** to detect global sparsity patte
 uv sync --group dev
 
 # Run tests
-uv run python jacobian_sparsity.py
+uv run pytest
 
 # Lint and format
 uv run ruff check .          # lint
@@ -47,7 +50,7 @@ make_jaxpr(f) -> computation graph
   |
   v
 For each primitive equation:
-  - Read input dependencies (List[Set[int]] per variable)
+  - Read input dependencies (list[set[int]] per variable)
   - Apply primitive-specific propagation rule
   - Write output dependencies
   |
