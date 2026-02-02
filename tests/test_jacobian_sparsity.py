@@ -60,3 +60,237 @@ def test_sct_readme_example():
     result = jacobian_sparsity(f, n=3).toarray().astype(int)
     expected = np.array([[1, 0, 0], [1, 1, 0], [0, 0, 1]])
     np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Tests from SparseConnectivityTracer.jl "Jacobian Global" testset
+# https://github.com/adrhill/SparseConnectivityTracer.jl/blob/main/test/test_gradient.jl
+# =============================================================================
+
+
+def test_identity():
+    """Identity function: f(x) = x"""
+
+    def f(x):
+        return x
+
+    result = jacobian_sparsity(f, n=1).toarray().astype(int)
+    expected = np.array([[1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_constant():
+    """Constant function: output doesn't depend on input."""
+
+    def f(x):
+        return jnp.array([1.0])
+
+    result = jacobian_sparsity(f, n=1).toarray().astype(int)
+    expected = np.array([[0]])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_zero_derivative_ceil_round():
+    """ceil/round have zero derivative: f(x) = [x1*x2, ceil(x1*x2), x1*round(x2)]"""
+
+    def f(x):
+        return jnp.array([x[0] * x[1], jnp.ceil(x[0] * x[1]), x[0] * jnp.round(x[1])])
+
+    result = jacobian_sparsity(f, n=2).toarray().astype(int)
+    # round(x2) has zero derivative, so x1*round(x2) only depends on x1
+    expected = np.array([[1, 1], [0, 0], [1, 0]])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_zero_derivative_floor():
+    """floor has zero derivative."""
+
+    def f(x):
+        return jnp.floor(x)
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    expected = np.zeros((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_zero_derivative_sign():
+    """sign has zero derivative."""
+
+    def f(x):
+        return jnp.sign(x)
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    expected = np.zeros((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_comparison_ops():
+    """Comparison operators have zero derivative."""
+
+    def f(x):
+        return jnp.array(
+            [
+                (x[0] < x[1]).astype(float),
+                (x[0] <= x[1]).astype(float),
+                (x[0] > x[1]).astype(float),
+                (x[0] >= x[1]).astype(float),
+                (x[0] == x[1]).astype(float),
+                (x[0] != x[1]).astype(float),
+            ]
+        )
+
+    result = jacobian_sparsity(f, n=2).toarray().astype(int)
+    expected = np.zeros((6, 2), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_type_conversion():
+    """Type conversions preserve dependencies."""
+
+    def f(x):
+        return x.astype(jnp.float32)
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_power_operations():
+    """Various power operations: x^e, e^x, etc."""
+
+    def f(x):
+        return jnp.array([x[0] ** 2.5, jnp.exp(x[1]), x[2] ** x[2]])
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    expected = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_integer_pow_zero():
+    """x^0 = 1 has no dependency on x."""
+
+    def f(x):
+        return x**0
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    expected = np.zeros((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_clamp_scalar_bounds():
+    """clamp(x, lo, hi) with scalar bounds preserves element structure."""
+
+    def f(x):
+        return jnp.clip(x, 0.0, 1.0)
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_clamp_variable_bounds():
+    """clamp(x1, x2, x3) with variable bounds - all contribute."""
+
+    def f(x):
+        return jnp.array([jnp.clip(x[0], x[1], x[2])])
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    expected = np.array([[1, 1, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_ifelse_both_branches():
+    """ifelse unions both branches (global sparsity)."""
+
+    def f(x):
+        # jnp.where is the JAX equivalent of ifelse
+        return jnp.array([jnp.where(x[1] < x[2], x[0] + x[1], x[2] * x[3])])
+
+    result = jacobian_sparsity(f, n=4).toarray().astype(int)
+    expected = np.array([[1, 1, 1, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_ifelse_one_branch_constant():
+    """ifelse with one constant branch."""
+
+    def f(x):
+        return jnp.array([jnp.where(x[1] < x[2], x[0] + x[1], 1.0)])
+
+    result = jacobian_sparsity(f, n=4).toarray().astype(int)
+    expected = np.array([[1, 1, 0, 0]])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_dot_product():
+    """Dot product: dot(x[0:2], x[3:5])."""
+
+    def f(x):
+        return jnp.array([jnp.dot(x[:2], x[3:5])])
+
+    result = jacobian_sparsity(f, n=5).toarray().astype(int)
+    expected = np.array([[1, 1, 0, 1, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_multiply_by_zero():
+    """Multiplying by zero still tracks structural dependency."""
+
+    def f1(x):
+        return jnp.array([0 * x[0]])
+
+    def f2(x):
+        return jnp.array([x[0] * 0])
+
+    # Global sparsity: we can't know at compile time that result is zero
+    result1 = jacobian_sparsity(f1, n=1).toarray().astype(int)
+    result2 = jacobian_sparsity(f2, n=1).toarray().astype(int)
+    expected = np.array([[1]])
+    np.testing.assert_array_equal(result1, expected)
+    np.testing.assert_array_equal(result2, expected)
+
+
+def test_unary_functions():
+    """Various unary math functions preserve element structure."""
+
+    def f(x):
+        return jnp.array(
+            [
+                jnp.sin(x[0]),
+                jnp.cos(x[1]),
+                jnp.tan(x[2]),
+                jnp.exp(x[0]),
+                jnp.log(x[1] + 1),  # +1 to avoid log(0)
+                jnp.sqrt(jnp.abs(x[2]) + 1),
+                jnp.sinh(x[0]),
+                jnp.cosh(x[1]),
+                jnp.tanh(x[2]),
+            ]
+        )
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    expected = np.array(
+        [
+            [1, 0, 0],  # sin(x0)
+            [0, 1, 0],  # cos(x1)
+            [0, 0, 1],  # tan(x2)
+            [1, 0, 0],  # exp(x0)
+            [0, 1, 0],  # log(x1+1)
+            [0, 0, 1],  # sqrt(|x2|+1)
+            [1, 0, 0],  # sinh(x0)
+            [0, 1, 0],  # cosh(x1)
+            [0, 0, 1],  # tanh(x2)
+        ]
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_binary_min_max():
+    """min and max operations."""
+
+    def f(x):
+        return jnp.array([jnp.minimum(x[0], x[1]), jnp.maximum(x[1], x[2])])
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    expected = np.array([[1, 1, 0], [0, 1, 1]])
+    np.testing.assert_array_equal(result, expected)

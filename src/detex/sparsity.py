@@ -1,11 +1,11 @@
 """Global Jacobian sparsity detection via jaxpr graph analysis."""
 
-from collections.abc import Callable
+import math
+from collections.abc import Callable, Sequence
 
 import jax
 import jax.numpy as jnp
-import numpy as np
-from jax._src.core import JaxprEqn, Literal, Var
+from jax._src.core import Jaxpr, JaxprEqn, Literal, Var
 from scipy.sparse import coo_matrix
 
 # Type aliases for readability
@@ -13,7 +13,6 @@ IndexSets = list[set[int]]
 ReadFn = Callable[[Var | Literal], IndexSets]
 WriteFn = Callable[[Var, IndexSets], None]
 GetSizeFn = Callable[[Var | Literal], int]
-
 
 # Primitives with zero derivatives (output doesn't depend on input)
 ZERO_DERIVATIVE_PRIMITIVES = frozenset(
@@ -31,6 +30,14 @@ ZERO_DERIVATIVE_PRIMITIVES = frozenset(
         "is_finite",
     ]
 )
+
+# Primitives that contain nested jaxprs we should trace into
+NESTED_JAXPR_PRIMITIVES = frozenset(["jit", "pjit", "xla_call", "named_call"])
+
+
+def _shape_size(shape: Sequence[int]) -> int:
+    """Compute the total number of elements from a shape tuple."""
+    return math.prod(shape) if shape else 1
 
 
 def _propagate_zero_derivative(
@@ -72,7 +79,7 @@ def _propagate_broadcast_in_dim(
     """Broadcast: replicate dependencies to match output shape."""
     in_indices = read(eqn.invars[0])
     out_shape = eqn.params["shape"]
-    out_size = int(np.prod(out_shape))
+    out_size = _shape_size(out_shape)
     if len(in_indices) == 1:
         write(eqn.outvars[0], [in_indices[0].copy() for _ in range(out_size)])
     else:
@@ -178,6 +185,122 @@ def _propagate_default(
         write(outvar, [all_deps.copy() for _ in range(out_size)])
 
 
+def _get_var_size(v: Var | Literal) -> int:
+    """Get the total number of elements in a variable."""
+    if isinstance(v, Literal):
+        val = v.val
+        shape = getattr(val, "shape", ())
+        return _shape_size(tuple(shape)) if shape else 1
+    aval = v.aval
+    shape = getattr(aval, "shape", ())
+    return _shape_size(tuple(shape)) if shape else 1
+
+
+def _propagate_jaxpr(jaxpr: Jaxpr, input_indices: list[IndexSets]) -> list[IndexSets]:
+    """
+    Propagate index sets through a jaxpr.
+
+    Args:
+        jaxpr: The jaxpr to analyze
+        input_indices: List of IndexSets, one per input variable
+
+    Returns:
+        List of IndexSets, one per output variable
+    """
+    env: dict[Var, IndexSets] = {}
+
+    def read(v: Var | Literal) -> IndexSets:
+        if isinstance(v, Literal):
+            size = _get_var_size(v)
+            return [set() for _ in range(size)]
+        return env.get(v, [set()])
+
+    def write(v: Var, indices: IndexSets) -> None:
+        env[v] = indices
+
+    # Initialize input variables
+    for var, indices in zip(jaxpr.invars, input_indices, strict=False):
+        write(var, indices)
+
+    # Process each equation
+    for eqn in jaxpr.eqns:
+        _propagate_equation(eqn, read, write)
+
+    # Return output dependencies
+    return [read(outvar) for outvar in jaxpr.outvars]
+
+
+def _propagate_nested_jaxpr(
+    eqn: JaxprEqn, read: ReadFn, write: WriteFn, get_var_size: GetSizeFn
+) -> None:
+    """Handle primitives with nested jaxprs by recursively tracing."""
+    # Get the nested jaxpr from params
+    nested_jaxpr = eqn.params.get("jaxpr")
+    if nested_jaxpr is None:
+        # Fallback if we can't find the jaxpr
+        _propagate_default(eqn, read, write, get_var_size)
+        return
+
+    # Handle ClosedJaxpr wrapper
+    if hasattr(nested_jaxpr, "jaxpr"):
+        nested_jaxpr = nested_jaxpr.jaxpr
+
+    # Gather input dependencies
+    input_indices = [read(invar) for invar in eqn.invars]
+
+    # Recursively propagate through nested jaxpr
+    output_indices = _propagate_jaxpr(nested_jaxpr, input_indices)
+
+    # Write output dependencies
+    for outvar, indices in zip(eqn.outvars, output_indices, strict=False):
+        write(outvar, indices)
+
+
+def _propagate_equation(eqn: JaxprEqn, read: ReadFn, write: WriteFn) -> None:
+    """Propagate dependencies through a single equation."""
+    match eqn.primitive.name:
+        case prim if prim in ZERO_DERIVATIVE_PRIMITIVES:
+            _propagate_zero_derivative(eqn, read, write, _get_var_size)
+        case prim if prim in NESTED_JAXPR_PRIMITIVES:
+            _propagate_nested_jaxpr(eqn, read, write, _get_var_size)
+        case "slice":
+            _propagate_slice(eqn, read, write, _get_var_size)
+        case "squeeze":
+            _propagate_squeeze(eqn, read, write, _get_var_size)
+        case "broadcast_in_dim":
+            _propagate_broadcast_in_dim(eqn, read, write, _get_var_size)
+        case "concatenate":
+            _propagate_concatenate(eqn, read, write, _get_var_size)
+        case "reshape":
+            _propagate_reshape(eqn, read, write, _get_var_size)
+        case "integer_pow":
+            _propagate_integer_pow(eqn, read, write, _get_var_size)
+        case "add" | "sub" | "mul" | "div" | "pow" | "max" | "min":
+            _propagate_binary_elementwise(eqn, read, write, _get_var_size)
+        case (
+            "neg"
+            | "exp"
+            | "log"
+            | "sin"
+            | "cos"
+            | "tan"
+            | "sqrt"
+            | "abs"
+            | "sinh"
+            | "cosh"
+            | "tanh"
+            | "log1p"
+            | "expm1"
+        ):
+            _propagate_unary_elementwise(eqn, read, write, _get_var_size)
+        case "reduce_sum":
+            _propagate_reduce_sum(eqn, read, write, _get_var_size)
+        case "convert_element_type":
+            _propagate_convert_element_type(eqn, read, write, _get_var_size)
+        case _:
+            _propagate_default(eqn, read, write, _get_var_size)
+
+
 def jacobian_sparsity(f, n: int) -> coo_matrix:
     """
     Detect GLOBAL Jacobian sparsity pattern for f: R^n -> R^m.
@@ -203,84 +326,16 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
     jaxpr = closed_jaxpr.jaxpr
     m = int(jax.eval_shape(f, dummy_input).size)
 
-    # env maps variable -> list of index sets (one per element)
-    # This is the key data structure for element-wise tracking
-    env: dict[Var, list[set[int]]] = {}
-
-    def get_var_size(v) -> int:
-        """Get the total number of elements in a variable."""
-        if isinstance(v, Literal):
-            val = v.val
-            if hasattr(val, "shape"):
-                return int(np.prod(val.shape)) if val.shape else 1
-            return 1
-        aval = v.aval
-        if hasattr(aval, "shape"):
-            shape = aval.shape
-            return int(np.prod(shape)) if shape else 1
-        return 1
-
-    def read(v) -> list[set[int]]:
-        """Get list of index sets for variable v (one per element)."""
-        if isinstance(v, Literal):
-            size = get_var_size(v)
-            return [set() for _ in range(size)]
-        return env.get(v, [set()])
-
-    def write(v, indices: list[set[int]]):
-        """Set index sets for variable v."""
-        env[v] = indices
-
     # Initialize: input element i depends on input index i
-    input_var = jaxpr.invars[0]
-    write(input_var, [{i} for i in range(n)])
+    input_indices = [[{i} for i in range(n)]]
 
-    # Process each equation in the jaxpr
-    for eqn in jaxpr.eqns:
-        match eqn.primitive.name:
-            case prim if prim in ZERO_DERIVATIVE_PRIMITIVES:
-                _propagate_zero_derivative(eqn, read, write, get_var_size)
-            case "slice":
-                _propagate_slice(eqn, read, write, get_var_size)
-            case "squeeze":
-                _propagate_squeeze(eqn, read, write, get_var_size)
-            case "broadcast_in_dim":
-                _propagate_broadcast_in_dim(eqn, read, write, get_var_size)
-            case "concatenate":
-                _propagate_concatenate(eqn, read, write, get_var_size)
-            case "reshape":
-                _propagate_reshape(eqn, read, write, get_var_size)
-            case "integer_pow":
-                _propagate_integer_pow(eqn, read, write, get_var_size)
-            case "add" | "sub" | "mul" | "div" | "pow" | "max" | "min":
-                _propagate_binary_elementwise(eqn, read, write, get_var_size)
-            case (
-                "neg"
-                | "exp"
-                | "log"
-                | "sin"
-                | "cos"
-                | "tan"
-                | "sqrt"
-                | "abs"
-                | "sinh"
-                | "cosh"
-                | "tanh"
-                | "log1p"
-                | "expm1"
-            ):
-                _propagate_unary_elementwise(eqn, read, write, get_var_size)
-            case "reduce_sum":
-                _propagate_reduce_sum(eqn, read, write, get_var_size)
-            case "convert_element_type":
-                _propagate_convert_element_type(eqn, read, write, get_var_size)
-            case _:
-                _propagate_default(eqn, read, write, get_var_size)
+    # Propagate through the jaxpr
+    output_indices_list = _propagate_jaxpr(jaxpr, input_indices)
 
-    # Extract output dependencies and build sparse matrix
-    output_var = jaxpr.outvars[0]
-    out_indices = read(output_var)
+    # Extract output dependencies (first output variable)
+    out_indices = output_indices_list[0] if output_indices_list else []
 
+    # Build sparse matrix
     rows = []
     cols = []
     for i, deps in enumerate(out_indices):
