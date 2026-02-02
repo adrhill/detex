@@ -17,8 +17,9 @@ jacobian_sparsity_jax.md  # Detailed explanation and theory
 ## Development
 
 ```bash
-# Install dependencies
+# Install dependencies and pre-commit hooks
 uv sync --group dev
+uv run pre-commit install
 
 # Run tests
 uv run pytest
