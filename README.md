@@ -12,8 +12,8 @@
 For a function $f: \mathbb{R}^n \to \mathbb{R}^m$, the Jacobian $J \in \mathbb{R}^{m \times n}$ is defined as $J_{ij} = \frac{\partial f_i}{\partial x_j}$.
 Computing the full Jacobian requires $n$ forward-mode AD passes or $m$ reverse-mode passes. But many Jacobians are *sparse*—most entries are structurally zero for all inputs.
 `detex` detects this sparsity pattern in a single forward pass by tracing the function into a jaxpr (JAX's IR) and propagating index sets through the graph. 
-This enables [automatic sparse differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/),
-i.e. using [sparsediffax](https://github.com/gdalle/sparsediffax).
+This enables [automatic sparse differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) 
+(e.g., using [`sparsediffax`](https://github.com/gdalle/sparsediffax)).
 
 ## Installation
 

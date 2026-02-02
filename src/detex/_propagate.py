@@ -180,6 +180,136 @@ def _propagate_convert_element_type(
     write(eqn.outvars[0], [s.copy() for s in in_indices])
 
 
+def _propagate_conv_general_dilated(
+    eqn: JaxprEqn, read: ReadFn, write: WriteFn, get_var_size: GetSizeFn
+) -> None:
+    """Convolution: each output depends on a spatial window of inputs.
+
+    For a 2D conv with kernel (kH, kW) and C_in input channels:
+    - Output at (n, h, w, c_out) depends on inputs at
+      (n, h*stride_h + kh, w*stride_w + kw, c_in) for all kh, kw, c_in
+    """
+    lhs_indices = read(eqn.invars[0])  # Input image dependencies
+    # rhs (kernel) is typically constant, so we ignore its dependencies
+
+    # Get shapes from avals
+    lhs_aval = eqn.invars[0].aval
+    rhs_aval = eqn.invars[1].aval
+    out_aval = eqn.outvars[0].aval
+    lhs_shape = tuple(getattr(lhs_aval, "shape", ()))
+    rhs_shape = tuple(getattr(rhs_aval, "shape", ()))
+    out_shape = tuple(getattr(out_aval, "shape", ()))
+
+    # Parse dimension numbers
+    dim_nums = eqn.params["dimension_numbers"]
+    lhs_spec = dim_nums.lhs_spec  # (batch, feature, spatial...)
+    out_spec = dim_nums.out_spec
+    rhs_spec = dim_nums.rhs_spec
+
+    # Extract dimension indices
+    lhs_batch_dim = lhs_spec[0]
+    lhs_feature_dim = lhs_spec[1]
+    lhs_spatial_dims = lhs_spec[2:]
+
+    out_batch_dim = out_spec[0]
+    out_spatial_dims = out_spec[2:]
+
+    rhs_spatial_dims = rhs_spec[2:]
+
+    # Get parameters
+    strides = eqn.params.get("window_strides", (1,) * len(lhs_spatial_dims))
+    lhs_dilation = eqn.params.get("lhs_dilation", (1,) * len(lhs_spatial_dims))
+    rhs_dilation = eqn.params.get("rhs_dilation", (1,) * len(lhs_spatial_dims))
+    padding = eqn.params.get("padding", ((0, 0),) * len(lhs_spatial_dims))
+
+    # Compute strides for flat indexing
+    def compute_strides(shape: tuple[int, ...]) -> tuple[int, ...]:
+        strides = []
+        stride = 1
+        for dim in reversed(shape):
+            strides.append(stride)
+            stride *= dim
+        return tuple(reversed(strides))
+
+    lhs_strides = compute_strides(lhs_shape)
+    out_strides = compute_strides(out_shape)
+
+    # Get spatial sizes
+    lhs_spatial_sizes = [lhs_shape[d] for d in lhs_spatial_dims]
+    kernel_spatial_sizes = [rhs_shape[d] for d in rhs_spatial_dims]
+
+    n_in_features = lhs_shape[lhs_feature_dim]
+    n_spatial = len(lhs_spatial_dims)
+
+    out_indices: IndexSets = []
+    out_size = _shape_size(out_shape)
+
+    for out_flat in range(out_size):
+        # Convert flat output index to coordinates
+        out_coords = []
+        remaining = out_flat
+        for s in out_strides:
+            out_coords.append(remaining // s)
+            remaining %= s
+
+        # Extract output coordinates by dimension type
+        batch_idx = out_coords[out_batch_dim]
+        out_spatial_coords = [out_coords[d] for d in out_spatial_dims]
+
+        # Collect dependencies from input
+        deps = IdxSet.empty()
+
+        # For each position in the kernel window
+        kernel_ranges = [range(k) for k in kernel_spatial_sizes]
+        from itertools import product
+
+        for kernel_offsets in product(*kernel_ranges):
+            # Compute input spatial coordinates
+            in_spatial_coords = []
+            valid = True
+            for i in range(n_spatial):
+                # Account for stride, dilation, and padding
+                in_coord = (
+                    out_spatial_coords[i] * strides[i]
+                    + kernel_offsets[i] * rhs_dilation[i]
+                    - padding[i][0]
+                )
+                # Check bounds (with lhs_dilation consideration)
+                if in_coord < 0 or in_coord >= lhs_spatial_sizes[i] * lhs_dilation[i]:
+                    valid = False
+                    break
+                # For lhs_dilation > 1, only original positions are valid
+                if lhs_dilation[i] > 1 and in_coord % lhs_dilation[i] != 0:
+                    valid = False
+                    break
+                in_spatial_coords.append(in_coord // lhs_dilation[i])
+
+            if not valid:
+                continue
+
+            # For each input feature channel
+            for in_feature_idx in range(n_in_features):
+                # Build input coordinates
+                in_coords = [0] * len(lhs_shape)
+                in_coords[lhs_batch_dim] = batch_idx
+                in_coords[lhs_feature_dim] = in_feature_idx
+                for i, d in enumerate(lhs_spatial_dims):
+                    in_coords[d] = in_spatial_coords[i]
+
+                # Convert to flat index
+                in_flat = sum(
+                    c * s for c, s in zip(in_coords, lhs_strides, strict=True)
+                )
+
+                # Union with dependencies from that input position
+                if in_flat < len(lhs_indices):
+                    deps |= lhs_indices[in_flat]
+
+        out_indices.append(deps)
+
+    write(eqn.outvars[0], out_indices)
+
+
 def _propagate_default(
     eqn: JaxprEqn, read: ReadFn, write: WriteFn, get_var_size: GetSizeFn
 ) -> None:
@@ -305,5 +435,7 @@ def _propagate_equation(eqn: JaxprEqn, read: ReadFn, write: WriteFn) -> None:
             _propagate_reduce_sum(eqn, read, write, _get_var_size)
         case "convert_element_type":
             _propagate_convert_element_type(eqn, read, write, _get_var_size)
+        case "conv_general_dilated":
+            _propagate_conv_general_dilated(eqn, read, write, _get_var_size)
         case _:
             _propagate_default(eqn, read, write, _get_var_size)

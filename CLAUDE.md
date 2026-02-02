@@ -1,6 +1,6 @@
 # detex - Sparsity Detection Exploration in JAX/Python
 
-This folder contains an exploration of Jacobian sparsity detection implemented in JAX, inspired by [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl).
+This folder contains an exploration of Jacobian sparsity detection implemented in JAX, inspired by [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl) (SCT).
 
 ## Overview
 

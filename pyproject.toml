@@ -36,6 +36,7 @@ Issues = "https://github.com/adrhill/detex/issues"
 
 [dependency-groups]
 dev = [
+    "flax>=0.10.0",
     "pre-commit>=4.0.0",
     "pytest>=8.0.0",
     "pytest-benchmark>=5.0.0",
