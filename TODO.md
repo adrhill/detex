@@ -6,7 +6,6 @@
 - [ ] Add more test cases (matrix operations, neural network layers)
 - [ ] Handle `dynamic_slice` primitive precisely
 - [ ] Handle `gather` and `scatter` with static indices
-- [ ] Add Hessian sparsity detection
 
 ## Primitive Coverage
 
@@ -26,7 +25,6 @@ Missing precise handlers for:
 
 ## Comparison with SCT
 
-- [ ] Benchmark against SparseConnectivityTracer.jl on same functions
 - [ ] Compare operator classification schemes
 
 ## Potential Extensions

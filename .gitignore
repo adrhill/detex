@@ -7,6 +7,9 @@ wheels/
 *.egg-info
 uv.lock
 .python-version
+.benchmarks
+.pytest_cache
+.ruff_cache
 
 # Virtual environments
 .venv

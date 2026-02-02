@@ -1,18 +1,44 @@
 [project]
 name = "detex"
 version = "0.1.0"
-description = "Add your description here"
+description = "Jacobian sparsity detection for JAX"
 readme = "README.md"
 requires-python = ">=3.12"
+license = "MIT"
+authors = [
+    { name = "Adrian Hill", email = "gh@adrianhill.de" },
+]
+keywords = [
+    "jax",
+    "automatic-differentiation",
+    "sparsity",
+    "jacobian",
+    "scientific-computing",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
 dependencies = [
     "jax>=0.9.0",
     "scipy>=1.14.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/adrhill/detex"
+Repository = "https://github.com/adrhill/detex"
+Issues = "https://github.com/adrhill/detex/issues"
+
 [dependency-groups]
 dev = [
     "pre-commit>=4.0.0",
     "pytest>=8.0.0",
+    "pytest-benchmark>=5.0.0",
     "ruff>=0.9.0",
     "ty>=0.0.1a6",
 ]

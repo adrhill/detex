@@ -25,13 +25,14 @@ uv run pre-commit install
 uv run pytest
 
 # Lint and format
-uv run ruff check .          # lint
 uv run ruff check --fix .    # lint + auto-fix
 uv run ruff format .         # format
 
 # Type check
 uv run ty check
 ```
+
+**Important**: Always run both `ruff` and `ty` after making changes.
 
 ## Key Concepts
 
