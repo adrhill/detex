@@ -5,12 +5,3 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
-
-  - repo: local
-    hooks:
-      - id: ty
-        name: ty
-        entry: uv run ty check
-        language: system
-        types: [python]
-        pass_filenames: false

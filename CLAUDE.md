@@ -33,6 +33,8 @@ uv run ruff format .         # format
 uv run ty check
 ```
 
+**Important**: Always run both `ruff` and `ty` after making changes.
+
 ## Key Concepts
 
 1. **Global vs Local Sparsity**: This implements global sparsity (valid for all inputs). Local sparsity would require tracking actual values through control flow.
