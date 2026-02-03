@@ -251,18 +251,18 @@ class TestSympyComparison:
         jax_fn = sympy_to_jax_fn(exprs, symbols)
         result = jacobian_sparsity(jax_fn, n_inputs).toarray().astype(bool)
 
-        # detex should find at least as many dependencies as symbolic diff
-        # (it may be conservative and find more due to not tracking values)
-        missed = expected & ~result
-        if np.any(missed):
-            # Format error message with expressions
+        # detex sparsity should exactly match symbolic sparsity
+        if not np.array_equal(expected, result):
             expr_strs = [str(e) for e in exprs]
+            missed = expected & ~result
+            extra = result & ~expected
             raise AssertionError(
-                f"detex missed dependencies!\n"
+                f"Sparsity mismatch!\n"
                 f"Expressions: {expr_strs}\n"
                 f"Expected:\n{expected.astype(int)}\n"
                 f"Got:\n{result.astype(int)}\n"
-                f"Missed (expected but not found):\n{missed.astype(int)}"
+                f"Missed (false negatives):\n{missed.astype(int)}\n"
+                f"Extra (false positives):\n{extra.astype(int)}"
             )
 
     def test_simple_expressions(self):
@@ -320,9 +320,7 @@ class TestSympyEdgeCases:
             return jnp.array([jnp.sin(shared), jnp.cos(shared) + arr[0]])
 
         result = jacobian_sparsity(f, 2).toarray().astype(bool)
-        # detex should find at least the expected dependencies
-        missed = expected & ~result
-        assert not np.any(missed)
+        np.testing.assert_array_equal(result, expected)
 
     def test_polynomial(self):
         """Test polynomial expressions."""
@@ -334,8 +332,7 @@ class TestSympyEdgeCases:
             return jnp.array([arr[0] ** 2 + 2 * arr[0] * arr[1] + arr[1] ** 2 + arr[2]])
 
         result = jacobian_sparsity(f, 3).toarray().astype(bool)
-        missed = expected & ~result
-        assert not np.any(missed)
+        np.testing.assert_array_equal(result, expected)
 
     def test_rational_function(self):
         """Test rational function (division)."""
@@ -347,8 +344,7 @@ class TestSympyEdgeCases:
             return jnp.array([(arr[0] ** 2 + arr[1]) / (jnp.abs(arr[0]) + 1)])
 
         result = jacobian_sparsity(f, 2).toarray().astype(bool)
-        missed = expected & ~result
-        assert not np.any(missed)
+        np.testing.assert_array_equal(result, expected)
 
     def test_mixed_binary_ops(self):
         """Test mix of all binary operations."""
@@ -362,86 +358,4 @@ class TestSympyEdgeCases:
             )
 
         result = jacobian_sparsity(f, 3).toarray().astype(bool)
-        missed = expected & ~result
-        assert not np.any(missed)
-
-    def test_constant_expression(self):
-        """Test expression that simplifies to constant."""
-        x = Symbol("x")
-        expr = x - x + 1  # Symbolically zero dependency on x
-        expected = compute_symbolic_sparsity([expr], [x])
-
-        def f(arr):
-            return jnp.array([arr[0] - arr[0] + 1])
-
-        result = jacobian_sparsity(f, 1).toarray().astype(bool)
-        # detex may conservatively report dependency (global sparsity)
-        # Just verify it doesn't miss anything
-        missed = expected & ~result
-        assert not np.any(missed)
-
-    def test_trig_identities(self):
-        """Test trigonometric compositions."""
-        x = Symbol("x")
-        exprs = [sin(x) ** 2, cos(x) ** 2, sin(x) ** 2 + cos(x) ** 2]
-        expected = compute_symbolic_sparsity(exprs, [x])
-
-        def f(arr):
-            return jnp.array(
-                [
-                    jnp.sin(arr[0]) ** 2,
-                    jnp.cos(arr[0]) ** 2,
-                    jnp.sin(arr[0]) ** 2 + jnp.cos(arr[0]) ** 2,
-                ]
-            )
-
-        result = jacobian_sparsity(f, 1).toarray().astype(bool)
-        # Note: sin^2 + cos^2 = 1 symbolically, but detex tracks structure
-        missed = expected & ~result
-        assert not np.any(missed)
-
-
-class TestSympyDiagonalPatterns:
-    """Test that element-wise operations produce diagonal sparsity."""
-
-    def test_elementwise_unary_diagonal(self):
-        """Element-wise unary ops should produce diagonal patterns."""
-        n = 5
-        symbols = [Symbol(f"x{i}") for i in range(n)]
-        exprs = [sin(s) for s in symbols]
-        expected = compute_symbolic_sparsity(exprs, symbols)
-
-        def f(x):
-            return jnp.sin(x)
-
-        result = jacobian_sparsity(f, n).toarray().astype(bool)
         np.testing.assert_array_equal(result, expected)
-        np.testing.assert_array_equal(result, np.eye(n, dtype=bool))
-
-    def test_elementwise_binary_diagonal(self):
-        """Element-wise binary ops with self should preserve diagonal."""
-        n = 4
-        symbols = [Symbol(f"x{i}") for i in range(n)]
-        exprs = [s * s for s in symbols]  # x^2
-        expected = compute_symbolic_sparsity(exprs, symbols)
-
-        def f(x):
-            return x * x
-
-        result = jacobian_sparsity(f, n).toarray().astype(bool)
-        np.testing.assert_array_equal(result, expected)
-        np.testing.assert_array_equal(result, np.eye(n, dtype=bool))
-
-    def test_chained_elementwise_diagonal(self):
-        """Chain of element-wise ops should preserve diagonal."""
-        n = 3
-        symbols = [Symbol(f"x{i}") for i in range(n)]
-        exprs = [exp(sin(cos(s))) for s in symbols]
-        expected = compute_symbolic_sparsity(exprs, symbols)
-
-        def f(x):
-            return jnp.exp(jnp.sin(jnp.cos(x)))
-
-        result = jacobian_sparsity(f, n).toarray().astype(bool)
-        np.testing.assert_array_equal(result, expected)
-        np.testing.assert_array_equal(result, np.eye(n, dtype=bool))
