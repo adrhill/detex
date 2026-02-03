@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770119699685,
+  "lastUpdate": 1770126511864,
   "repoUrl": "https://github.com/adrhill/detex",
   "entries": {
     "Benchmark": [
@@ -87,6 +87,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00002216304332103185",
             "extra": "mean: 676.492855029799 usec\nrounds: 338"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c02a100d759b4c8a1c6099bc09cc55ca74aa92ef",
+          "message": "Add SymPy-based randomized tests (#6)\n\n* Add SymPy-based randomized tests for Jacobian sparsity\n\nGenerate random mathematical expressions using SymPy primitives and\ncompare detex's sparsity detection against symbolic differentiation\nground truth. Tests verify detex doesn't miss any dependencies.\n\n- Add sympy dev dependency\n- Add SympyToJax converter using dictionary-based dispatch\n- Add TestSympyComparison with randomized expression tests\n- Add TestSympyEdgeCases for specific patterns (nested, polynomial, etc.)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Test for exact patterns\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-03T14:48:06+01:00",
+          "tree_id": "55fb75a7062fee1390510a04694e38f1c3c61cf3",
+          "url": "https://github.com/adrhill/detex/commit/c02a100d759b4c8a1c6099bc09cc55ca74aa92ef"
+        },
+        "date": 1770126511519,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n100",
+            "value": 1462.3523956205077,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005041444558289315",
+            "extra": "mean: 683.8297000058446 usec\nrounds: 10"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n500",
+            "value": 567.0589612816366,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0044292601948708625",
+            "extra": "mean: 1.763485048785497 msec\nrounds: 41"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n1000",
+            "value": 407.24900140915554,
+            "unit": "iter/sec",
+            "range": "stddev: 0.005480715921880039",
+            "extra": "mean: 2.455500189171289 msec\nrounds: 37"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n100",
+            "value": 1614.2324042045805,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002203174566286637",
+            "extra": "mean: 619.4894845347587 usec\nrounds: 582"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n500",
+            "value": 1026.298318097376,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012895637625450827",
+            "extra": "mean: 974.3755615364062 usec\nrounds: 520"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_matmul_n100",
+            "value": 134.45649018074488,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010622471106826242",
+            "extra": "mean: 7.437350169231229 msec\nrounds: 195"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mlp_layer",
+            "value": 105.00214557028332,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01198516860705706",
+            "extra": "mean: 9.523614918236587 msec\nrounds: 159"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_elementwise_chain",
+            "value": 445.7049475553997,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0068765923204995956",
+            "extra": "mean: 2.2436367500176857 msec\nrounds: 40"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mixed_ops",
+            "value": 1484.0313588207578,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000022095700115448225",
+            "extra": "mean: 673.8402083326735 usec\nrounds: 336"
           }
         ]
       }
