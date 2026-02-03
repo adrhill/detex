@@ -85,7 +85,8 @@ def _propagate_slice(eqn: JaxprEqn, env: Env) -> None:
     if len(start) == 1:
         env[eqn.outvars[0]] = in_indices[start[0] : limit[0]]
     else:
-        # Multi-dimensional: conservative fallback
+        # TODO: Implement precise multi-dimensional slice tracking.
+        # Conservative fallback: union all input dependencies.
         all_deps = _union_all(in_indices)
         env[eqn.outvars[0]] = [
             all_deps.copy() for _ in range(_get_size(eqn.outvars[0]))
@@ -104,7 +105,8 @@ def _propagate_broadcast_in_dim(eqn: JaxprEqn, env: Env) -> None:
     if len(in_indices) == 1:
         env[eqn.outvars[0]] = [in_indices[0].copy() for _ in range(out_size)]
     else:
-        # Array broadcast: conservative (could be smarter)
+        # TODO: Track which input elements map to which output elements.
+        # Conservative fallback: union all input dependencies.
         all_deps = _union_all(in_indices)
         env[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
 
@@ -124,7 +126,8 @@ def _propagate_reshape(eqn: JaxprEqn, env: Env) -> None:
     if len(in_indices) == out_size:
         env[eqn.outvars[0]] = in_indices
     else:
-        # Size mismatch: conservative
+        # TODO: Investigate when size mismatch occurs and handle precisely.
+        # Conservative fallback: union all input dependencies.
         all_deps = _union_all(in_indices)
         env[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
 
@@ -285,7 +288,11 @@ def _propagate_conv_general_dilated(eqn: JaxprEqn, env: Env) -> None:
 
 
 def _propagate_default(eqn: JaxprEqn, env: Env) -> None:
-    """Default fallback: union all input deps for all outputs."""
+    """Default conservative fallback for unhandled primitives.
+
+    TODO: Add precise handlers for common primitives that hit this fallback,
+    such as dot_general, gather, scatter, dynamic_slice, transpose, etc.
+    """
     all_inputs: IndexSets = []
     for invar in eqn.invars:
         all_inputs.extend(_get_idxs(env, invar))
