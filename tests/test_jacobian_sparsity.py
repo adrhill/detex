@@ -294,3 +294,62 @@ def test_binary_min_max():
     result = jacobian_sparsity(f, n=3).toarray().astype(int)
     expected = np.array([[1, 1, 0], [0, 1, 1]])
     np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Tests for edge cases and conservative fallbacks
+# =============================================================================
+
+
+def test_multidim_slice():
+    """Multi-dimensional slice triggers conservative fallback (union all deps)."""
+
+    def f(x):
+        # Reshape to 2D and slice in multiple dimensions
+        mat = x.reshape(3, 3)
+        sliced = mat[0:2, 0:2]  # 2D slice
+        return sliced.flatten()
+
+    result = jacobian_sparsity(f, n=9).toarray().astype(int)
+    # Conservative fallback: all outputs depend on all inputs
+    expected = np.ones((4, 9), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_array_broadcast():
+    """Broadcasting a non-scalar array triggers conservative fallback."""
+
+    def f(x):
+        # x is shape (3,), reshape to (3, 1) and broadcast to (3, 2)
+        col = x.reshape(3, 1)
+        broadcasted = jnp.broadcast_to(col, (3, 2))
+        return broadcasted.flatten()
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    # Conservative fallback: all outputs depend on all inputs
+    expected = np.ones((6, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_scalar_broadcast():
+    """Broadcasting a scalar preserves per-element structure."""
+
+    def f(x):
+        # Each element broadcast independently
+        return jnp.array([jnp.broadcast_to(x[0], (2,)).sum(), x[1] * 2])
+
+    result = jacobian_sparsity(f, n=2).toarray().astype(int)
+    expected = np.array([[1, 0], [0, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_zero_size_input():
+    """Zero-size input exercises empty union edge case."""
+
+    def f(x):
+        # Sum over empty array gives scalar 0 with no dependencies
+        return jnp.sum(x)
+
+    result = jacobian_sparsity(f, n=0)
+    assert result.shape == (1, 0)
+    assert result.nnz == 0
