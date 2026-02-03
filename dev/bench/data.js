@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770128356234,
+  "lastUpdate": 1770130944905,
   "repoUrl": "https://github.com/adrhill/detex",
   "entries": {
     "Benchmark": [
@@ -261,6 +261,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.000016962861398074534",
             "extra": "mean: 619.3614779007306 usec\nrounds: 362"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bfef6ac65826c05ba0865f316f72b2643e9e40e1",
+          "message": "Add edge case tests for sparsity detection (#8)\n\nAdd 18 new tests documenting conservative fallback behavior and one bug:\n- transpose, matmul, argmax, gather, stack, reverse, pad, tile, split,\n  scatter, iota/eye, reduce_max, sort, where_mask, reduce_along_axis\n- Bug: empty array concatenate causes index out-of-bounds error\n- roll and nested_slice_concat work precisely (no fallback needed)\n\nUpdate TODO.md with new primitive coverage items and test references.\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-03T15:51:06+01:00",
+          "tree_id": "fc5438f246cc7be4d67ef6fd7ab8694c90b611ca",
+          "url": "https://github.com/adrhill/detex/commit/bfef6ac65826c05ba0865f316f72b2643e9e40e1"
+        },
+        "date": 1770130943830,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n100",
+            "value": 1536.3371387379527,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004958445079084393",
+            "extra": "mean: 650.8988000000215 usec\nrounds: 10"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n500",
+            "value": 602.6687952128033,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004909851353180239",
+            "extra": "mean: 1.6592861749991528 msec\nrounds: 40"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n1000",
+            "value": 904.1320005348431,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002889549831159516",
+            "extra": "mean: 1.1060331891896822 msec\nrounds: 37"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n100",
+            "value": 1669.5059522413458,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000045144833579399625",
+            "extra": "mean: 598.9795955249393 usec\nrounds: 581"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n500",
+            "value": 1250.7586018433287,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009220179592936867",
+            "extra": "mean: 799.5147892856634 usec\nrounds: 560"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_matmul_n100",
+            "value": 239.0532684922411,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0074242391169871925",
+            "extra": "mean: 4.1831680708957 msec\nrounds: 268"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mlp_layer",
+            "value": 187.2420263439154,
+            "unit": "iter/sec",
+            "range": "stddev: 0.008856010814062612",
+            "extra": "mean: 5.34068136051496 msec\nrounds: 233"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_elementwise_chain",
+            "value": 1239.0740222820748,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000028043625561342584",
+            "extra": "mean: 807.0542857142963 usec\nrounds: 42"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mixed_ops",
+            "value": 1609.0334478925013,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001633380239054108",
+            "extra": "mean: 621.4911202186579 usec\nrounds: 366"
           }
         ]
       }
