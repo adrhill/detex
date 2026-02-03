@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770126511864,
+  "lastUpdate": 1770128356234,
   "repoUrl": "https://github.com/adrhill/detex",
   "entries": {
     "Benchmark": [
@@ -174,6 +174,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.000022095700115448225",
             "extra": "mean: 673.8402083326735 usec\nrounds: 336"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f0f3fca2fce80769bcc98b66a33b9dcd3cc35ef4",
+          "message": "Increase code coverage, update CI (#7)\n\n* Remove index set abstraction\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Increase code coverage\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Add TODOs\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Update workflows\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Only test on Ubuntu\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-03T15:18:17+01:00",
+          "tree_id": "b45e02f69ae9673f8cc4c3b45c8a0b1ef11cdcf6",
+          "url": "https://github.com/adrhill/detex/commit/f0f3fca2fce80769bcc98b66a33b9dcd3cc35ef4"
+        },
+        "date": 1770128355266,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n100",
+            "value": 1537.8648469013847,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000051975740706799664",
+            "extra": "mean: 650.2521999998123 usec\nrounds: 10"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n500",
+            "value": 606.6322497227576,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0050500295740285184",
+            "extra": "mean: 1.6484451666673159 msec\nrounds: 42"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n1000",
+            "value": 917.6842537313044,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000019268614970056113",
+            "extra": "mean: 1.0896994210525024 msec\nrounds: 38"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n100",
+            "value": 1676.344485118207,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000024975786507968366",
+            "extra": "mean: 596.5360991595264 usec\nrounds: 595"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n500",
+            "value": 1296.684871317438,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005895894304937807",
+            "extra": "mean: 771.1973989362544 usec\nrounds: 564"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_matmul_n100",
+            "value": 243.65972628953114,
+            "unit": "iter/sec",
+            "range": "stddev: 0.006932237806888015",
+            "extra": "mean: 4.104084065216998 msec\nrounds: 276"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mlp_layer",
+            "value": 197.84410877455878,
+            "unit": "iter/sec",
+            "range": "stddev: 0.007662972382939562",
+            "extra": "mean: 5.05448459493676 msec\nrounds: 237"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_elementwise_chain",
+            "value": 1255.6461199664284,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003106920558504024",
+            "extra": "mean: 796.4027317081476 usec\nrounds: 41"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mixed_ops",
+            "value": 1614.5660259488675,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000016962861398074534",
+            "extra": "mean: 619.3614779007306 usec\nrounds: 362"
           }
         ]
       }
