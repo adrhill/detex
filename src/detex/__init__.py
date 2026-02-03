@@ -9,7 +9,6 @@ import jax
 import jax.numpy as jnp
 from scipy.sparse import coo_matrix
 
-from detex._indexset import IdxSet
 from detex._propagate import _propagate_jaxpr
 
 
@@ -39,7 +38,7 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
     m = int(jax.eval_shape(f, dummy_input).size)
 
     # Initialize: input element i depends on input index i
-    input_indices = [[IdxSet.single(i) for i in range(n)]]
+    input_indices = [[{i} for i in range(n)]]
 
     # Propagate through the jaxpr
     output_indices_list = _propagate_jaxpr(jaxpr, input_indices)

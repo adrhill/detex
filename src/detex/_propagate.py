@@ -14,11 +14,20 @@ from itertools import product
 
 from jax._src.core import Jaxpr, JaxprEqn, Literal, Var
 
-from detex._indexset import IdxSet
-
 # Type aliases
-IndexSets = list[IdxSet]
+IndexSets = list[set[int]]
 Env = dict[Var, IndexSets]  # Maps each variable to its per-element dependency sets
+
+
+def _union_all(sets: Sequence[set[int]]) -> set[int]:
+    """Union all sets together, returning a new set."""
+    if not sets:
+        return set()
+    result: set[int] = set()
+    for s in sets:
+        result |= s
+    return result
+
 
 # Primitives with zero derivatives (output doesn't depend on input)
 ZERO_DERIVATIVE_PRIMITIVES = frozenset(
@@ -58,14 +67,14 @@ def _get_size(atom: Var | Literal) -> int:
 def _get_idxs(env: Env, atom: Var | Literal) -> IndexSets:
     """Get the index sets for a variable or literal."""
     if isinstance(atom, Literal):
-        return [IdxSet.empty() for _ in range(_get_size(atom))]
-    return env.get(atom, [IdxSet.empty()])
+        return [set() for _ in range(_get_size(atom))]
+    return env.get(atom, [set()])
 
 
 def _propagate_zero_derivative(eqn: JaxprEqn, env: Env) -> None:
     """Zero-derivative ops: output has no dependence on inputs."""
     for outvar in eqn.outvars:
-        env[outvar] = [IdxSet.empty() for _ in range(_get_size(outvar))]
+        env[outvar] = [set() for _ in range(_get_size(outvar))]
 
 
 def _propagate_slice(eqn: JaxprEqn, env: Env) -> None:
@@ -77,7 +86,7 @@ def _propagate_slice(eqn: JaxprEqn, env: Env) -> None:
         env[eqn.outvars[0]] = in_indices[start[0] : limit[0]]
     else:
         # Multi-dimensional: conservative fallback
-        all_deps = IdxSet.union_all(in_indices)
+        all_deps = _union_all(in_indices)
         env[eqn.outvars[0]] = [
             all_deps.copy() for _ in range(_get_size(eqn.outvars[0]))
         ]
@@ -96,7 +105,7 @@ def _propagate_broadcast_in_dim(eqn: JaxprEqn, env: Env) -> None:
         env[eqn.outvars[0]] = [in_indices[0].copy() for _ in range(out_size)]
     else:
         # Array broadcast: conservative (could be smarter)
-        all_deps = IdxSet.union_all(in_indices)
+        all_deps = _union_all(in_indices)
         env[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
 
 
@@ -116,7 +125,7 @@ def _propagate_reshape(eqn: JaxprEqn, env: Env) -> None:
         env[eqn.outvars[0]] = in_indices
     else:
         # Size mismatch: conservative
-        all_deps = IdxSet.union_all(in_indices)
+        all_deps = _union_all(in_indices)
         env[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
 
 
@@ -124,7 +133,7 @@ def _propagate_integer_pow(eqn: JaxprEqn, env: Env) -> None:
     """x^n: element-wise, preserves structure (unless n=0)."""
     in_indices = _get_idxs(env, eqn.invars[0])
     if eqn.params.get("y", 1) == 0:
-        env[eqn.outvars[0]] = [IdxSet.empty() for _ in range(len(in_indices))]
+        env[eqn.outvars[0]] = [set() for _ in range(len(in_indices))]
     else:
         env[eqn.outvars[0]] = [s.copy() for s in in_indices]
 
@@ -146,7 +155,7 @@ def _propagate_binary_elementwise(eqn: JaxprEqn, env: Env) -> None:
             to_merge.append(in2[0])
         elif i < len(in2):
             to_merge.append(in2[i])
-        out_indices.append(IdxSet.union_all(to_merge))
+        out_indices.append(_union_all(to_merge))
     env[eqn.outvars[0]] = out_indices
 
 
@@ -157,7 +166,7 @@ def _propagate_unary_elementwise(eqn: JaxprEqn, env: Env) -> None:
 
 def _propagate_reduce_sum(eqn: JaxprEqn, env: Env) -> None:
     """Reduction: output depends on all input elements."""
-    env[eqn.outvars[0]] = [IdxSet.union_all(_get_idxs(env, eqn.invars[0]))]
+    env[eqn.outvars[0]] = [_union_all(_get_idxs(env, eqn.invars[0]))]
 
 
 def _propagate_convert_element_type(eqn: JaxprEqn, env: Env) -> None:
@@ -232,7 +241,7 @@ def _propagate_conv_general_dilated(eqn: JaxprEqn, env: Env) -> None:
         out_spatial_coords = [out_coords[d] for d in out_spatial_dims]
 
         # Collect dependencies from input
-        deps = IdxSet.empty()
+        deps = set()
 
         # For each position in the kernel window
         for kernel_offsets in product(*[range(k) for k in kernel_spatial_sizes]):
@@ -280,7 +289,7 @@ def _propagate_default(eqn: JaxprEqn, env: Env) -> None:
     all_inputs: IndexSets = []
     for invar in eqn.invars:
         all_inputs.extend(_get_idxs(env, invar))
-    all_deps = IdxSet.union_all(all_inputs)
+    all_deps = _union_all(all_inputs)
     for outvar in eqn.outvars:
         env[outvar] = [all_deps.copy() for _ in range(_get_size(outvar))]
 
