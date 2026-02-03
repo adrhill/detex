@@ -1,6 +1,8 @@
 # detex
 
 [![CI](https://github.com/adrhill/detex/actions/workflows/ci.yml/badge.svg)](https://github.com/adrhill/detex/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/adrhill/detex/graph/badge.svg)](https://codecov.io/gh/adrhill/detex)
+[![Benchmarks](https://img.shields.io/badge/benchmarks-view-blue)](https://adrianhill.de/detex/dev/bench/)
 
 `detex` detects Jacobian sparsity patterns in JAX.
 
