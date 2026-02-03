@@ -363,3 +363,315 @@ def test_zero_size_input():
     result = jacobian_sparsity(f, n=0)
     assert result.shape == (1, 0)
     assert result.nnz == 0
+
+
+# =============================================================================
+# Tests for edge cases that trigger conservative fallback
+# These document current behavior and expected precise behavior
+# =============================================================================
+
+
+def test_transpose_2d():
+    """Transpose should preserve per-element dependencies with reordering.
+
+    TODO(transpose): Implement precise handler for transpose primitive.
+    Currently triggers conservative fallback (all outputs depend on all inputs).
+    Precise: output[i,j] depends only on input[j,i] (permutation matrix).
+    """
+
+    def f(x):
+        mat = x.reshape(2, 3)
+        return mat.T.flatten()  # (3, 2) -> 6 elements
+
+    result = jacobian_sparsity(f, n=6).toarray().astype(int)
+    # TODO: Should be permutation matrix, not dense
+    expected = np.ones((6, 6), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_matmul():
+    """Matrix multiplication (dot_general) triggers conservative fallback.
+
+    TODO(dot_general): Implement precise handler for dot_general primitive.
+    Precise: output[i,j] depends on row i of first input and column j of second.
+    For f(x) = x @ x.T, output[i,j] depends on rows i and j of input.
+    """
+
+    def f(x):
+        mat = x.reshape(2, 2)
+        return (mat @ mat.T).flatten()
+
+    result = jacobian_sparsity(f, n=4).toarray().astype(int)
+    # TODO: Should track row/column dependencies, not be fully dense
+    expected = np.ones((4, 4), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_argmax():
+    """argmax has zero derivative (returns integer index, not differentiable).
+
+    TODO(argmax): Add argmax/argmin to ZERO_DERIVATIVE_PRIMITIVES.
+    Currently triggers conservative fallback.
+    Precise: argmax output has zero dependency (non-differentiable).
+    """
+
+    def f(x):
+        # argmax returns int, multiply by x[0] to get float output
+        idx = jnp.argmax(x)
+        return x[0] * idx.astype(float)
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    # TODO: Should be [[1, 0, 0]] - only x[0] contributes (argmax has zero derivative)
+    expected = np.array([[1, 1, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_gather_fancy_indexing():
+    """Fancy indexing (gather) triggers conservative fallback.
+
+    TODO(gather): Implement precise handler for gather with static indices.
+    Precise: each output element depends on the corresponding indexed input.
+    """
+
+    def f(x):
+        indices = jnp.array([2, 0, 1])
+        return x[indices]
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    # TODO: Should be permutation [[0,0,1], [1,0,0], [0,1,0]]
+    expected = np.ones((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_stack():
+    """jnp.stack preserves block structure but not per-element structure.
+
+    TODO(stack): Track per-element dependencies through concatenate after reshape.
+    Each output depends on the corresponding stacked array (block-wise).
+    Precise: would be identity (each output = one input).
+    """
+
+    def f(x):
+        a, b = x[:2], x[2:]
+        return jnp.stack([a, b]).flatten()
+
+    result = jacobian_sparsity(f, n=4).toarray().astype(int)
+    # TODO: Should be identity matrix, not block-diagonal
+    # Block-wise: outputs 0-1 depend on inputs 0-1, outputs 2-3 on inputs 2-3
+    expected = np.array(
+        [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]], dtype=int
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_reverse():
+    """jnp.flip triggers conservative fallback.
+
+    TODO(rev): Implement precise handler for rev (reverse) primitive.
+    Precise: output[i] depends on input[n-1-i] (anti-diagonal permutation).
+    """
+
+    def f(x):
+        return jnp.flip(x)
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    # TODO: Should be anti-diagonal [[0,0,1], [0,1,0], [1,0,0]]
+    expected = np.ones((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_roll():
+    """jnp.roll correctly tracks the cyclic permutation.
+
+    output[i] depends on input[(i-shift) % n].
+    """
+
+    def f(x):
+        return jnp.roll(x, shift=1)
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    # Precise: cyclic permutation matrix
+    # output[0] <- input[2], output[1] <- input[0], output[2] <- input[1]
+    expected = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]], dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_pad():
+    """jnp.pad triggers conservative fallback.
+
+    TODO(pad): Implement precise handler for pad primitive.
+    Precise: padded elements have no dependency, original elements preserve structure.
+    """
+
+    def f(x):
+        return jnp.pad(x, (1, 1), constant_values=0)
+
+    result = jacobian_sparsity(f, n=2).toarray().astype(int)
+    # TODO: Should be [[0,0], [1,0], [0,1], [0,0]] (pad values have no deps)
+    expected = np.ones((4, 2), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_tile():
+    """jnp.tile triggers conservative fallback.
+
+    TODO(tile): Implement precise handler for broadcast_in_dim used by tile.
+    Precise: each output element depends on corresponding input (mod input size).
+    """
+
+    def f(x):
+        return jnp.tile(x, 2)
+
+    result = jacobian_sparsity(f, n=2).toarray().astype(int)
+    # TODO: Should be [[1,0], [0,1], [1,0], [0,1]]
+    expected = np.ones((4, 2), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_split():
+    """jnp.split triggers conservative fallback.
+
+    TODO(dynamic_slice): split uses dynamic_slice which needs precise handler.
+    Precise: each output element depends only on corresponding input.
+    """
+
+    def f(x):
+        parts = jnp.split(x, 2)
+        return jnp.concatenate([parts[1], parts[0]])  # swap halves
+
+    result = jacobian_sparsity(f, n=4).toarray().astype(int)
+    # TODO: Should be permutation [[0,0,1,0], [0,0,0,1], [1,0,0,0], [0,1,0,0]]
+    expected = np.ones((4, 4), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_scatter_at_set():
+    """In-place update with .at[].set() is partially precise.
+
+    TODO(scatter): Implement precise handler for scatter primitive.
+    Currently: all outputs depend on x[0] (the value being set).
+    Precise: only output[1] should depend on x[0].
+    """
+
+    def f(x):
+        arr = jnp.zeros(3)
+        return arr.at[1].set(x[0])
+
+    result = jacobian_sparsity(f, n=2).toarray().astype(int)
+    # TODO: Should be [[0,0], [1,0], [0,0]] (only index 1 depends on x[0])
+    expected = np.array([[1, 0], [1, 0], [1, 0]], dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_iota_eye():
+    """jnp.eye uses iota internally, triggers conservative fallback.
+
+    TODO(iota): Add iota to ZERO_DERIVATIVE_PRIMITIVES (constant output).
+    TODO(dot_general): Also needs dot_general handler for eye @ x.
+    Precise: eye matrix has no input dependency (constant), so eye @ x = x.
+    """
+
+    def f(x):
+        # Multiply x by identity - should preserve diagonal structure
+        return jnp.eye(3) @ x
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    # TODO: Should be identity matrix (eye @ x = x)
+    expected = np.ones((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_reduce_max():
+    """jnp.max (reduce_max) has correct global sparsity (all inputs matter).
+
+    Unlike reduce_sum which has a handler, reduce_max falls to default.
+    Both should produce the same result: output depends on all inputs.
+    """
+
+    def f(x):
+        return jnp.array([jnp.max(x)])
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    # All inputs can affect the max (global sparsity)
+    expected = np.array([[1, 1, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_sort():
+    """jnp.sort triggers conservative fallback.
+
+    Precise: all outputs depend on all inputs (sorting is a global operation).
+    """
+
+    def f(x):
+        return jnp.sort(x)
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    # Conservative fallback is actually correct here
+    expected = np.ones((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_where_mask():
+    """jnp.where with mask triggers conservative fallback.
+
+    Precise: each output depends on mask condition + both branches.
+    """
+
+    def f(x):
+        mask = x > 0
+        return jnp.where(mask, x, -x)
+
+    result = jacobian_sparsity(f, n=3).toarray().astype(int)
+    # Global sparsity: each output could depend on corresponding input
+    # (mask has zero derivative, both branches are element-wise from x)
+    # Conservative: may be dense depending on how where is traced
+    assert result.shape == (3, 3)
+
+
+def test_empty_concatenate():
+    """Concatenating with empty arrays causes index out-of-bounds error.
+
+    TODO(bug): Fix empty array handling in concatenate/reshape.
+    BUG: Empty arrays in concatenate produce invalid COO indices.
+    The reshape after concatenate produces incorrect flat indices.
+    """
+    import pytest
+
+    def f(x):
+        empty = jnp.array([])
+        return jnp.concatenate([empty, x, empty])
+
+    # TODO: Should work and produce identity matrix
+    with pytest.raises(ValueError, match="index .* exceeds matrix dimension"):
+        jacobian_sparsity(f, n=2)
+
+
+def test_nested_slice_concat():
+    """Multiple 1D slices followed by concatenate should preserve structure."""
+
+    def f(x):
+        a = x[:2]
+        b = x[2:]
+        return jnp.concatenate([b, a])  # [x2, x3, x0, x1]
+
+    result = jacobian_sparsity(f, n=4).toarray().astype(int)
+    # Permutation: swap first 2 and last 2
+    expected = np.array(
+        [[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=int
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_reduce_along_axis():
+    """Reduction along one axis should track per-slice dependencies."""
+
+    def f(x):
+        mat = x.reshape(2, 3)
+        return jnp.sum(mat, axis=1)  # Sum each row
+
+    result = jacobian_sparsity(f, n=6).toarray().astype(int)
+    # Conservative fallback for axis reduction
+    # Precise: output[0] depends on x[0:3], output[1] on x[3:6]
+    # Current implementation may or may not handle axis parameter
+    assert result.shape == (2, 6)
