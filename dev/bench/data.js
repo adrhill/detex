@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770130944905,
+  "lastUpdate": 1770245002546,
   "repoUrl": "https://github.com/adrhill/detex",
   "entries": {
     "Benchmark": [
@@ -348,6 +348,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00001633380239054108",
             "extra": "mean: 621.4911202186579 usec\nrounds: 366"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cd763819109ea01fb6ff6a34689b0f7797af1dd4",
+          "message": "Improve `vmap` support (#9)\n\n* Add precise multi-dimensional index tracking for vmap support\n\nVmapped functions now correctly produce block-diagonal Jacobian sparsity\npatterns instead of falling back to dense (conservative) patterns.\n\nChanges to primitive handlers in _propagate.py:\n- Add _compute_strides helper for flat↔coordinate conversion\n- _propagate_slice: handle multi-dimensional slices precisely\n- _propagate_broadcast_in_dim: handle size-1 dimension broadcasting\n- _propagate_concatenate: handle concatenation along inner dimensions\n- _propagate_reduce_sum: support partial reduction with axes parameter\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Split test_jacobian_sparsity.py into focused test modules\n\n- test_jacobian_sparsity.py: Core API + element-wise operations\n- test_array_ops.py: Array manipulation (slice, concat, broadcast, etc.)\n- test_control_flow.py: Conditionals (where, select)\n- test_reductions.py: Reduction operations\n- test_vmap.py: Batched/vmapped operations\n\nAdd pytest markers (elementwise, array_ops, control_flow, reduction, vmap,\nfallback, bug) for selective test runs. Add tests/CLAUDE.md documenting\nthe test structure and conventions.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Raise informative error for missing jaxpr parameter\n\nReplace silent fallback with a ValueError that includes the primitive\nname and links to the issue tracker. This achieves 100% test coverage.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Raise error for unknown primitives instead of silent fallback\n\n- Rename _propagate_default to _propagate_conservative_fallback\n- Add _propagate_throw_error for unknown primitives\n- Explicitly list primitives that use conservative fallback with TODO\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-04T23:42:59+01:00",
+          "tree_id": "f2da0ccfb011af0abeb5522504a9c5896220b0d9",
+          "url": "https://github.com/adrhill/detex/commit/cd763819109ea01fb6ff6a34689b0f7797af1dd4"
+        },
+        "date": 1770245002133,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n100",
+            "value": 1575.3047663364048,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000047490307958336215",
+            "extra": "mean: 634.7978000000865 usec\nrounds: 10"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n500",
+            "value": 688.4146018245003,
+            "unit": "iter/sec",
+            "range": "stddev: 0.003942147431087655",
+            "extra": "mean: 1.4526129999998652 msec\nrounds: 43"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n1000",
+            "value": 933.1704826417675,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002169609146217004",
+            "extra": "mean: 1.0716155500000824 msec\nrounds: 40"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n100",
+            "value": 1718.0396519622934,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000019814019198566518",
+            "extra": "mean: 582.0587428572036 usec\nrounds: 630"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n500",
+            "value": 1352.3726741416901,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000017066064393151597",
+            "extra": "mean: 739.4411460100446 usec\nrounds: 589"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_matmul_n100",
+            "value": 279.2694816448513,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004917649239072918",
+            "extra": "mean: 3.5807707813620184 msec\nrounds: 279"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mlp_layer",
+            "value": 238.32036429459976,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004618820795154789",
+            "extra": "mean: 4.196032525209847 msec\nrounds: 238"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_elementwise_chain",
+            "value": 1269.443913747097,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000021071632379682943",
+            "extra": "mean: 787.7464999995451 usec\nrounds: 44"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mixed_ops",
+            "value": 1438.522117324531,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000016027268864223224",
+            "extra": "mean: 695.1578901406629 usec\nrounds: 355"
           }
         ]
       }
