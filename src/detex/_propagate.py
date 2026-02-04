@@ -441,18 +441,23 @@ def _propagate_conv_general_dilated(eqn: JaxprEqn, env: Env) -> None:
     env[eqn.outvars[0]] = out_indices
 
 
-def _propagate_default(eqn: JaxprEqn, env: Env) -> None:
-    """Default conservative fallback for unhandled primitives.
-
-    TODO: Add precise handlers for common primitives that hit this fallback,
-    such as dot_general, gather, scatter, dynamic_slice, transpose, etc.
-    """
+def _propagate_conservative_fallback(eqn: JaxprEqn, env: Env) -> None:
+    """Conservative fallback: each output element depends on all inputs."""
     all_inputs: IndexSets = []
     for invar in eqn.invars:
         all_inputs.extend(_get_idxs(env, invar))
     all_deps = _union_all(all_inputs)
     for outvar in eqn.outvars:
         env[outvar] = [all_deps.copy() for _ in range(_get_size(outvar))]
+
+
+def _propagate_throw_error(eqn: JaxprEqn, env: Env) -> None:
+    """Raise an error for unhandled primitives."""
+    msg = (
+        f"No handler for primitive '{eqn.primitive.name}'. "
+        "Please report this at https://github.com/adrhill/detex/issues"
+    )
+    raise NotImplementedError(msg)
 
 
 def _propagate_nested_jaxpr(eqn: JaxprEqn, env: Env) -> None:
@@ -519,8 +524,27 @@ def _propagate_equation(eqn: JaxprEqn, env: Env) -> None:
             _propagate_convert_element_type(eqn, env)
         case "conv_general_dilated":
             _propagate_conv_general_dilated(eqn, env)
+        # TODO: implement precise handlers for these primitives.
+        # Currently uses conservative fallback (all outputs depend on all inputs).
+        case (
+            "argmax"
+            | "dot_general"
+            | "gather"
+            | "iota"
+            | "pad"
+            | "reduce_max"
+            | "reduce_prod"
+            | "rev"
+            | "scatter"
+            | "select_n"
+            | "sort"
+            | "split"
+            | "tile"
+            | "transpose"
+        ):
+            _propagate_conservative_fallback(eqn, env)
         case _:
-            _propagate_default(eqn, env)
+            _propagate_throw_error(eqn, env)
 
 
 def _propagate_jaxpr(jaxpr: Jaxpr, input_indices: list[IndexSets]) -> list[IndexSets]:
