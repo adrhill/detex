@@ -1,3 +1,4 @@
+import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -302,30 +303,32 @@ def test_binary_min_max():
 
 
 def test_multidim_slice():
-    """Multi-dimensional slice triggers conservative fallback (union all deps).
+    """Multi-dimensional slice tracks per-element dependencies precisely.
 
-    TODO: Implement precise multi-dimensional slice tracking. The correct sparsity
-    would show each output element depending only on its corresponding input element.
+    Each output element depends on exactly one input element.
     """
 
     def f(x):
         # Reshape to 2D and slice in multiple dimensions
         mat = x.reshape(3, 3)
-        sliced = mat[0:2, 0:2]  # 2D slice
+        sliced = mat[0:2, 0:2]  # 2D slice extracts 2x2 submatrix
         return sliced.flatten()
 
     result = jacobian_sparsity(f, n=9).toarray().astype(int)
-    # Conservative fallback: all outputs depend on all inputs
-    # Precise: would be sparse, each output depends on one input
-    expected = np.ones((4, 9), dtype=int)
+    # Input (3x3): indices 0-8 in row-major order
+    # Slice [0:2, 0:2] extracts: [0,0]=0, [0,1]=1, [1,0]=3, [1,1]=4
+    expected = np.zeros((4, 9), dtype=int)
+    expected[0, 0] = 1  # out[0] <- in[0]
+    expected[1, 1] = 1  # out[1] <- in[1]
+    expected[2, 3] = 1  # out[2] <- in[3]
+    expected[3, 4] = 1  # out[3] <- in[4]
     np.testing.assert_array_equal(result, expected)
 
 
 def test_array_broadcast():
-    """Broadcasting a non-scalar array triggers conservative fallback.
+    """Broadcasting a non-scalar array tracks per-element dependencies precisely.
 
-    TODO: Implement precise multi-dimensional broadcast tracking. The correct
-    sparsity would track which input elements map to which output elements.
+    Each output element depends on the input element it was replicated from.
     """
 
     def f(x):
@@ -335,9 +338,19 @@ def test_array_broadcast():
         return broadcasted.flatten()
 
     result = jacobian_sparsity(f, n=3).toarray().astype(int)
-    # Conservative fallback: all outputs depend on all inputs
-    # Precise: outputs 0,1 depend on input 0; outputs 2,3 on input 1; etc.
-    expected = np.ones((6, 3), dtype=int)
+    # Output (3x2) flattened: [0,0], [0,1], [1,0], [1,1], [2,0], [2,1]
+    # Each row comes from one input: out[0,1] <- in[0], out[2,3] <- in[1], etc.
+    expected = np.array(
+        [
+            [1, 0, 0],  # out[0] <- in[0]
+            [1, 0, 0],  # out[1] <- in[0]
+            [0, 1, 0],  # out[2] <- in[1]
+            [0, 1, 0],  # out[3] <- in[1]
+            [0, 0, 1],  # out[4] <- in[2]
+            [0, 0, 1],  # out[5] <- in[2]
+        ],
+        dtype=int,
+    )
     np.testing.assert_array_equal(result, expected)
 
 
@@ -444,23 +457,15 @@ def test_gather_fancy_indexing():
 
 
 def test_stack():
-    """jnp.stack preserves block structure but not per-element structure.
-
-    TODO(stack): Track per-element dependencies through concatenate after reshape.
-    Each output depends on the corresponding stacked array (block-wise).
-    Precise: would be identity (each output = one input).
-    """
+    """jnp.stack tracks per-element dependencies precisely."""
 
     def f(x):
         a, b = x[:2], x[2:]
         return jnp.stack([a, b]).flatten()
 
     result = jacobian_sparsity(f, n=4).toarray().astype(int)
-    # TODO: Should be identity matrix, not block-diagonal
-    # Block-wise: outputs 0-1 depend on inputs 0-1, outputs 2-3 on inputs 2-3
-    expected = np.array(
-        [[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]], dtype=int
-    )
+    # Each output depends on exactly one input (identity)
+    expected = np.eye(4, dtype=int)
     np.testing.assert_array_equal(result, expected)
 
 
@@ -664,14 +669,83 @@ def test_nested_slice_concat():
 
 
 def test_reduce_along_axis():
-    """Reduction along one axis should track per-slice dependencies."""
+    """Reduction along one axis tracks per-row dependencies precisely."""
 
     def f(x):
         mat = x.reshape(2, 3)
         return jnp.sum(mat, axis=1)  # Sum each row
 
     result = jacobian_sparsity(f, n=6).toarray().astype(int)
-    # Conservative fallback for axis reduction
-    # Precise: output[0] depends on x[0:3], output[1] on x[3:6]
-    # Current implementation may or may not handle axis parameter
-    assert result.shape == (2, 6)
+    # out[0] = sum of row 0 = x[0]+x[1]+x[2], depends on inputs 0,1,2
+    # out[1] = sum of row 1 = x[3]+x[4]+x[5], depends on inputs 3,4,5
+    expected = np.array(
+        [
+            [1, 1, 1, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Tests for vmap sparsity (block-diagonal patterns)
+# =============================================================================
+
+
+def test_vmap_elementwise():
+    """Vmapped element-wise operations produce diagonal sparsity."""
+
+    def f(x):
+        return jax.vmap(lambda xi: xi**2)(x.reshape(3, 2)).flatten()
+
+    result = jacobian_sparsity(f, n=6).toarray().astype(int)
+    # Element-wise squaring: each output depends on exactly one input
+    expected = np.eye(6, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_vmap_block_diagonal():
+    """Vmapped functions with internal dependencies produce block-diagonal sparsity."""
+
+    def g(x):
+        return jnp.array([x[0] + x[1], x[0] * x[1]])
+
+    def f(x):
+        return jax.vmap(g)(x.reshape(2, 2)).flatten()
+
+    result = jacobian_sparsity(f, n=4).toarray().astype(int)
+    # Two 2x2 dense blocks on the diagonal
+    expected = np.array(
+        [
+            [1, 1, 0, 0],
+            [1, 1, 0, 0],
+            [0, 0, 1, 1],
+            [0, 0, 1, 1],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+def test_vmap_larger_batch():
+    """Vmapped reduction produces block-diagonal with dense rows."""
+
+    def g(x):
+        return jnp.array([jnp.sum(x)])
+
+    def f(x):
+        return jax.vmap(g)(x.reshape(4, 3)).flatten()
+
+    result = jacobian_sparsity(f, n=12).toarray().astype(int)
+    # Each output depends on 3 consecutive inputs (one batch)
+    expected = np.array(
+        [
+            [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)

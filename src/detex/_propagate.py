@@ -55,6 +55,24 @@ def _shape_size(shape: Sequence[int]) -> int:
     return math.prod(shape) if shape else 1
 
 
+def _compute_strides(shape: Sequence[int]) -> tuple[int, ...]:
+    """Compute row-major strides for multi-dimensional index tracking.
+
+    Used to convert between flat indices and coordinates when propagating
+    dependencies through slice and broadcast_in_dim. Each stride tells how
+    many flat elements to skip when incrementing one coordinate position.
+
+    For shape (2, 3, 4): strides = (12, 4, 1) since moving one step in dim 0
+    skips 3*4=12 elements, dim 1 skips 4 elements, and dim 2 skips 1 element.
+    """
+    result: list[int] = []
+    stride = 1
+    for dim in reversed(shape):
+        result.append(stride)
+        stride *= dim
+    return tuple(reversed(result))
+
+
 def _get_size(atom: Var | Literal) -> int:
     """Get the total number of elements in a variable or literal."""
     if isinstance(atom, Literal):
@@ -78,19 +96,43 @@ def _propagate_zero_derivative(eqn: JaxprEqn, env: Env) -> None:
 
 
 def _propagate_slice(eqn: JaxprEqn, env: Env) -> None:
-    """Slice extracts elements [start:limit] - preserve element structure."""
+    """Propagate dependencies through the slice primitive.
+
+    Slice extracts arr[start:limit:stride] along each dimension. Each output
+    element depends on exactly one input element, so we compute the flat index
+    mapping: output[i,j,...] <- input[start + i*stride, start + j*stride, ...].
+    """
     in_indices = _get_idxs(env, eqn.invars[0])
     start = eqn.params["start_indices"]
     limit = eqn.params["limit_indices"]
-    if len(start) == 1:
-        env[eqn.outvars[0]] = in_indices[start[0] : limit[0]]
-    else:
-        # TODO: Implement precise multi-dimensional slice tracking.
-        # Conservative fallback: union all input dependencies.
-        all_deps = _union_all(in_indices)
-        env[eqn.outvars[0]] = [
-            all_deps.copy() for _ in range(_get_size(eqn.outvars[0]))
-        ]
+    strides = eqn.params.get("strides") or tuple(1 for _ in start)
+
+    in_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+    out_shape = tuple(
+        (limit[d] - start[d] + strides[d] - 1) // strides[d] for d in range(len(start))
+    )
+
+    in_strides = _compute_strides(in_shape)
+    out_strides = _compute_strides(out_shape)
+    out_size = _shape_size(out_shape)
+
+    out_indices: IndexSets = []
+    for out_flat in range(out_size):
+        # Convert flat output index to output coordinates
+        out_coord = []
+        remaining = out_flat
+        for s in out_strides:
+            out_coord.append(remaining // s)
+            remaining %= s
+
+        # Map to input coordinates: in_coord[d] = start[d] + out_coord[d] * strides[d]
+        in_flat = sum(
+            (start[d] + out_coord[d] * strides[d]) * in_strides[d]
+            for d in range(len(start))
+        )
+        out_indices.append(in_indices[in_flat].copy())
+
+    env[eqn.outvars[0]] = out_indices
 
 
 def _propagate_squeeze(eqn: JaxprEqn, env: Env) -> None:
@@ -99,23 +141,98 @@ def _propagate_squeeze(eqn: JaxprEqn, env: Env) -> None:
 
 
 def _propagate_broadcast_in_dim(eqn: JaxprEqn, env: Env) -> None:
-    """Broadcast: replicate dependencies to match output shape."""
+    """Propagate dependencies through the broadcast_in_dim primitive.
+
+    Broadcast replicates input elements across new or expanded dimensions.
+    The broadcast_dimensions param maps input dim i to output dim broadcast_dims[i].
+    Each output element depends on one input element determined by projecting
+    the output coordinates onto the input dimensions.
+    """
     in_indices = _get_idxs(env, eqn.invars[0])
-    out_size = _shape_size(eqn.params["shape"])
+    out_shape = eqn.params["shape"]
+    broadcast_dims = eqn.params["broadcast_dimensions"]
+    out_size = _shape_size(out_shape)
+
+    # Scalar case: single input dependency applies to all outputs
     if len(in_indices) == 1:
         env[eqn.outvars[0]] = [in_indices[0].copy() for _ in range(out_size)]
-    else:
-        # TODO: Track which input elements map to which output elements.
-        # Conservative fallback: union all input dependencies.
-        all_deps = _union_all(in_indices)
-        env[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
+        return
+
+    in_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+    in_strides = _compute_strides(in_shape)
+    out_strides = _compute_strides(out_shape)
+
+    out_indices: IndexSets = []
+    for out_flat in range(out_size):
+        # Convert flat output index to output coordinates
+        out_coord = []
+        remaining = out_flat
+        for s in out_strides:
+            out_coord.append(remaining // s)
+            remaining %= s
+
+        # Map to input coordinates using broadcast_dimensions.
+        # broadcast_dims[i] = which output dim corresponds to input dim i.
+        # Size-1 input dims are replicated: input (3,1) -> output (3,2) means
+        # out[i,0] and out[i,1] both come from in[i,0], so we clamp to 0.
+        in_flat = sum(
+            (out_coord[broadcast_dims[i]] if in_shape[i] > 1 else 0) * in_strides[i]
+            for i in range(len(in_shape))
+        )
+        out_indices.append(in_indices[in_flat].copy())
+
+    env[eqn.outvars[0]] = out_indices
 
 
 def _propagate_concatenate(eqn: JaxprEqn, env: Env) -> None:
-    """Concatenate: join element lists in order."""
-    out_indices: IndexSets = []
-    for invar in eqn.invars:
-        out_indices.extend(_get_idxs(env, invar))
+    """Propagate dependencies through the concatenate primitive.
+
+    Concat along dim 0 is simple append. For inner dims, we track which input
+    each output coordinate comes from based on position along the concat axis.
+    """
+    dim = eqn.params["dimension"]
+
+    # Concat along dim 0: flat arrays are contiguous, just append
+    if dim == 0:
+        out_indices: IndexSets = []
+        for invar in eqn.invars:
+            out_indices.extend(_get_idxs(env, invar))
+        env[eqn.outvars[0]] = out_indices
+        return
+
+    # Inner dimension: output coord along `dim` determines which input it's from.
+    # E.g., concat([A(2x1), B(2x1)], dim=1) -> C(2x2): C[i,0] from A, C[i,1] from B.
+    out_shape = tuple(getattr(eqn.outvars[0].aval, "shape", ()))
+    in_shapes = [tuple(getattr(iv.aval, "shape", ())) for iv in eqn.invars]
+    in_dim_sizes = [s[dim] for s in in_shapes]
+
+    # dim_offsets[i] = starting position of input i along concat dimension
+    dim_offsets = [sum(in_dim_sizes[:i]) for i in range(len(in_dim_sizes) + 1)]
+
+    out_strides = _compute_strides(out_shape)
+    all_in_indices = [_get_idxs(env, iv) for iv in eqn.invars]
+    all_in_strides = [_compute_strides(s) for s in in_shapes]
+
+    out_indices = []
+    for out_flat in range(_shape_size(out_shape)):
+        out_coord = []
+        remaining = out_flat
+        for s in out_strides:
+            out_coord.append(remaining // s)
+            remaining %= s
+
+        # Find which input owns this position along the concat dimension
+        pos_along_dim = out_coord[dim]
+        for i in range(len(eqn.invars)):
+            if dim_offsets[i] <= pos_along_dim < dim_offsets[i + 1]:
+                in_coord = list(out_coord)
+                in_coord[dim] = pos_along_dim - dim_offsets[i]
+                in_flat = sum(
+                    c * s for c, s in zip(in_coord, all_in_strides[i], strict=True)
+                )
+                out_indices.append(all_in_indices[i][in_flat].copy())
+                break
+
     env[eqn.outvars[0]] = out_indices
 
 
@@ -168,8 +285,45 @@ def _propagate_unary_elementwise(eqn: JaxprEqn, env: Env) -> None:
 
 
 def _propagate_reduce_sum(eqn: JaxprEqn, env: Env) -> None:
-    """Reduction: output depends on all input elements."""
-    env[eqn.outvars[0]] = [_union_all(_get_idxs(env, eqn.invars[0]))]
+    """Propagate dependencies through the reduce_sum primitive.
+
+    Full reduction: jnp.sum(x) reduces all elements to a scalar. The single
+    output depends on all inputs.
+
+    Partial reduction: jnp.sum(x, axis=1) on shape (4,3) produces shape (4,).
+    Each output row is the sum of that input row: out[i] depends on in[i,:].
+    """
+    in_indices = _get_idxs(env, eqn.invars[0])
+    axes = eqn.params.get("axes", ())
+    in_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+
+    # Full reduction: single output depends on all inputs
+    if not axes or len(axes) == len(in_shape):
+        env[eqn.outvars[0]] = [_union_all(in_indices)]
+        return
+
+    # Partial reduction: group input elements by their non-reduced coordinates
+    out_shape = tuple(s for i, s in enumerate(in_shape) if i not in axes)
+    in_strides = _compute_strides(in_shape)
+    out_strides = _compute_strides(out_shape)
+    out_size = _shape_size(out_shape)
+
+    out_indices: IndexSets = [set() for _ in range(out_size)]
+
+    for in_flat, deps in enumerate(in_indices):
+        # Convert to input coordinates
+        in_coord = []
+        remaining = in_flat
+        for s in in_strides:
+            in_coord.append(remaining // s)
+            remaining %= s
+
+        # Project to output coordinates (drop reduced dimensions)
+        out_coord = [c for i, c in enumerate(in_coord) if i not in axes]
+        out_flat = sum(c * s for c, s in zip(out_coord, out_strides, strict=True))
+        out_indices[out_flat] |= deps
+
+    env[eqn.outvars[0]] = out_indices
 
 
 def _propagate_convert_element_type(eqn: JaxprEqn, env: Env) -> None:
