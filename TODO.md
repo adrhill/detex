@@ -56,18 +56,18 @@ Missing precise handlers for:
 
 These propagators in `src/detex/_propagate.py` use conservative fallbacks that could be made precise:
 
-- [ ] `_propagate_slice` (lines 87-93) - Multi-dimensional slice unions all dependencies
-- [ ] `_propagate_broadcast_in_dim` (lines 107-110) - Non-scalar broadcast unions all dependencies
-- [ ] `_propagate_reshape` (lines 127-130) - Size mismatch unions all dependencies
-- [ ] `_propagate_default` (lines 287-295) - Fallback for unhandled primitives (dot_general, gather, scatter, dynamic_slice, transpose, etc.)
+- [ ] `prop_slice` (lines 87-93) - Multi-dimensional slice unions all dependencies
+- [ ] `prop_broadcast_in_dim` (lines 107-110) - Non-scalar broadcast unions all dependencies
+- [ ] `prop_reshape` (lines 127-130) - Size mismatch unions all dependencies
+- [ ] `prop_default` (lines 287-295) - Fallback for unhandled primitives (dot_general, gather, scatter, dynamic_slice, transpose, etc.)
 
 ## Tests Using Conservative Fallbacks
 
 These tests verify conservative behavior that could be made precise:
 
 ### Existing tests
-- [ ] `test_multidim_slice` - exercises `_propagate_slice` fallback
-- [ ] `test_array_broadcast` - exercises `_propagate_broadcast_in_dim` fallback
+- [ ] `test_multidim_slice` - exercises `prop_slice` fallback
+- [ ] `test_array_broadcast` - exercises `prop_broadcast_in_dim` fallback
 
 ### New edge case tests (conservative fallback)
 - [ ] `test_transpose_2d` - transpose produces dense, should be permutation matrix

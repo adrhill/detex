@@ -9,7 +9,7 @@ import jax
 import jax.numpy as jnp
 from scipy.sparse import coo_matrix
 
-from detex._propagate import _propagate_jaxpr
+from detex._propagate import prop_jaxpr
 
 
 def jacobian_sparsity(f, n: int) -> coo_matrix:
@@ -41,7 +41,7 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
     input_indices = [[{i} for i in range(n)]]
 
     # Propagate through the jaxpr
-    output_indices_list = _propagate_jaxpr(jaxpr, input_indices)
+    output_indices_list = prop_jaxpr(jaxpr, input_indices)
 
     # Extract output dependencies (first output variable)
     out_indices = output_indices_list[0] if output_indices_list else []

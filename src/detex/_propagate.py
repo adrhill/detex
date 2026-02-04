@@ -4,7 +4,7 @@ Each JAX primitive has a handler that maps input index sets to output index sets
 For example, element-wise ops preserve per-element dependencies, while reductions
 union all input dependencies into a single output.
 
-The main entry point is `_propagate_jaxpr`, which walks the computation graph
+The main entry point is `prop_jaxpr`, which walks the computation graph
 and applies the appropriate handler for each equation.
 """
 
@@ -17,16 +17,6 @@ from jax._src.core import Jaxpr, JaxprEqn, Literal, Var
 # Type aliases
 IndexSets = list[set[int]]
 Env = dict[Var, IndexSets]  # Maps each variable to its per-element dependency sets
-
-
-def _union_all(sets: Sequence[set[int]]) -> set[int]:
-    """Union all sets together, returning a new set."""
-    if not sets:
-        return set()
-    result: set[int] = set()
-    for s in sets:
-        result |= s
-    return result
 
 
 # Primitives with zero derivatives (output doesn't depend on input)
@@ -50,12 +40,38 @@ ZERO_DERIVATIVE_PRIMITIVES = frozenset(
 NESTED_JAXPR_PRIMITIVES = frozenset(["jit", "pjit", "xla_call", "named_call"])
 
 
-def _shape_size(shape: Sequence[int]) -> int:
+def union_all(sets: Sequence[set[int]]) -> set[int]:
+    """Union all sets together, returning a new set."""
+    if not sets:
+        return set()
+    result: set[int] = set()
+    for s in sets:
+        result |= s
+    return result
+
+
+def shape_size(shape: Sequence[int]) -> int:
     """Compute the total number of elements from a shape tuple."""
     return math.prod(shape) if shape else 1
 
 
-def _compute_strides(shape: Sequence[int]) -> tuple[int, ...]:
+def get_size(atom: Var | Literal) -> int:
+    """Get the total number of elements in a variable or literal."""
+    if isinstance(atom, Literal):
+        shape = getattr(atom.val, "shape", ())
+        return shape_size(tuple(shape)) if shape else 1
+    shape = getattr(atom.aval, "shape", ())
+    return shape_size(tuple(shape)) if shape else 1
+
+
+def index_sets(env: Env, atom: Var | Literal) -> IndexSets:
+    """Get the index sets for a variable or literal."""
+    if isinstance(atom, Literal):
+        return [set() for _ in range(get_size(atom))]
+    return env.get(atom, [set()])
+
+
+def row_strides(shape: Sequence[int]) -> tuple[int, ...]:
     """Compute row-major strides for multi-dimensional index tracking.
 
     Used to convert between flat indices and coordinates when propagating
@@ -73,36 +89,166 @@ def _compute_strides(shape: Sequence[int]) -> tuple[int, ...]:
     return tuple(reversed(result))
 
 
-def _get_size(atom: Var | Literal) -> int:
-    """Get the total number of elements in a variable or literal."""
-    if isinstance(atom, Literal):
-        shape = getattr(atom.val, "shape", ())
-        return _shape_size(tuple(shape)) if shape else 1
-    shape = getattr(atom.aval, "shape", ())
-    return _shape_size(tuple(shape)) if shape else 1
+# =============================================================================
+# Handle Jaxpr
+# =============================================================================
 
 
-def _get_idxs(env: Env, atom: Var | Literal) -> IndexSets:
-    """Get the index sets for a variable or literal."""
-    if isinstance(atom, Literal):
-        return [set() for _ in range(_get_size(atom))]
-    return env.get(atom, [set()])
+def prop_jaxpr(jaxpr: Jaxpr, input_indices: list[IndexSets]) -> list[IndexSets]:
+    """
+    Propagate index sets through a jaxpr.
+
+    Args:
+        jaxpr: The jaxpr to analyze
+        input_indices: List of IndexSets, one per input variable
+
+    Returns:
+        List of IndexSets, one per output variable
+    """
+    env: Env = {}
+
+    # Initialize input variables
+    for var, indices in zip(jaxpr.invars, input_indices, strict=False):
+        env[var] = indices
+
+    # Process each equation
+    for eqn in jaxpr.eqns:
+        prop_equation(eqn, env)
+
+    # Return output dependencies
+    return [index_sets(env, outvar) for outvar in jaxpr.outvars]
 
 
-def _propagate_zero_derivative(eqn: JaxprEqn, env: Env) -> None:
+def prop_nested_jaxpr(eqn: JaxprEqn, env: Env) -> None:
+    """Handle primitives with nested jaxprs by recursively tracing."""
+    nested_jaxpr = eqn.params.get("jaxpr")
+    if nested_jaxpr is None:
+        msg = (
+            f"Primitive '{eqn.primitive.name}' has no 'jaxpr' parameter. "
+            "Please report this at https://github.com/adrhill/detex/issues"
+        )
+        raise ValueError(msg)
+
+    # Handle ClosedJaxpr wrapper
+    if hasattr(nested_jaxpr, "jaxpr"):
+        nested_jaxpr = nested_jaxpr.jaxpr
+
+    input_indices = [index_sets(env, invar) for invar in eqn.invars]
+    output_indices = prop_jaxpr(nested_jaxpr, input_indices)
+
+    for outvar, indices in zip(eqn.outvars, output_indices, strict=False):
+        env[outvar] = indices
+
+
+# =============================================================================
+# Dispatch on JaxprEqn
+# =============================================================================
+
+
+def prop_equation(eqn: JaxprEqn, env: Env) -> None:
+    """Propagate dependencies through a single equation."""
+    match eqn.primitive.name:
+        case prim if prim in ZERO_DERIVATIVE_PRIMITIVES:
+            prop_zero_derivative(eqn, env)
+        case prim if prim in NESTED_JAXPR_PRIMITIVES:
+            prop_nested_jaxpr(eqn, env)
+        case "slice":
+            prop_slice(eqn, env)
+        case "squeeze":
+            prop_squeeze(eqn, env)
+        case "broadcast_in_dim":
+            prop_broadcast_in_dim(eqn, env)
+        case "concatenate":
+            prop_concatenate(eqn, env)
+        case "reshape":
+            prop_reshape(eqn, env)
+        case "integer_pow":
+            prop_integer_pow(eqn, env)
+        case "add" | "sub" | "mul" | "div" | "pow" | "max" | "min":
+            prop_binary_elementwise(eqn, env)
+        case (
+            "neg"
+            | "exp"
+            | "log"
+            | "sin"
+            | "cos"
+            | "tan"
+            | "sqrt"
+            | "abs"
+            | "sinh"
+            | "cosh"
+            | "tanh"
+            | "log1p"
+            | "expm1"
+        ):
+            prop_unary_elementwise(eqn, env)
+        case "reduce_sum":
+            prop_reduce_sum(eqn, env)
+        case "convert_element_type":
+            prop_convert_element_type(eqn, env)
+        case "conv_general_dilated":
+            prop_conv_general_dilated(eqn, env)
+        # TODO: implement precise handlers for these primitives.
+        # Currently uses conservative fallback (all outputs depend on all inputs).
+        case (
+            "argmax"
+            | "dot_general"
+            | "gather"
+            | "iota"
+            | "pad"
+            | "reduce_max"
+            | "reduce_prod"
+            | "rev"
+            | "scatter"
+            | "select_n"
+            | "sort"
+            | "split"
+            | "tile"
+            | "transpose"
+        ):
+            prop_conservative_fallback(eqn, env)
+        case _:
+            prop_throw_error(eqn, env)
+
+
+def prop_conservative_fallback(eqn: JaxprEqn, env: Env) -> None:
+    """Conservative fallback: each output element depends on all inputs."""
+    all_inputs: IndexSets = []
+    for invar in eqn.invars:
+        all_inputs.extend(index_sets(env, invar))
+    all_deps = union_all(all_inputs)
+    for outvar in eqn.outvars:
+        env[outvar] = [all_deps.copy() for _ in range(get_size(outvar))]
+
+
+def prop_throw_error(eqn: JaxprEqn, env: Env) -> None:
+    """Raise an error for unhandled primitives."""
+    msg = (
+        f"No handler for primitive '{eqn.primitive.name}'. "
+        "Please report this at https://github.com/adrhill/detex/issues"
+    )
+    raise NotImplementedError(msg)
+
+
+# =============================================================================
+# Propagation rules
+# =============================================================================
+
+
+def prop_zero_derivative(eqn: JaxprEqn, env: Env) -> None:
     """Zero-derivative ops: output has no dependence on inputs."""
     for outvar in eqn.outvars:
-        env[outvar] = [set() for _ in range(_get_size(outvar))]
+        env[outvar] = [set() for _ in range(get_size(outvar))]
 
 
-def _propagate_slice(eqn: JaxprEqn, env: Env) -> None:
+def prop_slice(eqn: JaxprEqn, env: Env) -> None:
     """Propagate dependencies through the slice primitive.
 
     Slice extracts arr[start:limit:stride] along each dimension. Each output
     element depends on exactly one input element, so we compute the flat index
     mapping: output[i,j,...] <- input[start + i*stride, start + j*stride, ...].
     """
-    in_indices = _get_idxs(env, eqn.invars[0])
+    in_indices = index_sets(env, eqn.invars[0])
     start = eqn.params["start_indices"]
     limit = eqn.params["limit_indices"]
     strides = eqn.params.get("strides") or tuple(1 for _ in start)
@@ -112,9 +258,9 @@ def _propagate_slice(eqn: JaxprEqn, env: Env) -> None:
         (limit[d] - start[d] + strides[d] - 1) // strides[d] for d in range(len(start))
     )
 
-    in_strides = _compute_strides(in_shape)
-    out_strides = _compute_strides(out_shape)
-    out_size = _shape_size(out_shape)
+    in_strides = row_strides(in_shape)
+    out_strides = row_strides(out_shape)
+    out_size = shape_size(out_shape)
 
     out_indices: IndexSets = []
     for out_flat in range(out_size):
@@ -135,12 +281,12 @@ def _propagate_slice(eqn: JaxprEqn, env: Env) -> None:
     env[eqn.outvars[0]] = out_indices
 
 
-def _propagate_squeeze(eqn: JaxprEqn, env: Env) -> None:
+def prop_squeeze(eqn: JaxprEqn, env: Env) -> None:
     """Squeeze removes size-1 dims, preserves element dependencies."""
-    env[eqn.outvars[0]] = _get_idxs(env, eqn.invars[0])
+    env[eqn.outvars[0]] = index_sets(env, eqn.invars[0])
 
 
-def _propagate_broadcast_in_dim(eqn: JaxprEqn, env: Env) -> None:
+def prop_broadcast_in_dim(eqn: JaxprEqn, env: Env) -> None:
     """Propagate dependencies through the broadcast_in_dim primitive.
 
     Broadcast replicates input elements across new or expanded dimensions.
@@ -148,10 +294,10 @@ def _propagate_broadcast_in_dim(eqn: JaxprEqn, env: Env) -> None:
     Each output element depends on one input element determined by projecting
     the output coordinates onto the input dimensions.
     """
-    in_indices = _get_idxs(env, eqn.invars[0])
+    in_indices = index_sets(env, eqn.invars[0])
     out_shape = eqn.params["shape"]
     broadcast_dims = eqn.params["broadcast_dimensions"]
-    out_size = _shape_size(out_shape)
+    out_size = shape_size(out_shape)
 
     # Scalar case: single input dependency applies to all outputs
     if len(in_indices) == 1:
@@ -159,8 +305,8 @@ def _propagate_broadcast_in_dim(eqn: JaxprEqn, env: Env) -> None:
         return
 
     in_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
-    in_strides = _compute_strides(in_shape)
-    out_strides = _compute_strides(out_shape)
+    in_strides = row_strides(in_shape)
+    out_strides = row_strides(out_shape)
 
     out_indices: IndexSets = []
     for out_flat in range(out_size):
@@ -184,7 +330,7 @@ def _propagate_broadcast_in_dim(eqn: JaxprEqn, env: Env) -> None:
     env[eqn.outvars[0]] = out_indices
 
 
-def _propagate_concatenate(eqn: JaxprEqn, env: Env) -> None:
+def prop_concatenate(eqn: JaxprEqn, env: Env) -> None:
     """Propagate dependencies through the concatenate primitive.
 
     Concat along dim 0 is simple append. For inner dims, we track which input
@@ -196,7 +342,7 @@ def _propagate_concatenate(eqn: JaxprEqn, env: Env) -> None:
     if dim == 0:
         out_indices: IndexSets = []
         for invar in eqn.invars:
-            out_indices.extend(_get_idxs(env, invar))
+            out_indices.extend(index_sets(env, invar))
         env[eqn.outvars[0]] = out_indices
         return
 
@@ -209,12 +355,12 @@ def _propagate_concatenate(eqn: JaxprEqn, env: Env) -> None:
     # dim_offsets[i] = starting position of input i along concat dimension
     dim_offsets = [sum(in_dim_sizes[:i]) for i in range(len(in_dim_sizes) + 1)]
 
-    out_strides = _compute_strides(out_shape)
-    all_in_indices = [_get_idxs(env, iv) for iv in eqn.invars]
-    all_in_strides = [_compute_strides(s) for s in in_shapes]
+    out_strides = row_strides(out_shape)
+    all_in_indices = [index_sets(env, iv) for iv in eqn.invars]
+    all_in_strides = [row_strides(s) for s in in_shapes]
 
     out_indices = []
-    for out_flat in range(_shape_size(out_shape)):
+    for out_flat in range(shape_size(out_shape)):
         out_coord = []
         remaining = out_flat
         for s in out_strides:
@@ -236,32 +382,32 @@ def _propagate_concatenate(eqn: JaxprEqn, env: Env) -> None:
     env[eqn.outvars[0]] = out_indices
 
 
-def _propagate_reshape(eqn: JaxprEqn, env: Env) -> None:
+def prop_reshape(eqn: JaxprEqn, env: Env) -> None:
     """Reshape preserves total elements and their dependencies."""
-    in_indices = _get_idxs(env, eqn.invars[0])
-    out_size = _get_size(eqn.outvars[0])
+    in_indices = index_sets(env, eqn.invars[0])
+    out_size = get_size(eqn.outvars[0])
     if len(in_indices) == out_size:
         env[eqn.outvars[0]] = in_indices
     else:
         # TODO: Investigate when size mismatch occurs and handle precisely.
         # Conservative fallback: union all input dependencies.
-        all_deps = _union_all(in_indices)
+        all_deps = union_all(in_indices)
         env[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
 
 
-def _propagate_integer_pow(eqn: JaxprEqn, env: Env) -> None:
+def prop_integer_pow(eqn: JaxprEqn, env: Env) -> None:
     """x^n: element-wise, preserves structure (unless n=0)."""
-    in_indices = _get_idxs(env, eqn.invars[0])
+    in_indices = index_sets(env, eqn.invars[0])
     if eqn.params.get("y", 1) == 0:
         env[eqn.outvars[0]] = [set() for _ in range(len(in_indices))]
     else:
         env[eqn.outvars[0]] = [s.copy() for s in in_indices]
 
 
-def _propagate_binary_elementwise(eqn: JaxprEqn, env: Env) -> None:
+def prop_binary_elementwise(eqn: JaxprEqn, env: Env) -> None:
     """Binary element-wise ops: merge corresponding elements."""
-    in1 = _get_idxs(env, eqn.invars[0])
-    in2 = _get_idxs(env, eqn.invars[1])
+    in1 = index_sets(env, eqn.invars[0])
+    in2 = index_sets(env, eqn.invars[1])
     out_size = max(len(in1), len(in2))
     out_indices: IndexSets = []
     for i in range(out_size):
@@ -275,16 +421,16 @@ def _propagate_binary_elementwise(eqn: JaxprEqn, env: Env) -> None:
             to_merge.append(in2[0])
         elif i < len(in2):
             to_merge.append(in2[i])
-        out_indices.append(_union_all(to_merge))
+        out_indices.append(union_all(to_merge))
     env[eqn.outvars[0]] = out_indices
 
 
-def _propagate_unary_elementwise(eqn: JaxprEqn, env: Env) -> None:
+def prop_unary_elementwise(eqn: JaxprEqn, env: Env) -> None:
     """Unary element-wise ops: preserve element structure."""
-    env[eqn.outvars[0]] = [s.copy() for s in _get_idxs(env, eqn.invars[0])]
+    env[eqn.outvars[0]] = [s.copy() for s in index_sets(env, eqn.invars[0])]
 
 
-def _propagate_reduce_sum(eqn: JaxprEqn, env: Env) -> None:
+def prop_reduce_sum(eqn: JaxprEqn, env: Env) -> None:
     """Propagate dependencies through the reduce_sum primitive.
 
     Full reduction: jnp.sum(x) reduces all elements to a scalar. The single
@@ -293,20 +439,20 @@ def _propagate_reduce_sum(eqn: JaxprEqn, env: Env) -> None:
     Partial reduction: jnp.sum(x, axis=1) on shape (4,3) produces shape (4,).
     Each output row is the sum of that input row: out[i] depends on in[i,:].
     """
-    in_indices = _get_idxs(env, eqn.invars[0])
+    in_indices = index_sets(env, eqn.invars[0])
     axes = eqn.params.get("axes", ())
     in_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
 
     # Full reduction: single output depends on all inputs
     if not axes or len(axes) == len(in_shape):
-        env[eqn.outvars[0]] = [_union_all(in_indices)]
+        env[eqn.outvars[0]] = [union_all(in_indices)]
         return
 
     # Partial reduction: group input elements by their non-reduced coordinates
     out_shape = tuple(s for i, s in enumerate(in_shape) if i not in axes)
-    in_strides = _compute_strides(in_shape)
-    out_strides = _compute_strides(out_shape)
-    out_size = _shape_size(out_shape)
+    in_strides = row_strides(in_shape)
+    out_strides = row_strides(out_shape)
+    out_size = shape_size(out_shape)
 
     out_indices: IndexSets = [set() for _ in range(out_size)]
 
@@ -326,19 +472,19 @@ def _propagate_reduce_sum(eqn: JaxprEqn, env: Env) -> None:
     env[eqn.outvars[0]] = out_indices
 
 
-def _propagate_convert_element_type(eqn: JaxprEqn, env: Env) -> None:
+def prop_convert_element_type(eqn: JaxprEqn, env: Env) -> None:
     """Type conversion: preserve dependencies."""
-    env[eqn.outvars[0]] = [s.copy() for s in _get_idxs(env, eqn.invars[0])]
+    env[eqn.outvars[0]] = [s.copy() for s in index_sets(env, eqn.invars[0])]
 
 
-def _propagate_conv_general_dilated(eqn: JaxprEqn, env: Env) -> None:
+def prop_conv_general_dilated(eqn: JaxprEqn, env: Env) -> None:
     """Convolution: each output depends on a spatial window of inputs.
 
     For a 2D conv with kernel (kH, kW) and C_in input channels:
     - Output at (n, h, w, c_out) depends on inputs at
       (n, h*stride_h + kh, w*stride_w + kw, c_in) for all kh, kw, c_in
     """
-    lhs_indices = _get_idxs(env, eqn.invars[0])  # Input image dependencies
+    lhs_indices = index_sets(env, eqn.invars[0])  # Input image dependencies
 
     # Get shapes from avals
     lhs_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
@@ -386,7 +532,7 @@ def _propagate_conv_general_dilated(eqn: JaxprEqn, env: Env) -> None:
 
     out_indices: IndexSets = []
 
-    for out_flat in range(_shape_size(out_shape)):
+    for out_flat in range(shape_size(out_shape)):
         # Convert flat output index to coordinates
         out_coords = []
         remaining = out_flat
@@ -439,134 +585,3 @@ def _propagate_conv_general_dilated(eqn: JaxprEqn, env: Env) -> None:
         out_indices.append(deps)
 
     env[eqn.outvars[0]] = out_indices
-
-
-def _propagate_conservative_fallback(eqn: JaxprEqn, env: Env) -> None:
-    """Conservative fallback: each output element depends on all inputs."""
-    all_inputs: IndexSets = []
-    for invar in eqn.invars:
-        all_inputs.extend(_get_idxs(env, invar))
-    all_deps = _union_all(all_inputs)
-    for outvar in eqn.outvars:
-        env[outvar] = [all_deps.copy() for _ in range(_get_size(outvar))]
-
-
-def _propagate_throw_error(eqn: JaxprEqn, env: Env) -> None:
-    """Raise an error for unhandled primitives."""
-    msg = (
-        f"No handler for primitive '{eqn.primitive.name}'. "
-        "Please report this at https://github.com/adrhill/detex/issues"
-    )
-    raise NotImplementedError(msg)
-
-
-def _propagate_nested_jaxpr(eqn: JaxprEqn, env: Env) -> None:
-    """Handle primitives with nested jaxprs by recursively tracing."""
-    nested_jaxpr = eqn.params.get("jaxpr")
-    if nested_jaxpr is None:
-        msg = (
-            f"Primitive '{eqn.primitive.name}' has no 'jaxpr' parameter. "
-            "Please report this at https://github.com/adrhill/detex/issues"
-        )
-        raise ValueError(msg)
-
-    # Handle ClosedJaxpr wrapper
-    if hasattr(nested_jaxpr, "jaxpr"):
-        nested_jaxpr = nested_jaxpr.jaxpr
-
-    input_indices = [_get_idxs(env, invar) for invar in eqn.invars]
-    output_indices = _propagate_jaxpr(nested_jaxpr, input_indices)
-
-    for outvar, indices in zip(eqn.outvars, output_indices, strict=False):
-        env[outvar] = indices
-
-
-def _propagate_equation(eqn: JaxprEqn, env: Env) -> None:
-    """Propagate dependencies through a single equation."""
-    match eqn.primitive.name:
-        case prim if prim in ZERO_DERIVATIVE_PRIMITIVES:
-            _propagate_zero_derivative(eqn, env)
-        case prim if prim in NESTED_JAXPR_PRIMITIVES:
-            _propagate_nested_jaxpr(eqn, env)
-        case "slice":
-            _propagate_slice(eqn, env)
-        case "squeeze":
-            _propagate_squeeze(eqn, env)
-        case "broadcast_in_dim":
-            _propagate_broadcast_in_dim(eqn, env)
-        case "concatenate":
-            _propagate_concatenate(eqn, env)
-        case "reshape":
-            _propagate_reshape(eqn, env)
-        case "integer_pow":
-            _propagate_integer_pow(eqn, env)
-        case "add" | "sub" | "mul" | "div" | "pow" | "max" | "min":
-            _propagate_binary_elementwise(eqn, env)
-        case (
-            "neg"
-            | "exp"
-            | "log"
-            | "sin"
-            | "cos"
-            | "tan"
-            | "sqrt"
-            | "abs"
-            | "sinh"
-            | "cosh"
-            | "tanh"
-            | "log1p"
-            | "expm1"
-        ):
-            _propagate_unary_elementwise(eqn, env)
-        case "reduce_sum":
-            _propagate_reduce_sum(eqn, env)
-        case "convert_element_type":
-            _propagate_convert_element_type(eqn, env)
-        case "conv_general_dilated":
-            _propagate_conv_general_dilated(eqn, env)
-        # TODO: implement precise handlers for these primitives.
-        # Currently uses conservative fallback (all outputs depend on all inputs).
-        case (
-            "argmax"
-            | "dot_general"
-            | "gather"
-            | "iota"
-            | "pad"
-            | "reduce_max"
-            | "reduce_prod"
-            | "rev"
-            | "scatter"
-            | "select_n"
-            | "sort"
-            | "split"
-            | "tile"
-            | "transpose"
-        ):
-            _propagate_conservative_fallback(eqn, env)
-        case _:
-            _propagate_throw_error(eqn, env)
-
-
-def _propagate_jaxpr(jaxpr: Jaxpr, input_indices: list[IndexSets]) -> list[IndexSets]:
-    """
-    Propagate index sets through a jaxpr.
-
-    Args:
-        jaxpr: The jaxpr to analyze
-        input_indices: List of IndexSets, one per input variable
-
-    Returns:
-        List of IndexSets, one per output variable
-    """
-    env: Env = {}
-
-    # Initialize input variables
-    for var, indices in zip(jaxpr.invars, input_indices, strict=False):
-        env[var] = indices
-
-    # Process each equation
-    for eqn in jaxpr.eqns:
-        _propagate_equation(eqn, env)
-
-    # Return output dependencies
-    return [_get_idxs(env, outvar) for outvar in jaxpr.outvars]
