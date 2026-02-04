@@ -459,8 +459,11 @@ def _propagate_nested_jaxpr(eqn: JaxprEqn, env: Env) -> None:
     """Handle primitives with nested jaxprs by recursively tracing."""
     nested_jaxpr = eqn.params.get("jaxpr")
     if nested_jaxpr is None:
-        _propagate_default(eqn, env)
-        return
+        msg = (
+            f"Primitive '{eqn.primitive.name}' has no 'jaxpr' parameter. "
+            "Please report this at https://github.com/adrhill/detex/issues"
+        )
+        raise ValueError(msg)
 
     # Handle ClosedJaxpr wrapper
     if hasattr(nested_jaxpr, "jaxpr"):
