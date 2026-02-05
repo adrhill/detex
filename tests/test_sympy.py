@@ -1,7 +1,7 @@
 """Test Jacobian sparsity by comparing against SymPy symbolic derivatives.
 
 This module generates random mathematical expressions using SymPy primitives,
-converts them to JAX functions, and verifies that detex's sparsity detection
+converts them to JAX functions, and verifies that asdex's sparsity detection
 matches the ground truth computed from symbolic differentiation.
 """
 
@@ -13,7 +13,7 @@ import numpy as np
 import sympy as sp
 from sympy import Abs, Symbol, cos, cosh, exp, log, sin, sinh, sqrt, tan, tanh
 
-from detex import jacobian_sparsity
+from asdex import jacobian_sparsity
 
 # Type alias for JAX functions
 JaxFn = Callable[[jnp.ndarray], jnp.ndarray]

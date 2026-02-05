@@ -14,8 +14,8 @@ import numpy as np
 from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike, NDArray
 
-from detex.coloring import color_rows
-from detex.detection import jacobian_sparsity as _detect_sparsity
+from asdex.coloring import color_rows
+from asdex.detection import jacobian_sparsity as _detect_sparsity
 
 
 def _compute_vjp_for_color(

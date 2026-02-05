@@ -3,7 +3,7 @@
 import jax.numpy as jnp
 import pytest
 
-from detex import jacobian_sparsity
+from asdex import jacobian_sparsity
 
 # -----------------------------------------------------------------------------
 # Diagonal sparsity (best case: each output depends on one input)

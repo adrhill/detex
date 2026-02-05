@@ -1,4 +1,4 @@
-# detex - Automatic Sparse Differentiation in JAX
+# asdex - Automatic Sparse Differentiation in JAX
 
 This package implements [Automatic Sparse Differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) (ASD) in JAX.
 
@@ -13,7 +13,7 @@ ASD exploits Jacobian sparsity to reduce the cost of computing sparse Jacobians:
 ## Structure
 
 ```
-src/detex/
+src/asdex/
 ├── __init__.py         # Public API
 ├── detection.py        # Sparsity pattern detection via jaxpr analysis
 ├── coloring.py         # Row-wise graph coloring

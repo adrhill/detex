@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from detex import jacobian_sparsity
+from asdex import jacobian_sparsity
 
 
 @pytest.mark.vmap

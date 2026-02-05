@@ -1,4 +1,4 @@
-"""Test detex on convolutional layers, similar to SCT's performance example.
+"""Test asdex on convolutional layers, similar to SCT's performance example.
 
 Reference: https://github.com/adrhill/SparseConnectivityTracer.jl/blob/main/docs/src/user/performance.md
 """
@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from flax import nnx
 
-from detex import jacobian_sparsity
+from asdex import jacobian_sparsity
 
 
 def check_conv_sparsity(

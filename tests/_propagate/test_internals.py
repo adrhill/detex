@@ -3,7 +3,7 @@
 import pytest
 from jax._src.core import Primitive
 
-from detex._propagate import prop_nested_jaxpr
+from asdex._propagate import prop_nested_jaxpr
 
 
 class FakeEqn:
@@ -34,4 +34,4 @@ def test_nested_jaxpr_missing_param_error_message():
         prop_nested_jaxpr(eqn, env)  # type: ignore[arg-type]
 
     assert "xla_call" in str(exc_info.value)
-    assert "https://github.com/adrhill/detex/issues" in str(exc_info.value)
+    assert "https://github.com/adrhill/asdex/issues" in str(exc_info.value)

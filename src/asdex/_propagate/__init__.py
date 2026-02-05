@@ -68,7 +68,7 @@ def prop_nested_jaxpr(eqn: JaxprEqn, deps: Deps) -> None:
     if nested_jaxpr is None:
         msg = (
             f"Primitive '{eqn.primitive.name}' has no 'jaxpr' parameter. "
-            "Please report this at https://github.com/adrhill/detex/issues"
+            "Please report this at https://github.com/adrhill/asdex/issues"
         )
         raise ValueError(msg)
 
@@ -170,6 +170,6 @@ def prop_throw_error(eqn: JaxprEqn, deps: Deps) -> None:
     """
     msg = (
         f"No handler for primitive '{eqn.primitive.name}'. "
-        "Please report this at https://github.com/adrhill/detex/issues"
+        "Please report this at https://github.com/adrhill/asdex/issues"
     )
     raise NotImplementedError(msg)
