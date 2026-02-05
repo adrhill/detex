@@ -14,8 +14,8 @@ import numpy as np
 from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike, NDArray
 
-from detex._coloring import color_rows
-from detex._propagate import prop_jaxpr
+from detex.coloring import color_rows
+from detex.detection import jacobian_sparsity as _detect_sparsity
 
 
 def _compute_vjp_for_color(
@@ -122,31 +122,3 @@ def sparse_jacobian(
         grads.append(grad)
 
     return _decompress_jacobian(sparsity, colors, grads)
-
-
-def _detect_sparsity(f: Callable[[ArrayLike], ArrayLike], n: int) -> BCOO:
-    """Detect Jacobian sparsity pattern via jaxpr analysis."""
-    dummy_input = jnp.zeros(n)
-    closed_jaxpr = jax.make_jaxpr(f)(dummy_input)
-    jaxpr = closed_jaxpr.jaxpr
-    m = int(jax.eval_shape(f, dummy_input).size)
-
-    input_indices = [[{i} for i in range(n)]]
-    output_indices_list = prop_jaxpr(jaxpr, input_indices)
-    out_indices = output_indices_list[0] if output_indices_list else []
-
-    rows = []
-    cols = []
-    for i, deps in enumerate(out_indices):
-        for j in deps:
-            rows.append(i)
-            cols.append(j)
-
-    indices = jnp.array(
-        [[r, c] for r, c in zip(rows, cols, strict=True)], dtype=jnp.int32
-    )
-    if len(rows) == 0:
-        indices = jnp.zeros((0, 2), dtype=jnp.int32)
-    data = jnp.ones(len(rows), dtype=jnp.int8)
-
-    return BCOO((data, indices), shape=(m, n))
