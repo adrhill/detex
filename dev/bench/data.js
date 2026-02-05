@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770295049620,
+  "lastUpdate": 1770315040359,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -957,6 +957,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00008009884375040523",
             "extra": "mean: 1.0080063030317654 msec\nrounds: 33"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9ecdb54a2d571f9d523f4578081e203655bec72b",
+          "message": "Add Hessian sparsity detection and computation (#14)\n\n* Rename `_propagate` to `_interpret`\n\nAligns with JAX's custom interpreter terminology.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Add Hessian sparsity detection via interpreter composition\n\nImplement `hessian_sparsity(f, n)` which computes second-order sparsity\nby analyzing the Jacobian sparsity of the gradient function. This\ndemonstrates how our sparsity interpreter composes with JAX's autodiff.\n\nChanges:\n- Add `add_any` primitive handler (used in gradient jaxprs)\n- Add `hessian_sparsity` function to detection.py\n- Export in public API\n- Add tests in test_detection.py and test_sympy.py\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Update README with Hessian sparsity documentation\n\n- Add mention of Hessians in intro section\n- Add ### Jacobians and ### Hessians subsections to examples\n- Add Hessian sparsity paragraph to \"How it works\" section\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Add sparse_hessian function for computing sparse Hessians\n\nComputes the Hessian by applying sparse_jacobian to the gradient function,\ndemonstrating how sparse differentiation composes with JAX's autodiff.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Use HVP for sparse Hessian computation\n\nReplace VJP-on-gradient with forward-over-reverse HVP for ~30% speedup.\nUpdate README with sparse_hessian examples and HVP explanation.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Add pytest markers for test categories\n\nRegister markers in pyproject.toml and add @pytest.mark.hessian\nto Hessian-related tests.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-05T19:10:07+01:00",
+          "tree_id": "37e155464d7b87b064fd80056226e18b8a029c90",
+          "url": "https://github.com/adrhill/asdex/commit/9ecdb54a2d571f9d523f4578081e203655bec72b"
+        },
+        "date": 1770315040062,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n100",
+            "value": 1054.0774681141997,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010920189620295607",
+            "extra": "mean: 948.6968749925495 usec\nrounds: 8"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n500",
+            "value": 325.68142120258574,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0067244696350223475",
+            "extra": "mean: 3.0704852499951585 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n1000",
+            "value": 424.7325520588975,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014544143252997788",
+            "extra": "mean: 2.354422789476542 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n100",
+            "value": 1163.5890008009867,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002724563278913846",
+            "extra": "mean: 859.4099800802724 usec\nrounds: 502"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n500",
+            "value": 577.8482983226987,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002784161878609437",
+            "extra": "mean: 1.7305580078762317 msec\nrounds: 381"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_matmul_n100",
+            "value": 93.48310282011347,
+            "unit": "iter/sec",
+            "range": "stddev: 0.009320643287222194",
+            "extra": "mean: 10.697120333331979 msec\nrounds: 27"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mlp_layer",
+            "value": 68.55961612625104,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01216060128804101",
+            "extra": "mean: 14.58584596154275 msec\nrounds: 26"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_elementwise_chain",
+            "value": 836.7809755469465,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000117638544680392",
+            "extra": "mean: 1.1950558500046782 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mixed_ops",
+            "value": 981.1006129398843,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008231375930930491",
+            "extra": "mean: 1.019263454543651 msec\nrounds: 33"
           }
         ]
       }
