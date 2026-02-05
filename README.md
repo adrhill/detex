@@ -103,5 +103,4 @@ Due to the coloring constraint, each column contributes to at most one row per c
 
 ## Related work
 
-- [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl): `detex` is a primitive port of this Julia package, which provides global and local Jacobian and Hessian sparsity detection via operator overloading.
-
+- [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl): `detex` started as a primitive port of this Julia package, which provides global and local Jacobian and Hessian sparsity detection via operator overloading.

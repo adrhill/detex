@@ -1,12 +1,12 @@
 # detex - Automatic Sparse Differentiation in JAX
 
-This package implements [Automatic Sparse Differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) (ASD) in JAX, inspired by [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl).
+This package implements [Automatic Sparse Differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) (ASD) in JAX.
 
 ## Overview
 
 ASD exploits Jacobian sparsity to reduce the cost of computing sparse Jacobians:
 
-1. **Detection**: Analyze the jaxpr computation graph to detect the sparsity pattern
+1. **Detection**: Analyze the jaxpr computation graph to detect the global sparsity pattern
 2. **Coloring**: Assign colors to rows so that rows sharing non-zero columns get different colors
 3. **Decompression**: Compute one VJP per color instead of one per row, then extract the sparse Jacobian
 
@@ -19,48 +19,52 @@ src/detex/
 ├── coloring.py         # Row-wise graph coloring
 ├── decompression.py    # Sparse Jacobian computation via VJPs
 └── _propagate/         # Primitive handlers for index set propagation
-
-tests/
-├── test_detection.py       # Sparsity detection tests
-├── test_coloring.py        # Row coloring tests
-├── test_decompression.py   # Sparse Jacobian tests
-├── test_control_flow.py    # Conditionals (where, select)
-├── test_vmap.py            # Batched/vmapped operations
-├── test_benchmarks.py      # Performance benchmarks
-├── test_sympy.py           # SymPy-based randomized tests
-└── _propagate/             # Tests for primitive handlers
 ```
+
+The structure of the test folder is described in `tests/CLAUDE.md`.
 
 ## Development
 
 ```bash
-# Install dependencies and pre-commit hooks
-uv sync --group dev
-uv run pre-commit install
-
-# Run tests
-uv run pytest
-
 # Lint and format
-uv run ruff check --fix .
-uv run ruff format .
+uv run ruff check --fix .    # lint + auto-fix
+uv run ruff format .         # format
 
 # Type check
 uv run ty check
+
+# Run tests
+uv run pytest
 ```
 
-**Important**: Always run both `ruff` and `ty` after making changes.
+## Architecture
 
-## Key Concepts
+```
+sparse_jacobian(f, x)
+  │
+  ├─ 1. DETECTION: jacobian_sparsity(f, n)
+  │     ├─ make_jaxpr(f) → computation graph
+  │     ├─ Initialize env: input[i] depends on {i}
+  │     ├─ prop_jaxpr() → propagate index sets through primitives
+  │     └─ Build BCOO sparsity pattern from output dependencies
+  │
+  ├─ 2. COLORING: color_rows(sparsity)
+  │     ├─ Build conflict graph (rows sharing columns)
+  │     └─ Greedy coloring → rows with same color are orthogonal
+  │
+  └─ 3. DECOMPRESSION
+        ├─ For each color: VJP with combined seed vector
+        └─ Extract J[i,j] = grad[color[i]][j]
+```
 
-1. **Global Sparsity**: The sparsity pattern is valid for all inputs. It's detected by analyzing the computation graph structure, not by evaluating derivatives.
+## Design philosophy
 
-2. **Element-wise Tracking**: Dependencies are tracked per-element, not per-variable. This is essential for detecting diagonal patterns like `f(x) = x^2`.
+When writing new code, adhere to these design principles:
 
-3. **Row Coloring**: Rows that don't share non-zero columns are structurally orthogonal and can be computed together in a single VJP.
+- **Minimize complexity**: The primary goal of software design is to minimize complexity—anything that makes a system hard to understand and modify.
 
-## Design Philosophy
+- **Information hiding**: Each module should encapsulate design decisions that other modules don't need to know about, preventing information leakage across boundaries.
 
-- **Minimize complexity**: The primary goal is to minimize complexity, anything that makes a system hard to understand and modify.
-- **Information hiding**: Each module should encapsulate design decisions that other modules don't need to know about.
-- **Pull complexity downward**: It's better for a module to be internally complex if it keeps the interface simple for others.
+- **Pull complexity downward**: It's better for a module to be internally complex if it keeps the interface simple for others. Don't expose complexity to callers.
+
+- **Favor exceptions over wrong results**: Raise errors for unknown edge cases rather than guessing. 
