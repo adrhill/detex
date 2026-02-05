@@ -7,7 +7,7 @@ import pytest
 from jax.experimental.sparse import BCOO
 from numpy.testing import assert_allclose
 
-from detex import color_rows, jacobian_sparsity, sparse_jacobian
+from asdex import color_rows, jacobian_sparsity, sparse_jacobian
 
 # =============================================================================
 # Reference tests against jax.jacobian

@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
       - name: Test with coverage
-        run: uv run pytest --cov=src/detex --cov-report=xml
+        run: uv run pytest --cov=src/asdex --cov-report=xml
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
         uses: codecov/codecov-action@v5

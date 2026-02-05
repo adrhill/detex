@@ -1,4 +1,4 @@
-# TODO - Next Steps for detex
+# TODO - Next Steps for asdex
 
 ## Immediate
 
@@ -54,7 +54,7 @@ Missing precise handlers for:
 
 ## Conservative Propagators
 
-These propagators in `src/detex/_propagate.py` use conservative fallbacks that could be made precise:
+These propagators in `src/asdex/_propagate.py` use conservative fallbacks that could be made precise:
 
 - [ ] `prop_slice` (lines 87-93) - Multi-dimensional slice unions all dependencies
 - [ ] `prop_broadcast_in_dim` (lines 107-110) - Non-scalar broadcast unions all dependencies

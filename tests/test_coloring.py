@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from jax.experimental.sparse import BCOO
 
-from detex import color_rows
+from asdex import color_rows
 
 
 def _make_bcoo(rows: list[int], cols: list[int], shape: tuple[int, int]) -> BCOO:
