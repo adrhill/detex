@@ -139,24 +139,66 @@ def test_nested_slice_concat():
 
 
 @pytest.mark.array_ops
-@pytest.mark.bug
 def test_empty_concatenate():
-    """Concatenating with empty arrays produces incorrect sparsity.
-
-    TODO(bug): Fix empty array handling in concatenate/reshape.
-    BUG: Empty arrays in concatenate produce incorrect indices.
-    Should produce identity matrix but result is shifted.
-    """
+    """Concatenating with empty arrays preserves correct sparsity."""
 
     def f(x):
         empty = jnp.array([])
         return jnp.concatenate([empty, x, empty])
 
-    # TODO: Should produce identity matrix
     result = jacobian_sparsity(f, n=2)
     expected = np.eye(2, dtype=int)
-    # BUG: Result is incorrect (shifted) instead of identity
-    assert not np.array_equal(result.todense().astype(int), expected)
+    np.testing.assert_array_equal(result.todense().astype(int), expected)
+
+
+@pytest.mark.array_ops
+def test_concatenate_with_constants():
+    """Concatenating non-empty constants with input tracks dependencies correctly.
+
+    Constants have no input dependency, so only input elements contribute non-zeros.
+    """
+
+    def f(x):
+        a = jnp.array([1.0])
+        b = jnp.array([2.0, 3.0])
+        return jnp.concatenate([a, x, b])
+
+    result = jacobian_sparsity(f, n=2).todense().astype(int)
+    # Output: [a[0], x[0], x[1], b[0], b[1]] (5 elements)
+    # Only x[0] and x[1] depend on input
+    expected = np.array(
+        [
+            [0, 0],  # out[0] <- a[0] (constant)
+            [1, 0],  # out[1] <- x[0]
+            [0, 1],  # out[2] <- x[1]
+            [0, 0],  # out[3] <- b[0] (constant)
+            [0, 0],  # out[4] <- b[1] (constant)
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_concatenate_mixed_empty_and_nonempty_constants():
+    """Concatenating empty and non-empty constants with input works correctly."""
+
+    def f(x):
+        const = jnp.array([1.0])
+        empty = jnp.array([])
+        return jnp.concatenate([const, empty, x])
+
+    result = jacobian_sparsity(f, n=2).todense().astype(int)
+    # Output: [const[0], x[0], x[1]] (3 elements)
+    expected = np.array(
+        [
+            [0, 0],  # out[0] <- const[0] (constant)
+            [1, 0],  # out[1] <- x[0]
+            [0, 1],  # out[2] <- x[1]
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
 
 
 # =============================================================================
@@ -378,6 +420,159 @@ def test_sort():
     result = jacobian_sparsity(f, n=3).todense().astype(int)
     # Conservative fallback is actually correct here
     expected = np.ones((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Constants in operations
+# =============================================================================
+
+
+@pytest.mark.array_ops
+def test_constant_in_elementwise_op():
+    """Constant array in binary elementwise operation preserves input structure.
+
+    Adding a constant array to input doesn't change the sparsity pattern.
+    """
+
+    def f(x):
+        const = jnp.array([1.0, 2.0, 3.0])
+        return x + const
+
+    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    # Each output depends only on corresponding input (identity)
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_all_constants_no_input_dependency():
+    """Output that depends only on constants has all-zero sparsity."""
+
+    def f(x):
+        a = jnp.array([1.0, 2.0])
+        b = jnp.array([3.0])
+        return jnp.concatenate([a, b])
+
+    result = jacobian_sparsity(f, n=2).todense().astype(int)
+    # Output has no dependency on input at all
+    expected = np.zeros((3, 2), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_slice_constant_array():
+    """Slicing a constant array produces zero sparsity."""
+
+    def f(_x):
+        const = jnp.array([1.0, 2.0, 3.0, 4.0])
+        return const[1:3]  # Slice constant, no input dependency
+
+    result = jacobian_sparsity(f, n=2).todense().astype(int)
+    expected = np.zeros((2, 2), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_slice_mixed_with_constant():
+    """Slicing input and concatenating with sliced constant."""
+
+    def f(x):
+        const = jnp.array([10.0, 20.0])
+        sliced_x = x[1:3]  # x[1], x[2]
+        sliced_const = const[:1]  # const[0]
+        return jnp.concatenate([sliced_const, sliced_x])
+
+    result = jacobian_sparsity(f, n=4).todense().astype(int)
+    # Output: [const[0], x[1], x[2]]
+    expected = np.array(
+        [
+            [0, 0, 0, 0],  # out[0] <- const[0]
+            [0, 1, 0, 0],  # out[1] <- x[1]
+            [0, 0, 1, 0],  # out[2] <- x[2]
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_squeeze_constant():
+    """Squeezing a constant array produces zero sparsity."""
+
+    def f(_x):
+        const = jnp.array([[1.0, 2.0, 3.0]])  # Shape (1, 3)
+        return jnp.squeeze(const, axis=0)  # Shape (3,)
+
+    result = jacobian_sparsity(f, n=2).todense().astype(int)
+    expected = np.zeros((3, 2), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_broadcast_constant():
+    """Broadcasting a constant array produces zero sparsity."""
+
+    def f(_x):
+        const = jnp.array([1.0, 2.0])  # Shape (2,)
+        return jnp.broadcast_to(const, (3, 2)).flatten()  # Shape (6,)
+
+    result = jacobian_sparsity(f, n=2).todense().astype(int)
+    expected = np.zeros((6, 2), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_broadcast_input_add_constant():
+    """Broadcasting input and adding a constant preserves input structure."""
+
+    def f(x):
+        const = jnp.array([[1.0], [2.0]])  # Shape (2, 1)
+        x_col = x.reshape(2, 1)  # Shape (2, 1)
+        broadcasted = jnp.broadcast_to(x_col, (2, 3))  # Shape (2, 3)
+        return (broadcasted + const).flatten()
+
+    result = jacobian_sparsity(f, n=2).todense().astype(int)
+    # Each row of output depends on corresponding input element
+    # Output shape (2, 3) flattened: rows 0-2 from x[0], rows 3-5 from x[1]
+    expected = np.array(
+        [
+            [1, 0],  # out[0] <- x[0]
+            [1, 0],  # out[1] <- x[0]
+            [1, 0],  # out[2] <- x[0]
+            [0, 1],  # out[3] <- x[1]
+            [0, 1],  # out[4] <- x[1]
+            [0, 1],  # out[5] <- x[1]
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_reshape_constant():
+    """Reshaping a constant array produces zero sparsity."""
+
+    def f(_x):
+        const = jnp.array([1.0, 2.0, 3.0, 4.0])
+        return const.reshape(2, 2).flatten()
+
+    result = jacobian_sparsity(f, n=2).todense().astype(int)
+    expected = np.zeros((4, 2), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_reshape_then_slice_constant():
+    """Reshaping and slicing a constant produces zero sparsity."""
+
+    def f(_x):
+        const = jnp.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+        mat = const.reshape(2, 3)
+        return mat[0, :]  # First row
+
+    result = jacobian_sparsity(f, n=2).todense().astype(int)
+    expected = np.zeros((3, 2), dtype=int)
     np.testing.assert_array_equal(result, expected)
 
 
