@@ -1,6 +1,6 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770257607947,
-  "repoUrl": "https://github.com/adrhill/detex",
+  "lastUpdate": 1770259219257,
+  "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
       {
@@ -609,6 +609,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00007461371594399075",
             "extra": "mean: 1.0164837058811111 msec\nrounds: 34"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6be7185765a25287933038a9ffa08f78b25021fa",
+          "message": "Rename package from `detex` to `asdex` (#12)\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-05T03:39:56+01:00",
+          "tree_id": "0c18bbcc4054007f710c07b1539a4a264038d1e2",
+          "url": "https://github.com/adrhill/asdex/commit/6be7185765a25287933038a9ffa08f78b25021fa"
+        },
+        "date": 1770259218847,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n100",
+            "value": 1001.4632809210294,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017279755942805586",
+            "extra": "mean: 998.5388571414384 usec\nrounds: 7"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n500",
+            "value": 264.3490066926449,
+            "unit": "iter/sec",
+            "range": "stddev: 0.009416161004423313",
+            "extra": "mean: 3.7828778421047256 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n1000",
+            "value": 415.16887372474133,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00019584094282209228",
+            "extra": "mean: 2.408658411764761 msec\nrounds: 17"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n100",
+            "value": 1167.220821450068,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000510730349776724",
+            "extra": "mean: 856.7359163090276 usec\nrounds: 466"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n500",
+            "value": 556.3601799740507,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0036480101163253427",
+            "extra": "mean: 1.7973967871795593 msec\nrounds: 390"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_matmul_n100",
+            "value": 78.418128756086,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013782088688828811",
+            "extra": "mean: 12.752153307692774 msec\nrounds: 26"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mlp_layer",
+            "value": 58.858458236732005,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01598009309053029",
+            "extra": "mean: 16.989911559999484 msec\nrounds: 25"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_elementwise_chain",
+            "value": 829.4922465970056,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00018368318234093922",
+            "extra": "mean: 1.2055567777788194 msec\nrounds: 18"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mixed_ops",
+            "value": 968.7228152160064,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001113231699407031",
+            "extra": "mean: 1.0322870322580555 msec\nrounds: 31"
           }
         ]
       }
