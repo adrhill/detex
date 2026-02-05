@@ -1,4 +1,4 @@
-"""Sparse Jacobian computation using VJPs and row coloring.
+"""Sparse Jacobian and Hessian computation using VJPs and row coloring.
 
 The key insight: rows that don't share non-zero columns can be computed together
 in a single VJP by using a combined seed vector. Coloring identifies which rows
@@ -122,3 +122,36 @@ def sparse_jacobian(
         grads.append(grad)
 
     return _decompress_jacobian(sparsity, colors, grads)
+
+
+def sparse_hessian(
+    f: Callable[[ArrayLike], ArrayLike],
+    x: ArrayLike,
+    sparsity: BCOO | None = None,
+    colors: NDArray[np.int32] | None = None,
+) -> BCOO:
+    """Compute sparse Hessian using coloring and VJPs.
+
+    Computes the Hessian by applying sparse_jacobian to the gradient function,
+    demonstrating how sparse differentiation composes with JAX's autodiff.
+
+    Args:
+        f: Scalar-valued function from R^n to R (takes 1D array, returns scalar)
+        x: Input point of shape (n,)
+        sparsity: Optional pre-computed Hessian sparsity pattern from
+            hessian_sparsity(). If None, detected automatically.
+        colors: Optional pre-computed row coloring from color_rows(). If None,
+            computed automatically from sparsity.
+
+    Returns:
+        Sparse Hessian matrix of shape (n, n) as BCOO
+    """
+    from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
+
+    x = np.asarray(x)
+    n = x.shape[0]
+
+    if sparsity is None:
+        sparsity = _detect_hessian_sparsity(f, n)
+
+    return sparse_jacobian(jax.grad(f), x, sparsity=sparsity, colors=colors)
