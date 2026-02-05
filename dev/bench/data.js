@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770253126024,
+  "lastUpdate": 1770257607947,
   "repoUrl": "https://github.com/adrhill/detex",
   "entries": {
     "Benchmark": [
@@ -522,6 +522,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00002761835749606136",
             "extra": "mean: 710.1587903680578 usec\nrounds: 353"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "aeaa6977713c1a6b47924e170adc64a1f692d395",
+          "message": "Implement full ASD pipeline for reverse-mode Jacobian computation (#11)\n\n* Add sparse Jacobian computation with row-wise coloring\n\nImplement greedy row-wise matrix coloring and VJP-based sparse Jacobian\ncomputation. Rows that don't share non-zero columns can be evaluated\ntogether in a single VJP, reducing backward passes from m to the number\nof colors.\n\nNew public API:\n- color_rows(sparsity) -> (colors, num_colors)\n- sparse_jacobian(f, x, sparsity=None) -> csr_matrix\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Switch from scipy.sparse to jax.experimental.sparse.BCOO\n\n- jacobian_sparsity() returns BCOO instead of coo_matrix\n- sparse_jacobian() returns BCOO instead of csr_matrix\n- color_rows() accepts BCOO input\n- Update all tests (.toarray() → .todense(), .nnz → .nse)\n- Use int8 instead of bool for sparsity data (BCOO limitation)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Update README\n\n* Rename main modules to detection.py, coloring.py, decompression.py\n\nRemove underscore prefix convention for the three main public modules:\n- _detect.py -> detection.py\n- _coloring.py -> coloring.py\n- _sparse_jacobian.py -> decompression.py\n\nThe decompression module now imports jacobian_sparsity from detection\ninstead of duplicating the detection logic.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Rename test files and update CLAUDE.md documentation\n\nTest files renamed to match module names:\n- test_jacobian_sparsity.py -> test_detection.py\n- test_sparse_jacobian.py -> test_decompression.py\n\nUpdated CLAUDE.md files to reflect:\n- Full ASD pipeline (detection, coloring, decompression)\n- New module and test file structure\n- Added coloring and sparse_jacobian markers\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Update documentation with full ASD pipeline\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-05T03:13:01+01:00",
+          "tree_id": "ae32ffb00376513b13e0e25a0931265aa12b351e",
+          "url": "https://github.com/adrhill/detex/commit/aeaa6977713c1a6b47924e170adc64a1f692d395"
+        },
+        "date": 1770257606919,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n100",
+            "value": 1055.0488903039582,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00013116306364006273",
+            "extra": "mean: 947.8233750019882 usec\nrounds: 8"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n500",
+            "value": 343.4584896071303,
+            "unit": "iter/sec",
+            "range": "stddev: 0.006348204379840068",
+            "extra": "mean: 2.9115599999984383 msec\nrounds: 21"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n1000",
+            "value": 425.42487742315546,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017037879787891628",
+            "extra": "mean: 2.3505912631558084 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n100",
+            "value": 1118.2780755972647,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010383944719810414",
+            "extra": "mean: 894.2319641435399 usec\nrounds: 502"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n500",
+            "value": 590.5539499843768,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0025046746978918347",
+            "extra": "mean: 1.6933253939398003 msec\nrounds: 396"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_matmul_n100",
+            "value": 93.42865182763616,
+            "unit": "iter/sec",
+            "range": "stddev: 0.009201068198822637",
+            "extra": "mean: 10.703354703703436 msec\nrounds: 27"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mlp_layer",
+            "value": 72.16680332931487,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010382125853322354",
+            "extra": "mean: 13.856786692307184 msec\nrounds: 26"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_elementwise_chain",
+            "value": 843.6264904461575,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014053180756587788",
+            "extra": "mean: 1.1853586999990284 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mixed_ops",
+            "value": 983.7836004790429,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007461371594399075",
+            "extra": "mean: 1.0164837058811111 msec\nrounds: 34"
           }
         ]
       }
