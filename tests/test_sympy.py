@@ -13,13 +13,16 @@ import numpy as np
 import sympy as sp
 from sympy import Abs, Symbol, cos, cosh, exp, log, sin, sinh, sqrt, tan, tanh
 
-from asdex import jacobian_sparsity
+from asdex import hessian_sparsity, jacobian_sparsity
 
 # Type alias for JAX functions
 JaxFn = Callable[[jnp.ndarray], jnp.ndarray]
 
 # Unary functions that preserve non-zero derivatives
 UNARY_OPS = [sin, cos, tan, exp, sqrt, sinh, cosh, tanh, Abs]
+
+# Unary ops for Hessian tests (excludes Abs due to SymPy's complex-analytic treatment)
+UNARY_OPS_HESSIAN = [sin, cos, tan, exp, sqrt, sinh, cosh, tanh]
 
 # Binary operations
 BINARY_OPS = ["add", "sub", "mul", "div"]
@@ -145,9 +148,13 @@ def compute_symbolic_sparsity(
     return sparsity
 
 
-def random_unary_expr(base_expr: sp.Expr, rng: random.Random) -> sp.Expr:
+def random_unary_expr(
+    base_expr: sp.Expr, rng: random.Random, ops: list | None = None
+) -> sp.Expr:
     """Apply a random unary operation to an expression."""
-    op = rng.choice(UNARY_OPS)
+    if ops is None:
+        ops = UNARY_OPS
+    op = rng.choice(ops)
     # Some functions need domain restrictions
     if op in (sqrt, log):
         return op(Abs(base_expr) + 1)
@@ -173,6 +180,7 @@ def generate_random_expr(
     symbols: list[Symbol],
     depth: int,
     rng: random.Random,
+    unary_ops: list | None = None,
 ) -> sp.Expr:
     """Generate a random SymPy expression.
 
@@ -180,6 +188,7 @@ def generate_random_expr(
         symbols: Available input symbols
         depth: Maximum recursion depth
         rng: Random number generator
+        unary_ops: List of unary operations to use (defaults to UNARY_OPS)
 
     Returns:
         A random SymPy expression
@@ -196,12 +205,12 @@ def generate_random_expr(
 
     if choice < 0.4:
         # Unary operation
-        sub_expr = generate_random_expr(symbols, depth - 1, rng)
-        return random_unary_expr(sub_expr, rng)
+        sub_expr = generate_random_expr(symbols, depth - 1, rng, unary_ops)
+        return random_unary_expr(sub_expr, rng, unary_ops)
     else:
         # Binary operation
-        left = generate_random_expr(symbols, depth - 1, rng)
-        right = generate_random_expr(symbols, depth - 1, rng)
+        left = generate_random_expr(symbols, depth - 1, rng, unary_ops)
+        right = generate_random_expr(symbols, depth - 1, rng, unary_ops)
         return random_binary_expr(left, right, rng)
 
 
@@ -359,3 +368,206 @@ class TestSympyEdgeCases:
 
         result = jacobian_sparsity(f, 3).todense().astype(bool)
         np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Hessian sparsity tests
+# =============================================================================
+
+
+def sympy_to_jax_scalar_fn(
+    expr: sp.Expr, symbols: list[Symbol]
+) -> Callable[[jnp.ndarray], jnp.ndarray]:
+    """Convert a scalar SymPy expression to a JAX function.
+
+    Args:
+        expr: A scalar SymPy expression
+        symbols: List of SymPy symbols (input variables)
+
+    Returns:
+        JAX function f(x) -> scalar
+    """
+    converter = SympyToJax(symbols)
+    expr_fn = converter.convert(expr)
+
+    def jax_fn(x: jnp.ndarray) -> jnp.ndarray:
+        return expr_fn(x)
+
+    return jax_fn
+
+
+def compute_symbolic_hessian_sparsity(
+    expr: sp.Expr, symbols: list[Symbol]
+) -> np.ndarray:
+    """Compute the Hessian sparsity pattern using SymPy symbolic differentiation.
+
+    Args:
+        expr: A scalar SymPy expression
+        symbols: List of SymPy symbols (input variables)
+
+    Returns:
+        Boolean numpy array of shape (n, n) where entry (i,j) is True
+        if the second derivative d²f/dx_i dx_j is non-zero
+    """
+    n = len(symbols)
+    sparsity = np.zeros((n, n), dtype=bool)
+
+    for i, sym_i in enumerate(symbols):
+        for j, sym_j in enumerate(symbols):
+            # Compute second derivative
+            deriv = sp.diff(sp.diff(expr, sym_i), sym_j)
+            simplified = sp.simplify(deriv)
+            sparsity[i, j] = simplified != 0
+
+    return sparsity
+
+
+def generate_random_scalar_function(
+    n_inputs: int,
+    max_depth: int,
+    seed: int,
+) -> tuple[sp.Expr, list[Symbol]]:
+    """Generate a random scalar-valued function for Hessian testing.
+
+    Uses UNARY_OPS_HESSIAN which excludes Abs (its symbolic second derivative
+    involves complex analysis that differs from numerical computation).
+
+    Args:
+        n_inputs: Number of input variables
+        max_depth: Maximum expression tree depth
+        seed: Random seed for reproducibility
+
+    Returns:
+        Tuple of (scalar expression, input symbols)
+    """
+    rng = random.Random(seed)
+    symbols = [Symbol(f"x{i}") for i in range(n_inputs)]
+    expr = generate_random_expr(symbols, max_depth, rng, UNARY_OPS_HESSIAN)
+    return expr, symbols
+
+
+class TestHessianSympyComparison:
+    """Test Hessian sparsity by comparing against SymPy symbolic derivatives.
+
+    Due to conservative handling of the `pad` primitive in gradient jaxprs,
+    asdex may over-estimate Hessian sparsity. We verify that the result is
+    a superset of the true sparsity (no false negatives).
+    """
+
+    def _run_comparison(self, n_inputs: int, max_depth: int, seed: int) -> None:
+        """Run a single Hessian comparison test.
+
+        Args:
+            n_inputs: Number of input variables
+            max_depth: Maximum expression depth
+            seed: Random seed
+        """
+        expr, symbols = generate_random_scalar_function(n_inputs, max_depth, seed)
+
+        # Compute ground truth sparsity from SymPy
+        expected = compute_symbolic_hessian_sparsity(expr, symbols)
+
+        # Convert to JAX and compute sparsity with asdex
+        jax_fn = sympy_to_jax_scalar_fn(expr, symbols)
+        result = hessian_sparsity(jax_fn, n_inputs).todense().astype(bool)
+
+        # asdex should have no false negatives (may have false positives due to
+        # conservative pad handling)
+        missed = expected & ~result
+        if missed.any():
+            raise AssertionError(
+                f"Hessian sparsity has false negatives!\n"
+                f"Expression: {expr}\n"
+                f"Expected:\n{expected.astype(int)}\n"
+                f"Got:\n{result.astype(int)}\n"
+                f"Missed (false negatives):\n{missed.astype(int)}"
+            )
+
+    def test_simple_expressions(self):
+        """Test simple expressions with depth 1."""
+        for seed in range(10):
+            self._run_comparison(n_inputs=3, max_depth=1, seed=seed)
+
+    def test_medium_expressions(self):
+        """Test medium complexity expressions with depth 2."""
+        for seed in range(10):
+            self._run_comparison(n_inputs=4, max_depth=2, seed=seed)
+
+    def test_wide_inputs(self):
+        """Test with many input variables."""
+        for seed in range(5):
+            self._run_comparison(n_inputs=6, max_depth=2, seed=seed)
+
+
+class TestHessianSympyEdgeCases:
+    """Test specific Hessian edge cases using SymPy verification."""
+
+    def test_linear_function(self):
+        """Linear functions have zero Hessian."""
+        x, y, z = Symbol("x"), Symbol("y"), Symbol("z")
+        expr = 2 * x + 3 * y - z
+        expected = compute_symbolic_hessian_sparsity(expr, [x, y, z])
+
+        def f(arr):
+            return 2 * arr[0] + 3 * arr[1] - arr[2]
+
+        result = hessian_sparsity(f, 3).todense().astype(bool)
+        # Linear function has zero Hessian
+        assert not expected.any()
+        assert not result.any()
+
+    def test_quadratic_diagonal(self):
+        """f(x) = x² + y² + z² has diagonal Hessian."""
+        x, y, z = Symbol("x"), Symbol("y"), Symbol("z")
+        expr = x**2 + y**2 + z**2
+        expected = compute_symbolic_hessian_sparsity(expr, [x, y, z])
+
+        def f(arr):
+            return arr[0] ** 2 + arr[1] ** 2 + arr[2] ** 2
+
+        result = hessian_sparsity(f, 3).todense().astype(bool)
+        # No false negatives
+        missed = expected & ~result
+        assert not missed.any()
+
+    def test_cross_terms(self):
+        """f(x) = x*y + y*z has off-diagonal Hessian entries."""
+        x, y, z = Symbol("x"), Symbol("y"), Symbol("z")
+        expr = x * y + y * z
+        expected = compute_symbolic_hessian_sparsity(expr, [x, y, z])
+
+        def f(arr):
+            return arr[0] * arr[1] + arr[1] * arr[2]
+
+        result = hessian_sparsity(f, 3).todense().astype(bool)
+        # No false negatives
+        missed = expected & ~result
+        assert not missed.any()
+
+    def test_nested_nonlinear(self):
+        """Test nested nonlinear function."""
+        x, y = Symbol("x"), Symbol("y")
+        expr = sin(x * y) + exp(x)
+        expected = compute_symbolic_hessian_sparsity(expr, [x, y])
+
+        def f(arr):
+            return jnp.sin(arr[0] * arr[1]) + jnp.exp(arr[0])
+
+        result = hessian_sparsity(f, 2).todense().astype(bool)
+        # No false negatives
+        missed = expected & ~result
+        assert not missed.any()
+
+    def test_rational_hessian(self):
+        """Test Hessian of rational function."""
+        x, y = Symbol("x"), Symbol("y")
+        expr = (x * y) / (Abs(x) + 1)
+        expected = compute_symbolic_hessian_sparsity(expr, [x, y])
+
+        def f(arr):
+            return (arr[0] * arr[1]) / (jnp.abs(arr[0]) + 1)
+
+        result = hessian_sparsity(f, 2).todense().astype(bool)
+        # No false negatives
+        missed = expected & ~result
+        assert not missed.any()

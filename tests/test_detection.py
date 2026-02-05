@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from asdex import jacobian_sparsity
+from asdex import hessian_sparsity, jacobian_sparsity
 
 # =============================================================================
 # Core API tests
@@ -21,6 +21,55 @@ def test_simple_dependencies():
     result = jacobian_sparsity(f, n=3).todense().astype(int)
     expected = np.array([[1, 1, 0], [0, 1, 1], [0, 0, 1]])
     np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Hessian sparsity tests
+# =============================================================================
+
+
+def test_hessian_linear():
+    """Linear functions have zero Hessian."""
+
+    def f(x):
+        return x[0] + 2 * x[1] + 3 * x[2]
+
+    H = hessian_sparsity(f, n=3).todense()
+    assert H.sum() == 0
+
+
+@pytest.mark.fallback
+def test_hessian_product():
+    """f(x) = x[0] * x[1] has H[0,1] = H[1,0] != 0.
+
+    TODO(pad): Precise behavior would be [[0,1,0], [1,0,0], [0,0,0]].
+    Currently conservative due to pad primitive in gradient jaxpr.
+    """
+
+    def f(x):
+        return x[0] * x[1]
+
+    H = hessian_sparsity(f, n=3).todense().astype(int)
+    # Conservative: all rows depending on x[0], x[1] are dense
+    expected = jnp.array([[1, 1, 0], [1, 1, 0], [1, 1, 0]])
+    assert jnp.array_equal(H, expected)
+
+
+@pytest.mark.fallback
+def test_hessian_quadratic():
+    """f(x) = x[0]^2 + x[1]^2 has diagonal Hessian.
+
+    TODO(pad): Precise behavior would be [[1,0,0], [0,1,0], [0,0,0]].
+    Currently conservative due to pad primitive in gradient jaxpr.
+    """
+
+    def f(x):
+        return x[0] ** 2 + x[1] ** 2
+
+    H = hessian_sparsity(f, n=3).todense().astype(int)
+    # Conservative: all rows depending on x[0], x[1] are dense
+    expected = jnp.array([[1, 1, 0], [1, 1, 0], [1, 1, 0]])
+    assert jnp.array_equal(H, expected)
 
 
 @pytest.mark.elementwise

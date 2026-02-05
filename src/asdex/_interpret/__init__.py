@@ -106,7 +106,7 @@ def prop_equation(eqn: JaxprEqn, deps: Deps) -> None:
             prop_reshape(eqn, deps)
         case "integer_pow":
             prop_integer_pow(eqn, deps)
-        case "add" | "sub" | "mul" | "div" | "pow" | "max" | "min":
+        case "add" | "sub" | "mul" | "div" | "pow" | "max" | "min" | "add_any":
             prop_binary_elementwise(eqn, deps)
         case (
             "neg"

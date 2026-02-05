@@ -1,4 +1,4 @@
-"""Jacobian sparsity detection via jaxpr graph analysis."""
+"""Jacobian and Hessian sparsity detection via jaxpr graph analysis."""
 
 import jax
 import jax.numpy as jnp
@@ -57,3 +57,21 @@ def jacobian_sparsity(f, n: int) -> BCOO:
     data = jnp.ones(len(rows), dtype=jnp.int8)
 
     return BCOO((data, indices), shape=(m, n))
+
+
+def hessian_sparsity(f, n: int) -> BCOO:
+    """
+    Detect global Hessian sparsity pattern for f: R^n -> R.
+
+    Computed by analyzing the Jacobian sparsity of the gradient function,
+    demonstrating how our sparsity interpreter composes with JAX's autodiff.
+
+    Args:
+        f: Scalar-valued function taking a 1D array of length n
+        n: Input dimension
+
+    Returns:
+        BCOO sparse matrix of shape (n, n) where entry (i,j) is True
+        if H[i,j] may be nonzero
+    """
+    return jacobian_sparsity(jax.grad(f), n)
