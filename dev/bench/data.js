@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770245002546,
+  "lastUpdate": 1770253126024,
   "repoUrl": "https://github.com/adrhill/detex",
   "entries": {
     "Benchmark": [
@@ -435,6 +435,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.000016027268864223224",
             "extra": "mean: 695.1578901406629 usec\nrounds: 355"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "56aa24a7c46166572b776bc73e8ac1670408b77f",
+          "message": "Refactor and document propagation rules (#10)\n\n* Rename internals\n\n* Further simplify names\n\n* Improve docstrings for propagation rules\n\nEach rule now documents:\n- Summary of the operation\n- Mathematical explanation\n- Concrete example with input/output deps\n- Jaxpr parameters\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Refactor _propagate.py into module folder\n\nSplit into focused submodules:\n- _commons.py: types, constants, utilities\n- _elementwise.py: element-wise operations\n- _indexing.py: shape manipulation operations\n- _reduction.py: reduction operations\n- _conv.py: convolution\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Reorganize tests to mirror source structure\n\nMove propagation-related tests into tests/_propagate/:\n- test_array_ops.py → test_indexing.py\n- test_reductions.py → test_reduction.py\n- test_conv.py → test_conv.py\n- test_propagate_internals.py → test_internals.py\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-05T01:58:23+01:00",
+          "tree_id": "e1cffc960b0e091a4b1256da7399db8c1c288212",
+          "url": "https://github.com/adrhill/detex/commit/56aa24a7c46166572b776bc73e8ac1670408b77f"
+        },
+        "date": 1770253125600,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n100",
+            "value": 1565.8658776351906,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006931991717497248",
+            "extra": "mean: 638.6243000008562 usec\nrounds: 10"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n500",
+            "value": 656.2551309920754,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004356937674137892",
+            "extra": "mean: 1.5237976097623465 msec\nrounds: 41"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n1000",
+            "value": 918.3901731462745,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004656758544388837",
+            "extra": "mean: 1.0888618250064042 msec\nrounds: 40"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n100",
+            "value": 1685.4489634567337,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000028378223340977004",
+            "extra": "mean: 593.3137233352189 usec\nrounds: 600"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n500",
+            "value": 1343.56326821282,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002492484908838617",
+            "extra": "mean: 744.2894753517483 usec\nrounds: 568"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_matmul_n100",
+            "value": 264.1128637934405,
+            "unit": "iter/sec",
+            "range": "stddev: 0.006117863256733758",
+            "extra": "mean: 3.786260107277804 msec\nrounds: 261"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mlp_layer",
+            "value": 209.806881201913,
+            "unit": "iter/sec",
+            "range": "stddev: 0.006858042495005558",
+            "extra": "mean: 4.766287903768154 msec\nrounds: 239"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_elementwise_chain",
+            "value": 663.7426170516065,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004358438402801063",
+            "extra": "mean: 1.5066080952313616 msec\nrounds: 42"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mixed_ops",
+            "value": 1408.135776903817,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002761835749606136",
+            "extra": "mean: 710.1587903680578 usec\nrounds: 353"
           }
         ]
       }
