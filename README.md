@@ -41,7 +41,7 @@ def f(x):
 
 # Detect sparsity pattern for f: R^3 -> R^3
 pattern = jacobian_sparsity(f, n=3)
-print(pattern.toarray().astype(int))
+print(pattern.todense().astype(int))
 # [[1 0 0]
 #  [1 1 0]
 #  [0 0 1]]
@@ -61,8 +61,8 @@ def f(x):
     return (x[1:] - x[:-1]) ** 2
 
 # Detect sparsity pattern
-pattern = jacobian_sparsity(f, n=5)  # scipy.sparse.coo_matrix
-print(pattern.toarray().astype(int))
+pattern = jacobian_sparsity(f, n=5)  # jax.experimental.sparse.BCOO
+print(pattern.todense().astype(int))
 # [[1 1 0 0 0]
 #  [0 1 1 0 0]
 #  [0 0 1 1 0]
@@ -75,8 +75,8 @@ print(f"VJP passes: {num_colors} (instead of 4)")
 
 # Compute sparse Jacobian
 x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
-J = sparse_jacobian(f, x, sparsity=pattern, colors=colors)  # scipy.sparse.csr_matrix
-print(J.toarray())
+J = sparse_jacobian(f, x, sparsity=pattern, colors=colors)  # jax.experimental.sparse.BCOO
+print(J.todense())
 # [[-2.  2.  0.  0.  0.]
 #  [ 0. -4.  4.  0.  0.]
 #  [ 0.  0.  2. -2.  0.]

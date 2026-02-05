@@ -5,34 +5,35 @@ get different colors. Same-colored rows are structurally orthogonal and can be
 evaluated together in a single VJP.
 """
 
+from collections import defaultdict
+
 import numpy as np
+from jax.experimental.sparse import BCOO
 from numpy.typing import NDArray
-from scipy.sparse import coo_matrix
 
 
-def _build_row_conflict_sets(sparsity: coo_matrix) -> list[set[int]]:
+def _build_row_conflict_sets(sparsity: BCOO) -> list[set[int]]:
     """Build conflict graph: rows conflict if they share a non-zero column.
 
-    Uses CSC (compressed sparse column) format for efficient column iteration.
     For each column, all rows with non-zeros in that column conflict with each other.
 
     Args:
-        sparsity: Sparse boolean matrix of shape (m, n)
+        sparsity: BCOO sparse matrix of shape (m, n)
 
     Returns:
         List of sets where conflicts[i] contains all rows that conflict with row i
     """
     m = sparsity.shape[0]
-    csc = sparsity.tocsc()
-
     conflicts: list[set[int]] = [set() for _ in range(m)]
 
-    # For each column, mark all pairs of rows as conflicting
-    for col in range(csc.shape[1]):
-        start, end = csc.indptr[col], csc.indptr[col + 1]
-        rows_in_col = csc.indices[start:end]
+    # Group rows by column
+    col_to_rows: dict[int, list[int]] = defaultdict(list)
+    indices = np.asarray(sparsity.indices)
+    for row, col in indices:
+        col_to_rows[int(col)].append(int(row))
 
-        # All rows in this column conflict with each other
+    # For each column, mark all pairs of rows as conflicting
+    for rows_in_col in col_to_rows.values():
         for i, row_i in enumerate(rows_in_col):
             for row_j in rows_in_col[i + 1 :]:
                 conflicts[row_i].add(row_j)
@@ -41,7 +42,7 @@ def _build_row_conflict_sets(sparsity: coo_matrix) -> list[set[int]]:
     return conflicts
 
 
-def color_rows(sparsity: coo_matrix) -> tuple[NDArray[np.int32], int]:
+def color_rows(sparsity: BCOO) -> tuple[NDArray[np.int32], int]:
     """Greedy row-wise coloring for sparse Jacobian computation.
 
     Assigns colors to rows such that no two rows sharing a non-zero column
@@ -52,7 +53,7 @@ def color_rows(sparsity: coo_matrix) -> tuple[NDArray[np.int32], int]:
     not used by any conflicting row.
 
     Args:
-        sparsity: Sparse boolean matrix of shape (m, n) representing the
+        sparsity: BCOO sparse matrix of shape (m, n) representing the
             Jacobian sparsity pattern
 
     Returns:

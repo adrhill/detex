@@ -7,7 +7,7 @@ structure without evaluating derivatives, so results are valid for all inputs.
 
 import jax
 import jax.numpy as jnp
-from scipy.sparse import coo_matrix
+from jax.experimental.sparse import BCOO
 
 from detex._coloring import color_rows
 from detex._propagate import prop_jaxpr
@@ -16,7 +16,7 @@ from detex._sparse_jacobian import sparse_jacobian
 __all__ = ["jacobian_sparsity", "color_rows", "sparse_jacobian"]
 
 
-def jacobian_sparsity(f, n: int) -> coo_matrix:
+def jacobian_sparsity(f, n: int) -> BCOO:
     """
     Detect global Jacobian sparsity pattern for f: R^n -> R^m.
 
@@ -33,7 +33,7 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
         n: Input dimension
 
     Returns:
-        Sparse boolean matrix of shape (m, n) where entry (i,j) is True
+        BCOO sparse boolean matrix of shape (m, n) where entry (i,j) is True
         if output i depends on input j
     """
     dummy_input = jnp.zeros(n)
@@ -58,4 +58,11 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
             rows.append(i)
             cols.append(j)
 
-    return coo_matrix(([True] * len(rows), (rows, cols)), shape=(m, n), dtype=bool)
+    indices = jnp.array(
+        [[r, c] for r, c in zip(rows, cols, strict=True)], dtype=jnp.int32
+    )
+    if len(rows) == 0:
+        indices = jnp.zeros((0, 2), dtype=jnp.int32)
+    data = jnp.ones(len(rows), dtype=jnp.int8)
+
+    return BCOO((data, indices), shape=(m, n))

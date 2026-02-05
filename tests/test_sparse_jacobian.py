@@ -4,6 +4,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from jax.experimental.sparse import BCOO
 from numpy.testing import assert_allclose
 
 from detex import color_rows, jacobian_sparsity, sparse_jacobian
@@ -21,7 +22,7 @@ def test_diagonal():
         return x**2
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -35,7 +36,7 @@ def test_lower_triangular():
         return jnp.array([x[0], x[0] + x[1], x[0] + x[1] + x[2]])
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -49,7 +50,7 @@ def test_upper_triangular():
         return jnp.array([x[0] + x[1] + x[2], x[1] + x[2], x[2]])
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -63,7 +64,7 @@ def test_mixed_sparsity():
         return jnp.array([x[0] ** 2, 2 * x[0] * x[1] ** 2, jnp.sin(x[2])])
 
     x = np.array([1.0, 2.0, 0.5])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -78,7 +79,7 @@ def test_dense():
         return jnp.array([total, total * 2, total**2])
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -92,7 +93,7 @@ def test_zero_jacobian():
         return jnp.array([1.0, 2.0, 3.0])
 
     x = np.array([1.0, 2.0])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -108,8 +109,8 @@ def test_precomputed_sparsity():
     x = np.array([1.0, 2.0, 3.0])
     sparsity = jacobian_sparsity(f, n=3)
 
-    result1 = sparse_jacobian(f, x, sparsity=sparsity).toarray()
-    result2 = sparse_jacobian(f, x).toarray()  # Auto-detect
+    result1 = sparse_jacobian(f, x, sparsity=sparsity).todense()
+    result2 = sparse_jacobian(f, x).todense()  # Auto-detect
 
     assert_allclose(result1, result2, rtol=1e-10)
 
@@ -125,8 +126,8 @@ def test_precomputed_colors():
     sparsity = jacobian_sparsity(f, n=5)
     colors, num_colors = color_rows(sparsity)
 
-    result1 = sparse_jacobian(f, x, sparsity=sparsity, colors=colors).toarray()
-    result2 = sparse_jacobian(f, x).toarray()  # Auto-detect
+    result1 = sparse_jacobian(f, x, sparsity=sparsity, colors=colors).todense()
+    result2 = sparse_jacobian(f, x).todense()  # Auto-detect
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result1, result2, rtol=1e-10)
@@ -147,7 +148,7 @@ def test_different_input_points():
         np.array([0.0, 0.0, 0.0]),
         np.array([-1.0, 3.0, -0.5]),
     ]:
-        result = sparse_jacobian(f, x, sparsity=sparsity).toarray()
+        result = sparse_jacobian(f, x, sparsity=sparsity).todense()
         expected = jax.jacobian(f)(x)
         assert_allclose(result, expected, rtol=1e-5)
 
@@ -160,7 +161,7 @@ def test_single_output():
         return jnp.array([jnp.sum(x**2)])
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -174,7 +175,7 @@ def test_single_input():
         return jnp.array([x[0], x[0] ** 2, jnp.sin(x[0])])
 
     x = np.array([2.0])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -197,7 +198,7 @@ def test_tridiagonal_pattern():
         return jnp.array(out)
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -213,7 +214,7 @@ def test_block_diagonal():
         return jnp.array([x[0] + x[1], x[0] * x[1], x[2] + x[3], x[2] * x[3]])
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -233,7 +234,7 @@ def test_nonlinear_functions():
         )
 
     x = np.array([0.5, 1.0, 0.3])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -252,7 +253,7 @@ def test_wide_jacobian():
         return jnp.array([jnp.sum(x[:2]), jnp.sum(x[2:])])
 
     x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -266,7 +267,7 @@ def test_tall_jacobian():
         return jnp.array([x[0], x[1], x[0] + x[1], x[0] * x[1], x[0] - x[1]])
 
     x = np.array([2.0, 3.0])
-    result = sparse_jacobian(f, x).toarray()
+    result = sparse_jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -286,8 +287,8 @@ def test_empty_output():
 
 
 @pytest.mark.sparse_jacobian
-def test_csr_format():
-    """Verify output is CSR format."""
+def test_bcoo_format():
+    """Verify output is BCOO format."""
 
     def f(x):
         return x**2
@@ -295,4 +296,4 @@ def test_csr_format():
     x = np.array([1.0, 2.0, 3.0])
     result = sparse_jacobian(f, x)
 
-    assert result.format == "csr"
+    assert isinstance(result, BCOO)

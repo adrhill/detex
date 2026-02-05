@@ -1,18 +1,37 @@
 """Tests for row-wise graph coloring algorithm."""
 
+from collections import defaultdict
+
+import jax.numpy as jnp
 import numpy as np
 import pytest
-from scipy.sparse import coo_matrix
+from jax.experimental.sparse import BCOO
 
 from detex import color_rows
 
 
-def _is_valid_coloring(sparsity: coo_matrix, colors: np.ndarray) -> bool:
+def _make_bcoo(rows: list[int], cols: list[int], shape: tuple[int, int]) -> BCOO:
+    """Helper to create BCOO from row/col lists."""
+    if len(rows) == 0:
+        indices = jnp.zeros((0, 2), dtype=jnp.int32)
+    else:
+        indices = jnp.array(
+            [[r, c] for r, c in zip(rows, cols, strict=True)], dtype=jnp.int32
+        )
+    data = jnp.ones(len(rows), dtype=jnp.int8)
+    return BCOO((data, indices), shape=shape)
+
+
+def _is_valid_coloring(sparsity: BCOO, colors: np.ndarray) -> bool:
     """Check that no column has two rows with the same color."""
-    csc = sparsity.tocsc()
-    for col in range(csc.shape[1]):
-        start, end = csc.indptr[col], csc.indptr[col + 1]
-        rows_in_col = csc.indices[start:end]
+    # Group rows by column
+    col_to_rows: dict[int, list[int]] = defaultdict(list)
+    indices = np.asarray(sparsity.indices)
+    for row, col in indices:
+        col_to_rows[int(col)].append(int(row))
+
+    # Check each column
+    for rows_in_col in col_to_rows.values():
         colors_in_col = colors[rows_in_col]
         if len(colors_in_col) != len(set(colors_in_col)):
             return False
@@ -27,10 +46,7 @@ def _is_valid_coloring(sparsity: coo_matrix, colors: np.ndarray) -> bool:
 @pytest.mark.coloring
 def test_diagonal_one_color():
     """Diagonal matrix: all rows are independent, should use 1 color."""
-    data = [True] * 4
-    rows = [0, 1, 2, 3]
-    cols = [0, 1, 2, 3]
-    sparsity = coo_matrix((data, (rows, cols)), shape=(4, 4), dtype=bool)
+    sparsity = _make_bcoo([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
 
     colors, num_colors = color_rows(sparsity)
 
@@ -43,7 +59,12 @@ def test_diagonal_one_color():
 @pytest.mark.coloring
 def test_dense_m_colors():
     """Dense matrix: every row conflicts with every other, needs m colors."""
-    sparsity = coo_matrix(np.ones((4, 4), dtype=bool))
+    rows, cols = [], []
+    for i in range(4):
+        for j in range(4):
+            rows.append(i)
+            cols.append(j)
+    sparsity = _make_bcoo(rows, cols, (4, 4))
 
     colors, num_colors = color_rows(sparsity)
 
@@ -57,10 +78,9 @@ def test_dense_m_colors():
 def test_block_diagonal():
     """Block diagonal: non-overlapping blocks can share colors."""
     # Two 2x2 blocks
-    data = [True] * 8
     rows = [0, 0, 1, 1, 2, 2, 3, 3]
     cols = [0, 1, 0, 1, 2, 3, 2, 3]
-    sparsity = coo_matrix((data, (rows, cols)), shape=(4, 4), dtype=bool)
+    sparsity = _make_bcoo(rows, cols, (4, 4))
 
     colors, num_colors = color_rows(sparsity)
 
@@ -75,10 +95,9 @@ def test_block_diagonal():
 def test_tridiagonal():
     """Tridiagonal matrix: needs 2-3 colors depending on structure."""
     # 4x4 tridiagonal
-    data = [True] * 10
     rows = [0, 0, 1, 1, 1, 2, 2, 2, 3, 3]
     cols = [0, 1, 0, 1, 2, 1, 2, 3, 2, 3]
-    sparsity = coo_matrix((data, (rows, cols)), shape=(4, 4), dtype=bool)
+    sparsity = _make_bcoo(rows, cols, (4, 4))
 
     colors, num_colors = color_rows(sparsity)
 
@@ -90,7 +109,7 @@ def test_tridiagonal():
 @pytest.mark.coloring
 def test_single_row():
     """Single row matrix."""
-    sparsity = coo_matrix(([True, True, True], ([0, 0, 0], [0, 1, 2])), shape=(1, 3))
+    sparsity = _make_bcoo([0, 0, 0], [0, 1, 2], (1, 3))
 
     colors, num_colors = color_rows(sparsity)
 
@@ -102,7 +121,7 @@ def test_single_row():
 @pytest.mark.coloring
 def test_single_column():
     """Single column matrix: all rows conflict."""
-    sparsity = coo_matrix(([True] * 3, ([0, 1, 2], [0, 0, 0])), shape=(3, 1))
+    sparsity = _make_bcoo([0, 1, 2], [0, 0, 0], (3, 1))
 
     colors, num_colors = color_rows(sparsity)
 
@@ -114,7 +133,7 @@ def test_single_column():
 @pytest.mark.coloring
 def test_empty_matrix():
     """Empty matrix (0 rows)."""
-    sparsity = coo_matrix((0, 3), dtype=bool)
+    sparsity = _make_bcoo([], [], (0, 3))
 
     colors, num_colors = color_rows(sparsity)
 
@@ -125,7 +144,7 @@ def test_empty_matrix():
 @pytest.mark.coloring
 def test_zero_matrix():
     """Matrix with no non-zeros: all rows independent."""
-    sparsity = coo_matrix((3, 3), dtype=bool)
+    sparsity = _make_bcoo([], [], (3, 3))
 
     colors, num_colors = color_rows(sparsity)
 
@@ -138,15 +157,13 @@ def test_zero_matrix():
 def test_lower_triangular():
     """Lower triangular: increasing conflicts per row."""
     # 4x4 lower triangular
-    data = []
     rows = []
     cols = []
     for i in range(4):
         for j in range(i + 1):
-            data.append(True)
             rows.append(i)
             cols.append(j)
-    sparsity = coo_matrix((data, (rows, cols)), shape=(4, 4), dtype=bool)
+    sparsity = _make_bcoo(rows, cols, (4, 4))
 
     colors, num_colors = color_rows(sparsity)
 
@@ -159,16 +176,14 @@ def test_lower_triangular():
 def test_checkerboard():
     """Checkerboard pattern: alternating rows/cols."""
     # 4x4 checkerboard (even rows: even cols, odd rows: odd cols)
-    data = []
     rows = []
     cols = []
     for i in range(4):
         for j in range(4):
             if (i + j) % 2 == 0:
-                data.append(True)
                 rows.append(i)
                 cols.append(j)
-    sparsity = coo_matrix((data, (rows, cols)), shape=(4, 4), dtype=bool)
+    sparsity = _make_bcoo(rows, cols, (4, 4))
 
     colors, num_colors = color_rows(sparsity)
 

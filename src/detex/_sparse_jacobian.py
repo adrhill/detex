@@ -11,8 +11,8 @@ from collections.abc import Callable
 import jax
 import jax.numpy as jnp
 import numpy as np
+from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike, NDArray
-from scipy.sparse import coo_matrix, csr_matrix
 
 from detex._coloring import color_rows
 from detex._propagate import prop_jaxpr
@@ -40,10 +40,10 @@ def _compute_vjp_for_color(
 
 
 def _decompress_jacobian(
-    sparsity: coo_matrix,
+    sparsity: BCOO,
     colors: NDArray[np.int32],
     grads: list[NDArray],
-) -> csr_matrix:
+) -> BCOO:
     """Extract Jacobian entries from VJP results.
 
     For each non-zero (i, j) in the sparsity pattern, the value is extracted
@@ -52,31 +52,31 @@ def _decompress_jacobian(
     uniquely corresponds to one Jacobian row.
 
     Args:
-        sparsity: Sparsity pattern as COO matrix
+        sparsity: Sparsity pattern as BCOO matrix
         colors: Color assignment for each row
         grads: List of gradient vectors, one per color
 
     Returns:
-        Sparse Jacobian in CSR format
+        Sparse Jacobian as BCOO matrix
     """
-    coo = sparsity.tocoo()
-    rows = coo.row
-    cols = coo.col
+    indices = np.asarray(sparsity.indices)
+    rows = indices[:, 0]
+    cols = indices[:, 1]
 
     data = np.empty(len(rows), dtype=grads[0].dtype)
     for k, (i, j) in enumerate(zip(rows, cols, strict=True)):
         color = colors[i]
         data[k] = grads[color][j]
 
-    return csr_matrix((data, (rows, cols)), shape=sparsity.shape)
+    return BCOO((jnp.array(data), sparsity.indices), shape=sparsity.shape)
 
 
 def sparse_jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     x: ArrayLike,
-    sparsity: coo_matrix | None = None,
+    sparsity: BCOO | None = None,
     colors: NDArray[np.int32] | None = None,
-) -> csr_matrix:
+) -> BCOO:
     """Compute sparse Jacobian using coloring and VJPs.
 
     Uses row-wise coloring to identify structurally orthogonal rows, then
@@ -91,7 +91,7 @@ def sparse_jacobian(
             computed automatically from sparsity.
 
     Returns:
-        Sparse Jacobian matrix of shape (m, n) in CSR format
+        Sparse Jacobian matrix of shape (m, n) as BCOO
     """
     x = np.asarray(x)
     n = x.shape[0]
@@ -103,7 +103,7 @@ def sparse_jacobian(
 
     # Handle edge case: no outputs
     if m == 0:
-        return csr_matrix((0, n), dtype=x.dtype)
+        return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(0, n))
 
     if colors is None:
         colors, num_colors = color_rows(sparsity)
@@ -111,8 +111,8 @@ def sparse_jacobian(
         num_colors = int(colors.max()) + 1 if len(colors) > 0 else 0
 
     # Handle edge case: all-zero Jacobian
-    if sparsity.nnz == 0:
-        return csr_matrix((m, n), dtype=x.dtype)
+    if sparsity.nse == 0:
+        return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
     # Compute one VJP per color
     grads: list[NDArray] = []
@@ -124,11 +124,8 @@ def sparse_jacobian(
     return _decompress_jacobian(sparsity, colors, grads)
 
 
-def _detect_sparsity(f: Callable[[ArrayLike], ArrayLike], n: int) -> coo_matrix:
-    """Detect Jacobian sparsity pattern via jaxpr analysis.
-
-    This is a copy of the logic from jacobian_sparsity to avoid circular imports.
-    """
+def _detect_sparsity(f: Callable[[ArrayLike], ArrayLike], n: int) -> BCOO:
+    """Detect Jacobian sparsity pattern via jaxpr analysis."""
     dummy_input = jnp.zeros(n)
     closed_jaxpr = jax.make_jaxpr(f)(dummy_input)
     jaxpr = closed_jaxpr.jaxpr
@@ -145,4 +142,11 @@ def _detect_sparsity(f: Callable[[ArrayLike], ArrayLike], n: int) -> coo_matrix:
             rows.append(i)
             cols.append(j)
 
-    return coo_matrix(([True] * len(rows), (rows, cols)), shape=(m, n), dtype=bool)
+    indices = jnp.array(
+        [[r, c] for r, c in zip(rows, cols, strict=True)], dtype=jnp.int32
+    )
+    if len(rows) == 0:
+        indices = jnp.zeros((0, 2), dtype=jnp.int32)
+    data = jnp.ones(len(rows), dtype=jnp.int8)
+
+    return BCOO((data, indices), shape=(m, n))

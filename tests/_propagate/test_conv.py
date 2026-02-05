@@ -46,13 +46,13 @@ def check_conv_sparsity(
     expected_out_size = out_h * out_w * C_out
 
     assert sparsity.shape == (expected_out_size, input_size)
-    assert sparsity.nnz > 0
+    assert sparsity.nse > 0
 
     if verify_exact:
         x_test = jax.random.normal(jax.random.key(42), (input_size,))
         actual_jac = jax.jacobian(f)(x_test)
         actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
-        detected = sparsity.toarray().astype(int)
+        detected = sparsity.todense().astype(int)
 
         np.testing.assert_array_equal(
             detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
@@ -100,13 +100,13 @@ def test_conv_with_padding():
     # With SAME padding, output size equals input size
     expected_out_size = H * W * C_out
     assert sparsity.shape == (expected_out_size, input_size)
-    assert sparsity.nnz > 0
+    assert sparsity.nse > 0
 
     # Verify against actual Jacobian
     x_test = jax.random.normal(jax.random.key(42), (input_size,))
     actual_jac = jax.jacobian(f)(x_test)
     actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
-    detected = sparsity.toarray().astype(int)
+    detected = sparsity.todense().astype(int)
 
     np.testing.assert_array_equal(
         detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
@@ -136,13 +136,13 @@ def test_conv_with_strides():
     expected_out_size = out_h * out_w * C_out
 
     assert sparsity.shape == (expected_out_size, input_size)
-    assert sparsity.nnz > 0
+    assert sparsity.nse > 0
 
     # Verify against actual Jacobian
     x_test = jax.random.normal(jax.random.key(42), (input_size,))
     actual_jac = jax.jacobian(f)(x_test)
     actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
-    detected = sparsity.toarray().astype(int)
+    detected = sparsity.todense().astype(int)
 
     np.testing.assert_array_equal(
         detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
@@ -167,13 +167,13 @@ def test_conv_transpose():
 
     sparsity = jacobian_sparsity(f, n=input_size)
 
-    assert sparsity.nnz > 0
+    assert sparsity.nse > 0
 
     # Verify against actual Jacobian
     x_test = jax.random.normal(jax.random.key(42), (input_size,))
     actual_jac = jax.jacobian(f)(x_test)
     actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
-    detected = sparsity.toarray().astype(int)
+    detected = sparsity.todense().astype(int)
 
     np.testing.assert_array_equal(
         detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
