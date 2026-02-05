@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770259842590,
+  "lastUpdate": 1770295049620,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -870,6 +870,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00006050153864928073",
             "extra": "mean: 1.012791685714173 msec\nrounds: 35"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b9ffbc9eab4d98bf4f10276c8af42e0929e4fa7d",
+          "message": "Fix handling of `constvars` in Jaxpr interpreter (#13)\n\n* Fix empty array handling in concatenate sparsity detection\n\nInitialize jaxpr.constvars in prop_jaxpr so that constant arrays\n(like empty arrays) have the correct number of dependency sets.\nPreviously, uninitialized constvars fell back to [set()] regardless\nof their actual size, causing shifted indices in concatenate.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Add tests for constvar initialization in propagation handlers\n\nTest constant variable handling across all indexing handlers (slice,\nsqueeze, broadcast, concatenate, reshape) to prevent regressions after\nthe empty array fix. Also clean up TODO.md by removing resolved items.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-05T13:37:01+01:00",
+          "tree_id": "8efc943d61ecf4a04d6d0b87b710c1e49ad10e32",
+          "url": "https://github.com/adrhill/asdex/commit/b9ffbc9eab4d98bf4f10276c8af42e0929e4fa7d"
+        },
+        "date": 1770295048756,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n100",
+            "value": 1069.064507086966,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00011709795382738916",
+            "extra": "mean: 935.3972499983598 usec\nrounds: 8"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n500",
+            "value": 357.70066334395824,
+            "unit": "iter/sec",
+            "range": "stddev: 0.005825574673441266",
+            "extra": "mean: 2.795633619047608 msec\nrounds: 21"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n1000",
+            "value": 418.7497625628694,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002396801455593688",
+            "extra": "mean: 2.388061055556692 msec\nrounds: 18"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n100",
+            "value": 1164.7199043916123,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002214172002309312",
+            "extra": "mean: 858.5755220885891 usec\nrounds: 498"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n500",
+            "value": 581.646365788406,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0026007580635606965",
+            "extra": "mean: 1.7192577119338255 msec\nrounds: 243"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_matmul_n100",
+            "value": 94.3242240848029,
+            "unit": "iter/sec",
+            "range": "stddev: 0.009159272246236699",
+            "extra": "mean: 10.601730464286062 msec\nrounds: 28"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mlp_layer",
+            "value": 69.96428628954625,
+            "unit": "iter/sec",
+            "range": "stddev: 0.011717742198034582",
+            "extra": "mean: 14.2930065185188 msec\nrounds: 27"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_elementwise_chain",
+            "value": 844.0236311419565,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001307483597271736",
+            "extra": "mean: 1.184800950000664 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mixed_ops",
+            "value": 992.0572887216232,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008009884375040523",
+            "extra": "mean: 1.0080063030317654 msec\nrounds: 33"
           }
         ]
       }
