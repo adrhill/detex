@@ -3,7 +3,7 @@
 import pytest
 from jax._src.core import Primitive
 
-from asdex._propagate import prop_nested_jaxpr
+from asdex._interpret import prop_nested_jaxpr
 
 
 class FakeEqn:

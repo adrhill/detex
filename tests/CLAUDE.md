@@ -12,7 +12,7 @@ tests/
 ├── test_vmap.py                # Batched/vmapped operations
 ├── test_benchmarks.py          # Performance benchmarks
 ├── test_sympy.py               # SymPy-based randomized tests
-└── _propagate/                 # Tests for _propagate submodules
+└── _interpret/                 # Tests for _interpret submodules
     ├── test_indexing.py        # Slicing, concat, broadcast, reshape
     ├── test_reduction.py       # Reduction operations (sum, max, argmax)
     ├── test_conv.py            # Convolution tests

@@ -18,7 +18,7 @@ src/asdex/
 ├── detection.py        # Sparsity pattern detection via jaxpr analysis
 ├── coloring.py         # Row-wise graph coloring
 ├── decompression.py    # Sparse Jacobian computation via VJPs
-└── _propagate/         # Primitive handlers for index set propagation
+└── _interpret/         # Primitive handlers for index set propagation
 ```
 
 The structure of the test folder is described in `tests/CLAUDE.md`.

@@ -4,7 +4,7 @@ import jax
 import jax.numpy as jnp
 from jax.experimental.sparse import BCOO
 
-from asdex._propagate import prop_jaxpr
+from asdex._interpret import prop_jaxpr
 
 
 def jacobian_sparsity(f, n: int) -> BCOO:
