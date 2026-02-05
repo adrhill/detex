@@ -54,6 +54,10 @@ def prop_jaxpr(jaxpr: Jaxpr, input_indices: list[IndexSets]) -> list[IndexSets]:
     for var, indices in zip(jaxpr.invars, input_indices, strict=False):
         deps[var] = indices
 
+    # Initialize constant variables (no input dependencies)
+    for var in jaxpr.constvars:
+        deps[var] = [set() for _ in range(atom_numel(var))]
+
     # Process each equation
     for eqn in jaxpr.eqns:
         prop_equation(eqn, deps)

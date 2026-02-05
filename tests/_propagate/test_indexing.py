@@ -139,24 +139,16 @@ def test_nested_slice_concat():
 
 
 @pytest.mark.array_ops
-@pytest.mark.bug
 def test_empty_concatenate():
-    """Concatenating with empty arrays produces incorrect sparsity.
-
-    TODO(bug): Fix empty array handling in concatenate/reshape.
-    BUG: Empty arrays in concatenate produce incorrect indices.
-    Should produce identity matrix but result is shifted.
-    """
+    """Concatenating with empty arrays preserves correct sparsity."""
 
     def f(x):
         empty = jnp.array([])
         return jnp.concatenate([empty, x, empty])
 
-    # TODO: Should produce identity matrix
     result = jacobian_sparsity(f, n=2)
     expected = np.eye(2, dtype=int)
-    # BUG: Result is incorrect (shifted) instead of identity
-    assert not np.array_equal(result.todense().astype(int), expected)
+    np.testing.assert_array_equal(result.todense().astype(int), expected)
 
 
 # =============================================================================
