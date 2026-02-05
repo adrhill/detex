@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770259749834,
+  "lastUpdate": 1770259842590,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -783,6 +783,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0000642172524788849",
             "extra": "mean: 1.0130659999998068 msec\nrounds: 33"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "adrhill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "adrhill",
+            "username": "adrhill"
+          },
+          "distinct": true,
+          "id": "64f352c4f8eb3de69855497b351852d1705e3073",
+          "message": "Fix equation in README",
+          "timestamp": "2026-02-05T03:50:15+01:00",
+          "tree_id": "66ae79f30224bf954ac3b6d85cc20bbc92957d02",
+          "url": "https://github.com/adrhill/asdex/commit/64f352c4f8eb3de69855497b351852d1705e3073"
+        },
+        "date": 1770259842176,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n100",
+            "value": 1054.0591356189846,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00011045777503323493",
+            "extra": "mean: 948.7133749974674 usec\nrounds: 8"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n500",
+            "value": 359.3601520621164,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00561736868912918",
+            "extra": "mean: 2.7827236666661563 msec\nrounds: 21"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_diagonal_n1000",
+            "value": 385.31655935439824,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005603779828119075",
+            "extra": "mean: 2.595268684209965 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n100",
+            "value": 1132.9866756429315,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009359651318311288",
+            "extra": "mean: 882.6229129592668 usec\nrounds: 517"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_sum_n500",
+            "value": 577.2509056089783,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0028172732800779954",
+            "extra": "mean: 1.7323489496218927 msec\nrounds: 397"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_dense_matmul_n100",
+            "value": 98.11741141544431,
+            "unit": "iter/sec",
+            "range": "stddev: 0.008229094719794728",
+            "extra": "mean: 10.191870999998615 msec\nrounds: 29"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mlp_layer",
+            "value": 71.94954341606163,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010766116802458953",
+            "extra": "mean: 13.898628851851273 msec\nrounds: 27"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_elementwise_chain",
+            "value": 848.6247258425445,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006874798446348126",
+            "extra": "mean: 1.1783771666647642 msec\nrounds: 18"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_bench_mixed_ops",
+            "value": 987.369874876932,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006050153864928073",
+            "extra": "mean: 1.012791685714173 msec\nrounds: 35"
           }
         ]
       }
