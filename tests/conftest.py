@@ -18,3 +18,7 @@ def pytest_configure(config):
         "markers", "fallback: documents conservative fallback behavior (TODO)"
     )
     config.addinivalue_line("markers", "bug: documents known bugs")
+    config.addinivalue_line("markers", "coloring: row coloring algorithm tests")
+    config.addinivalue_line(
+        "markers", "sparse_jacobian: sparse Jacobian computation tests"
+    )

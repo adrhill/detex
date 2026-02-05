@@ -9,7 +9,11 @@ import jax
 import jax.numpy as jnp
 from scipy.sparse import coo_matrix
 
+from detex._coloring import color_rows
 from detex._propagate import _propagate_jaxpr
+from detex._sparse_jacobian import sparse_jacobian
+
+__all__ = ["jacobian_sparsity", "color_rows", "sparse_jacobian"]
 
 
 def jacobian_sparsity(f, n: int) -> coo_matrix:
