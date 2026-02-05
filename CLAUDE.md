@@ -1,24 +1,34 @@
-# detex - Sparsity Detection Exploration in JAX/Python
+# detex - Automatic Sparse Differentiation in JAX
 
-This folder contains an exploration of Jacobian sparsity detection implemented in JAX, inspired by [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl) (SCT).
+This package implements [Automatic Sparse Differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) (ASD) in JAX, inspired by [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl).
 
 ## Overview
 
-The implementation uses **jaxpr graph analysis** to detect global sparsity patterns. Unlike JVP-based approaches, this analyzes the computation graph structure directly, producing results valid for ALL inputs.
+ASD exploits Jacobian sparsity to reduce the cost of computing sparse Jacobians:
+
+1. **Detection**: Analyze the jaxpr computation graph to detect the sparsity pattern
+2. **Coloring**: Assign colors to rows so that rows sharing non-zero columns get different colors
+3. **Decompression**: Compute one VJP per color instead of one per row, then extract the sparse Jacobian
 
 ## Structure
 
 ```
 src/detex/
-├── __init__.py         # Public API (jacobian_sparsity)
-├── _indexset.py        # IndexSet and BitSet implementations
-└── _propagate.py       # Jaxpr traversal and primitive handlers
+├── __init__.py         # Public API
+├── detection.py        # Sparsity pattern detection via jaxpr analysis
+├── coloring.py         # Row-wise graph coloring
+├── decompression.py    # Sparse Jacobian computation via VJPs
+└── _propagate/         # Primitive handlers for index set propagation
 
 tests/
-├── test_jacobian_sparsity.py   # Core sparsity detection tests
-├── test_benchmarks.py          # Performance benchmarks
-├── test_bitset.py              # BitSet unit tests
-└── test_conv.py                # Convolution tests
+├── test_detection.py       # Sparsity detection tests
+├── test_coloring.py        # Row coloring tests
+├── test_decompression.py   # Sparse Jacobian tests
+├── test_control_flow.py    # Conditionals (where, select)
+├── test_vmap.py            # Batched/vmapped operations
+├── test_benchmarks.py      # Performance benchmarks
+├── test_sympy.py           # SymPy-based randomized tests
+└── _propagate/             # Tests for primitive handlers
 ```
 
 ## Development
@@ -32,8 +42,8 @@ uv run pre-commit install
 uv run pytest
 
 # Lint and format
-uv run ruff check --fix .    # lint + auto-fix
-uv run ruff format .         # format
+uv run ruff check --fix .
+uv run ruff format .
 
 # Type check
 uv run ty check
@@ -43,36 +53,14 @@ uv run ty check
 
 ## Key Concepts
 
-1. **Global vs Local Sparsity**: This implements global sparsity (valid for all inputs). Local sparsity would require tracking actual values through control flow.
+1. **Global Sparsity**: The sparsity pattern is valid for all inputs. It's detected by analyzing the computation graph structure, not by evaluating derivatives.
 
-2. **Element-wise Tracking**: The implementation tracks dependencies per-element, not per-variable. This is essential for detecting diagonal patterns like `f(x) = x^2`.
+2. **Element-wise Tracking**: Dependencies are tracked per-element, not per-variable. This is essential for detecting diagonal patterns like `f(x) = x^2`.
 
-3. **Primitive Handling**: Each JAX primitive (`slice`, `concatenate`, `add`, etc.) has specific propagation rules for index sets.
+3. **Row Coloring**: Rows that don't share non-zero columns are structurally orthogonal and can be computed together in a single VJP.
 
-## Architecture
+## Design Philosophy
 
-```
-jacobian_sparsity(f, n)
-  │
-  ├─ make_jaxpr(f) → computation graph
-  │
-  ├─ Initialize env: input[i] depends on {i}
-  │
-  ├─ prop_jaxpr(jaxpr, input_indices)
-  │     │
-  │     └─ For each equation:
-  │          prop_equation(eqn, env) → primitive-specific handler
-  │
-  └─ Build sparse COO matrix from output dependencies
-```
-
-The `env` maps each `Var` to its per-element dependency sets (`list[IdxSet]`).
-
-## Design philosophy
-
-When writing new code, adhere to these design principles:
-
-- **Minimize complexity**: The primary goal of software design is to minimize complexity—anything that makes a system hard to understand and modify.
-- **Information hiding**: Each module should encapsulate design decisions that other modules don't need to know about, preventing information leakage across boundaries.
-- **Pull complexity downward**: It's better for a module to be internally complex if it keeps the interface simple for others. Don't expose complexity to callers.
-
+- **Minimize complexity**: The primary goal is to minimize complexity, anything that makes a system hard to understand and modify.
+- **Information hiding**: Each module should encapsulate design decisions that other modules don't need to know about.
+- **Pull complexity downward**: It's better for a module to be internally complex if it keeps the interface simple for others.

@@ -5,7 +5,9 @@
 ```
 tests/
 ├── conftest.py                 # Pytest configuration and markers
-├── test_jacobian_sparsity.py   # Core API + element-wise operations
+├── test_detection.py           # Sparsity detection tests
+├── test_coloring.py            # Row coloring tests
+├── test_decompression.py       # Sparse Jacobian computation tests
 ├── test_control_flow.py        # Conditionals (where, select)
 ├── test_vmap.py                # Batched/vmapped operations
 ├── test_benchmarks.py          # Performance benchmarks
@@ -38,13 +40,16 @@ Use markers to run subsets of tests:
 | `control_flow` | Conditional operations (where, select) |
 | `reduction` | Reduction operations (sum, max, prod) |
 | `vmap` | Batched/vmapped operations |
+| `coloring` | Row coloring algorithm tests |
+| `sparse_jacobian` | Sparse Jacobian computation tests |
 | `fallback` | Documents conservative fallback behavior (TODO) |
 | `bug` | Documents known bugs |
 
 ```bash
 uv run pytest -m fallback        # Run only fallback tests
 uv run pytest -m "not fallback"  # Skip fallback tests
-uv run pytest -m vmap            # Run only vmap tests
+uv run pytest -m coloring        # Run only coloring tests
+uv run pytest -m sparse_jacobian # Run only sparse Jacobian tests
 ```
 
 ## Conventions
