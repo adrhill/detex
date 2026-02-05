@@ -39,6 +39,28 @@ def _compute_vjp_for_color(
     return np.asarray(grad)
 
 
+def _compute_hvp_for_color(
+    f: Callable[[ArrayLike], ArrayLike],
+    x: NDArray,
+    row_mask: NDArray[np.bool_],
+) -> NDArray:
+    """Compute HVP with tangent vector having 1s at masked positions.
+
+    Uses forward-over-reverse AD which is more efficient than VJP-on-gradient.
+
+    Args:
+        f: Scalar-valued function to differentiate
+        x: Input point
+        row_mask: Boolean mask of shape (n,) indicating which rows to compute
+
+    Returns:
+        HVP result vector of shape (n,)
+    """
+    tangent = row_mask.astype(x.dtype)
+    _, hvp = jax.jvp(jax.grad(f), (x,), (tangent,))
+    return np.asarray(hvp)
+
+
 def _decompress_jacobian(
     sparsity: BCOO,
     colors: NDArray[np.int32],
@@ -130,10 +152,11 @@ def sparse_hessian(
     sparsity: BCOO | None = None,
     colors: NDArray[np.int32] | None = None,
 ) -> BCOO:
-    """Compute sparse Hessian using coloring and VJPs.
+    """Compute sparse Hessian using coloring and HVPs.
 
-    Computes the Hessian by applying sparse_jacobian to the gradient function,
-    demonstrating how sparse differentiation composes with JAX's autodiff.
+    Uses forward-over-reverse Hessian-vector products for efficiency.
+    This is faster than VJP-on-gradient because forward-mode has less
+    overhead than reverse-mode for the outer differentiation.
 
     Args:
         f: Scalar-valued function from R^n to R (takes 1D array, returns scalar)
@@ -154,4 +177,20 @@ def sparse_hessian(
     if sparsity is None:
         sparsity = _detect_hessian_sparsity(f, n)
 
-    return sparse_jacobian(jax.grad(f), x, sparsity=sparsity, colors=colors)
+    if colors is None:
+        colors, num_colors = color_rows(sparsity)
+    else:
+        num_colors = int(colors.max()) + 1 if len(colors) > 0 else 0
+
+    # Handle edge case: all-zero Hessian
+    if sparsity.nse == 0:
+        return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n))
+
+    # Compute one HVP per color (forward-over-reverse)
+    grads: list[NDArray] = []
+    for c in range(num_colors):
+        row_mask = colors == c
+        hvp_result = _compute_hvp_for_color(f, x, row_mask)
+        grads.append(hvp_result)
+
+    return _decompress_jacobian(sparsity, colors, grads)
