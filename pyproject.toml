@@ -57,6 +57,18 @@ packages = ["src/asdex"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "elementwise: simple element-wise operations",
+    "array_ops: array manipulation (slice, concat, reshape)",
+    "control_flow: conditional operations (where, select)",
+    "reduction: reduction operations (sum, max, prod)",
+    "vmap: batched/vmapped operations",
+    "coloring: row coloring algorithm tests",
+    "sparse_jacobian: sparse Jacobian computation tests",
+    "hessian: Hessian sparsity detection and computation",
+    "fallback: documents conservative fallback behavior",
+    "bug: documents known bugs",
+]
 
 [tool.ruff]
 line-length = 88

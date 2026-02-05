@@ -10,6 +10,7 @@ from collections.abc import Callable
 
 import jax.numpy as jnp
 import numpy as np
+import pytest
 import sympy as sp
 from sympy import Abs, Symbol, cos, cosh, exp, log, sin, sinh, sqrt, tan, tanh
 
@@ -446,6 +447,7 @@ def generate_random_scalar_function(
     return expr, symbols
 
 
+@pytest.mark.hessian
 class TestHessianSympyComparison:
     """Test Hessian sparsity by comparing against SymPy symbolic derivatives.
 
@@ -499,6 +501,7 @@ class TestHessianSympyComparison:
             self._run_comparison(n_inputs=6, max_depth=2, seed=seed)
 
 
+@pytest.mark.hessian
 class TestHessianSympyEdgeCases:
     """Test specific Hessian edge cases using SymPy verification."""
 

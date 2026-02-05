@@ -28,6 +28,7 @@ def test_simple_dependencies():
 # =============================================================================
 
 
+@pytest.mark.hessian
 def test_hessian_linear():
     """Linear functions have zero Hessian."""
 
@@ -38,6 +39,7 @@ def test_hessian_linear():
     assert H.sum() == 0
 
 
+@pytest.mark.hessian
 @pytest.mark.fallback
 def test_hessian_product():
     """f(x) = x[0] * x[1] has H[0,1] = H[1,0] != 0.
@@ -55,6 +57,7 @@ def test_hessian_product():
     assert jnp.array_equal(H, expected)
 
 
+@pytest.mark.hessian
 @pytest.mark.fallback
 def test_hessian_quadratic():
     """f(x) = x[0]^2 + x[1]^2 has diagonal Hessian.
