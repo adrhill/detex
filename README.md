@@ -47,6 +47,51 @@ print(pattern.toarray().astype(int))
 #  [0 0 1]]
 ```
 
+## Sparse Jacobian Computation
+
+Once the sparsity pattern is known, `detex` can compute the actual Jacobian values efficiently using **row coloring**. Rows that don't share non-zero columns are structurally orthogonal and can be computed together in a single VJP (reverse-mode AD pass), reducing the number of passes from $m$ to the number of colors.
+
+Consider the squared differences function $f(x)_i = (x_{i+1} - x_i)^2$, which has a tridiagonal Jacobian:
+
+```python
+import numpy as np
+from detex import jacobian_sparsity, color_rows, sparse_jacobian
+
+def f(x):
+    return (x[1:] - x[:-1]) ** 2
+
+# Detect sparsity pattern
+pattern = jacobian_sparsity(f, n=5)  # scipy.sparse.coo_matrix
+print(pattern.toarray().astype(int))
+# [[1 1 0 0 0]
+#  [0 1 1 0 0]
+#  [0 0 1 1 0]
+#  [0 0 0 1 1]]
+
+# Color rows: only 2 colors needed for this banded structure
+colors, num_colors = color_rows(pattern)
+print(f"Colors: {colors}")  # [0 1 0 1]
+print(f"VJP passes: {num_colors} (instead of 4)")
+
+# Compute sparse Jacobian
+x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
+J = sparse_jacobian(f, x, sparsity=pattern, colors=colors)  # scipy.sparse.csr_matrix
+print(J.toarray())
+# [[-2.  2.  0.  0.  0.]
+#  [ 0. -4.  4.  0.  0.]
+#  [ 0.  0.  2. -2.  0.]
+#  [ 0.  0.  0. -4.  4.]]
+```
+
+The sparsity pattern and coloring depend only on the function structure, not the input values. Precompute them once and reuse for repeated evaluations:
+
+```python
+pattern = jacobian_sparsity(f, n=1000)
+colors, _ = color_rows(pattern)
+for x in points:
+    J = sparse_jacobian(f, x, sparsity=pattern, colors=colors)
+```
+
 ## How it works
 
 `detex` uses `jax.make_jaxpr` to trace the function into a jaxpr — JAX's intermediate representation that captures the computation as a sequence of primitive operations. 

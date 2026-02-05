@@ -10,7 +10,7 @@ import jax.numpy as jnp
 from scipy.sparse import coo_matrix
 
 from detex._coloring import color_rows
-from detex._propagate import _propagate_jaxpr
+from detex._propagate import prop_jaxpr
 from detex._sparse_jacobian import sparse_jacobian
 
 __all__ = ["jacobian_sparsity", "color_rows", "sparse_jacobian"]
@@ -18,10 +18,10 @@ __all__ = ["jacobian_sparsity", "color_rows", "sparse_jacobian"]
 
 def jacobian_sparsity(f, n: int) -> coo_matrix:
     """
-    Detect GLOBAL Jacobian sparsity pattern for f: R^n -> R^m.
+    Detect global Jacobian sparsity pattern for f: R^n -> R^m.
 
-    This analyzes the computation graph structure directly, without evaluating
-    any derivatives. The result is valid for ALL inputs (global sparsity).
+    This analyzes the computation graph structure directly, without evaluating any derivatives.
+    The result is valid for all inputs.
 
     The approach:
     1. Get the jaxpr (computation graph) for the function
@@ -45,7 +45,7 @@ def jacobian_sparsity(f, n: int) -> coo_matrix:
     input_indices = [[{i} for i in range(n)]]
 
     # Propagate through the jaxpr
-    output_indices_list = _propagate_jaxpr(jaxpr, input_indices)
+    output_indices_list = prop_jaxpr(jaxpr, input_indices)
 
     # Extract output dependencies (first output variable)
     out_indices = output_indices_list[0] if output_indices_list else []

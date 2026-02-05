@@ -6,14 +6,15 @@
 tests/
 ├── conftest.py                 # Pytest configuration and markers
 ├── test_jacobian_sparsity.py   # Core API + element-wise operations
-├── test_array_ops.py           # Array manipulation (slice, concat, broadcast, etc.)
 ├── test_control_flow.py        # Conditionals (where, select)
-├── test_reductions.py          # Reduction operations (sum, max, argmax)
 ├── test_vmap.py                # Batched/vmapped operations
-├── test_bitset.py              # BitSet unit tests
 ├── test_benchmarks.py          # Performance benchmarks
-├── test_conv.py                # Convolution tests
-└── test_sympy.py               # SymPy-based randomized tests
+├── test_sympy.py               # SymPy-based randomized tests
+└── _propagate/                 # Tests for _propagate submodules
+    ├── test_indexing.py        # Slicing, concat, broadcast, reshape
+    ├── test_reduction.py       # Reduction operations (sum, max, argmax)
+    ├── test_conv.py            # Convolution tests
+    └── test_internals.py       # Internal propagation functions
 ```
 
 ## Running Tests

@@ -15,7 +15,7 @@ from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import coo_matrix, csr_matrix
 
 from detex._coloring import color_rows
-from detex._propagate import _propagate_jaxpr
+from detex._propagate import prop_jaxpr
 
 
 def _compute_vjp_for_color(
@@ -75,6 +75,7 @@ def sparse_jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     x: ArrayLike,
     sparsity: coo_matrix | None = None,
+    colors: NDArray[np.int32] | None = None,
 ) -> csr_matrix:
     """Compute sparse Jacobian using coloring and VJPs.
 
@@ -85,7 +86,9 @@ def sparse_jacobian(
         f: Function from R^n to R^m (takes 1D array, returns 1D array)
         x: Input point of shape (n,)
         sparsity: Optional pre-computed sparsity pattern. If None, detected
-            automatically using jacobian_sparsity.
+            automatically.
+        colors: Optional pre-computed row coloring from color_rows(). If None,
+            computed automatically from sparsity.
 
     Returns:
         Sparse Jacobian matrix of shape (m, n) in CSR format
@@ -102,7 +105,10 @@ def sparse_jacobian(
     if m == 0:
         return csr_matrix((0, n), dtype=x.dtype)
 
-    colors, num_colors = color_rows(sparsity)
+    if colors is None:
+        colors, num_colors = color_rows(sparsity)
+    else:
+        num_colors = int(colors.max()) + 1 if len(colors) > 0 else 0
 
     # Handle edge case: all-zero Jacobian
     if sparsity.nnz == 0:
@@ -129,7 +135,7 @@ def _detect_sparsity(f: Callable[[ArrayLike], ArrayLike], n: int) -> coo_matrix:
     m = int(jax.eval_shape(f, dummy_input).size)
 
     input_indices = [[{i} for i in range(n)]]
-    output_indices_list = _propagate_jaxpr(jaxpr, input_indices)
+    output_indices_list = prop_jaxpr(jaxpr, input_indices)
     out_indices = output_indices_list[0] if output_indices_list else []
 
     rows = []

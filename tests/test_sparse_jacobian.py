@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 
-from detex import jacobian_sparsity, sparse_jacobian
+from detex import color_rows, jacobian_sparsity, sparse_jacobian
 
 # =============================================================================
 # Reference tests against jax.jacobian
@@ -112,6 +112,25 @@ def test_precomputed_sparsity():
     result2 = sparse_jacobian(f, x).toarray()  # Auto-detect
 
     assert_allclose(result1, result2, rtol=1e-10)
+
+
+@pytest.mark.sparse_jacobian
+def test_precomputed_colors():
+    """Using pre-computed sparsity and colors."""
+
+    def f(x):
+        return (x[1:] - x[:-1]) ** 2
+
+    x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
+    sparsity = jacobian_sparsity(f, n=5)
+    colors, num_colors = color_rows(sparsity)
+
+    result1 = sparse_jacobian(f, x, sparsity=sparsity, colors=colors).toarray()
+    result2 = sparse_jacobian(f, x).toarray()  # Auto-detect
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result1, result2, rtol=1e-10)
+    assert_allclose(result1, expected, rtol=1e-5)
 
 
 @pytest.mark.sparse_jacobian

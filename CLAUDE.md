@@ -58,10 +58,10 @@ jacobian_sparsity(f, n)
   │
   ├─ Initialize env: input[i] depends on {i}
   │
-  ├─ _propagate_jaxpr(jaxpr, input_indices)
+  ├─ prop_jaxpr(jaxpr, input_indices)
   │     │
   │     └─ For each equation:
-  │          _propagate_equation(eqn, env) → primitive-specific handler
+  │          prop_equation(eqn, env) → primitive-specific handler
   │
   └─ Build sparse COO matrix from output dependencies
 ```
