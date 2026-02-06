@@ -57,6 +57,12 @@ sparse_jacobian(f, x)
         └─ Extract J[i,j] = grad[color[i]][j]
 ```
 
+## Documentation
+
+- Use semantic line breaks in comments and docstrings: start a new line after each sentence or clause boundary, so the source reflects logical structure without affecting rendered output.
+- Add brief inline comments for non-obvious parameters and variables.
+- Keep descriptions concise without redundant phrases.
+
 ## Design philosophy
 
 When writing new code, adhere to these design principles:
