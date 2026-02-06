@@ -53,6 +53,25 @@ def test_gather_fancy_indexing():
     np.testing.assert_array_equal(result, expected)
 
 
+@pytest.mark.array_ops
+def test_gather_dynamic_indices_fallback():
+    """Gather with dynamic (traced) indices uses conservative fallback.
+
+    When indices depend on input, we cannot determine dependencies at trace time.
+    """
+
+    def f(x):
+        # indices depend on x, so they're dynamic
+        idx = jnp.argmax(x[:2])  # Dynamic index based on input
+        indices = jnp.array([0, 1]) + idx
+        return jnp.take(x, indices)
+
+    result = jacobian_sparsity(f, n=4).todense().astype(int)
+    # Conservative: all outputs depend on all inputs
+    expected = np.ones((2, 4), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
 # =============================================================================
 # Broadcasting
 # =============================================================================
@@ -596,12 +615,10 @@ def test_zero_size_input():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_gather_2d_row_select():
-    """2D gather selecting rows uses conservative fallback.
+    """2D gather selecting rows tracks per-row dependencies.
 
-    TODO(gather): Extend handler to support offset_dims for multi-dimensional gather.
-    Precise: each output row depends only on the corresponding selected input row.
+    Each output row depends only on the corresponding selected input row.
     """
 
     def f(x):
@@ -610,9 +627,16 @@ def test_gather_2d_row_select():
         return mat[indices].flatten()
 
     result = jacobian_sparsity(f, n=6).todense().astype(int)
-    # TODO: Should be per-row dependencies
-    # Currently conservative: all outputs depend on all inputs
-    expected = np.ones((4, 6), dtype=int)
+    # Output: row 2 (indices 4,5), then row 0 (indices 0,1)
+    expected = np.array(
+        [
+            [0, 0, 0, 0, 1, 0],  # out[0] <- in[4]
+            [0, 0, 0, 0, 0, 1],  # out[1] <- in[5]
+            [1, 0, 0, 0, 0, 0],  # out[2] <- in[0]
+            [0, 1, 0, 0, 0, 0],  # out[3] <- in[1]
+        ],
+        dtype=int,
+    )
     np.testing.assert_array_equal(result, expected)
 
 

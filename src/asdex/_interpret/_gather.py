@@ -3,7 +3,15 @@
 import numpy as np
 from jax._src.core import JaxprEqn, Literal, Var
 
-from ._commons import ConstVals, Deps, IndexSets, atom_numel, index_sets, union_all
+from ._commons import (
+    ConstVals,
+    Deps,
+    IndexSets,
+    atom_numel,
+    index_sets,
+    row_strides,
+    union_all,
+)
 
 
 def _get_static_indices(
@@ -80,6 +88,37 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
                 else:
                     # Out of bounds - no dependency (will be filled with default)
                     out_indices.append(set())
+            deps[eqn.outvars[0]] = out_indices
+            return
+
+        # Handle 2D row selection: mat[indices] where mat is (M, N) and indices is 1D
+        # This covers selecting rows from a 2D array with static indices.
+        # Example: mat.shape = (3, 2), indices = [2, 0] -> output shape (2, 2)
+        #   offset_dims=(1,) means output dim 1 comes from slice
+        #   collapsed_slice_dims=(0,) means operand dim 0 is indexed
+        #   slice_sizes=(1, N) means take 1 row, all columns
+        if (
+            len(operand_shape) == 2
+            and len(slice_sizes) == 2
+            and slice_sizes[0] == 1
+            and slice_sizes[1] == operand_shape[1]
+            and dim_nums.offset_dims == (1,)
+            and dim_nums.collapsed_slice_dims == (0,)
+            and dim_nums.start_index_map == (0,)
+        ):
+            # 2D row gather: out[i, j] = operand[indices[i], j]
+            flat_indices = concrete_indices.flatten()
+            num_cols = operand_shape[1]
+            operand_strides = row_strides(operand_shape)
+            out_indices: IndexSets = []
+            for row_idx in flat_indices:
+                row_idx_int = int(row_idx)
+                for col in range(num_cols):
+                    if 0 <= row_idx_int < operand_shape[0]:
+                        operand_flat = row_idx_int * operand_strides[0] + col
+                        out_indices.append(operand_indices[operand_flat].copy())
+                    else:
+                        out_indices.append(set())
             deps[eqn.outvars[0]] = out_indices
             return
 

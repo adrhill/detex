@@ -1,6 +1,5 @@
 """Propagation rules for element-wise operations."""
 
-
 import numpy as np
 from jax._src.core import JaxprEqn, Literal, Var
 
