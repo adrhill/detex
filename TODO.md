@@ -36,6 +36,7 @@ Missing precise handlers for:
 
 - [ ] Local sparsity via Dual-number style tracking
 - [ ] Integration with JAX's custom_vjp/custom_jvp
+  - [ ] Handle primitives used by `jax.nn.relu`, `jax.nn.softmax`, etc.
 - [ ] Coloring algorithms for efficient Jacobian computation
 - [ ] Export to sparse AD libraries
 
@@ -70,4 +71,5 @@ These tests verify conservative behavior that could be made precise:
 
 - SparseConnectivityTracer.jl: https://github.com/adrhill/SparseConnectivityTracer.jl
 - JAX jaxpr docs: https://jax.readthedocs.io/en/latest/jaxpr.html
+- Writing custom Jaxpr interpreters in JAX: https://docs.jax.dev/en/latest/notebooks/Writing_custom_interpreters_in_Jax.html
 - SparseDiffTools.jl for coloring algorithms
