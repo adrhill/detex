@@ -17,6 +17,7 @@ from numpy.typing import ArrayLike, NDArray
 from asdex.coloring import color_rows
 from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_sparsity
+from asdex.pattern import SparsityPattern
 
 
 def _compute_vjp_for_color(
@@ -63,7 +64,7 @@ def _compute_hvp_for_color(
 
 
 def _decompress_jacobian(
-    sparsity: BCOO,
+    sparsity: SparsityPattern,
     colors: NDArray[np.int32],
     grads: list[NDArray],
 ) -> BCOO:
@@ -75,29 +76,28 @@ def _decompress_jacobian(
     uniquely corresponds to one Jacobian row.
 
     Args:
-        sparsity: Sparsity pattern as BCOO matrix
+        sparsity: Sparsity pattern
         colors: Color assignment for each row
         grads: List of gradient vectors, one per color
 
     Returns:
         Sparse Jacobian as BCOO matrix
     """
-    indices = np.asarray(sparsity.indices)
-    rows = indices[:, 0]
-    cols = indices[:, 1]
+    rows = sparsity.rows
+    cols = sparsity.cols
 
     data = np.empty(len(rows), dtype=grads[0].dtype)
     for k, (i, j) in enumerate(zip(rows, cols, strict=True)):
         color = colors[i]
         data[k] = grads[color][j]
 
-    return BCOO((jnp.array(data), sparsity.indices), shape=sparsity.shape)
+    return sparsity.to_bcoo(data=jnp.array(data))
 
 
 def sparse_jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     x: ArrayLike,
-    sparsity: BCOO | None = None,
+    sparsity: SparsityPattern | None = None,
     colors: NDArray[np.int32] | None = None,
 ) -> BCOO:
     """Compute sparse Jacobian using coloring and VJPs.
@@ -122,7 +122,7 @@ def sparse_jacobian(
     if sparsity is None:
         sparsity = _detect_sparsity(f, n)
 
-    m = sparsity.shape[0]
+    m = sparsity.m
 
     # Handle edge case: no outputs
     if m == 0:
@@ -150,7 +150,7 @@ def sparse_jacobian(
 def sparse_hessian(
     f: Callable[[ArrayLike], ArrayLike],
     x: ArrayLike,
-    sparsity: BCOO | None = None,
+    sparsity: SparsityPattern | None = None,
     colors: NDArray[np.int32] | None = None,
 ) -> BCOO:
     """Compute sparse Hessian using coloring and HVPs.
