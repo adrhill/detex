@@ -1,8 +1,9 @@
 """Propagation rule for concatenate operations."""
 
+import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, IndexSets, index_sets, numel, row_strides
+from ._commons import Deps, IndexSets, index_sets
 
 
 def prop_concatenate(eqn: JaxprEqn, deps: Deps) -> None:
@@ -23,44 +24,18 @@ def prop_concatenate(eqn: JaxprEqn, deps: Deps) -> None:
     """
     dim = eqn.params["dimension"]
 
-    # Concat along dim 0: flat arrays are contiguous, just append
-    if dim == 0:
-        out_indices: IndexSets = []
-        for invar in eqn.invars:
-            out_indices.extend(index_sets(deps, invar))
-        deps[eqn.outvars[0]] = out_indices
-        return
+    # Pool every input's flat deps into one list.
+    # For each input, build a shaped array whose values are positions in that pool.
+    # np.concatenate on these index arrays mirrors the real op's element shuffling,
+    # giving a flat mapping from each output element to the pool position it came from.
+    all_deps: IndexSets = []
+    index_arrays = []
+    for invar in eqn.invars:
+        in_deps = index_sets(deps, invar)
+        offset = len(all_deps)
+        all_deps.extend(in_deps)
+        shape = tuple(getattr(invar.aval, "shape", ()))
+        index_arrays.append(np.arange(offset, offset + len(in_deps)).reshape(shape))
 
-    # Inner dimension: output coord along `dim` determines which input it's from.
-    out_shape = tuple(getattr(eqn.outvars[0].aval, "shape", ()))
-    in_shapes = [tuple(getattr(iv.aval, "shape", ())) for iv in eqn.invars]
-    in_dim_sizes = [s[dim] for s in in_shapes]
-
-    # dim_offsets[i] = starting position of input i along concat dimension
-    dim_offsets = [sum(in_dim_sizes[:i]) for i in range(len(in_dim_sizes) + 1)]
-
-    out_strides = row_strides(out_shape)
-    all_in_indices = [index_sets(deps, iv) for iv in eqn.invars]
-    all_in_strides = [row_strides(s) for s in in_shapes]
-
-    out_indices = []
-    for out_flat in range(numel(out_shape)):
-        out_coord = []
-        remaining = out_flat
-        for s in out_strides:
-            out_coord.append(remaining // s)
-            remaining %= s
-
-        # Find which input owns this position along the concat dimension
-        pos_along_dim = out_coord[dim]
-        for i in range(len(eqn.invars)):
-            if dim_offsets[i] <= pos_along_dim < dim_offsets[i + 1]:
-                in_coord = list(out_coord)
-                in_coord[dim] = pos_along_dim - dim_offsets[i]
-                in_flat = sum(
-                    c * s for c, s in zip(in_coord, all_in_strides[i], strict=True)
-                )
-                out_indices.append(all_in_indices[i][in_flat].copy())
-                break
-
-    deps[eqn.outvars[0]] = out_indices
+    mapping = np.concatenate(index_arrays, axis=dim).ravel()
+    deps[eqn.outvars[0]] = [all_deps[i] for i in mapping]
