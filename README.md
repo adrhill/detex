@@ -52,35 +52,40 @@ def f(x):
     return (x[1:] - x[:-1]) ** 2
 
 # Detect sparsity pattern
-pattern = jacobian_sparsity(f, n=5)  # of type jax.experimental.sparse.BCOO
-print(pattern.todense().astype(int))
-# [[1 1 0 0 0]
-#  [0 1 1 0 0]
-#  [0 0 1 1 0]
-#  [0 0 0 1 1]]
+pattern = jacobian_sparsity(f, n=100)  # returns SparsityPattern
+print(pattern)
+# SparsityPattern(99×100, nnz=198, density=2.0%)
+# ┌─────────────────────────┐
+# │⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀│
+# │⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀│
+# │⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀│
+# │⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀│
+# │⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀│
+# │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀│
+# │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀│
+# │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀│
+# │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀│
+# │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀│
+# │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀│
+# │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀│
+# │⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠿│
+# └─────────────────────────┘
 ```
 
-Color orthogonal rows:
+Color orthogonal rows. Only two colors are needed for this banded structure:
 ```python
-# Color rows: only 2 colors needed for this banded structure
 colors, num_colors = color_rows(pattern)
-print(f"Colors: {colors}")                         # Colors: [0 1 0 1]
-print(f"VJP passes: {num_colors} (instead of 4)")  # VJP passes: 2 (instead of 4)
+print(f"VJP passes: {num_colors} (instead of {len(colors)})")  # VJP passes: 2 (instead of 99)
 ```
 
 Compute the sparse Jacobian using the precomputed pattern and colors:
 
 ```python
-x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
-J = sparse_jacobian(f, x, sparsity=pattern, colors=colors)  # of type jax.experimental.sparse.BCOO
-print(J.todense())
-# [[-2.  2.  0.  0.  0.]
-#  [ 0. -4.  4.  0.  0.]
-#  [ 0.  0.  2. -2.  0.]
-#  [ 0.  0.  0. -4.  4.]]
+x = np.random.randn(100)
+J = sparse_jacobian(f, x, sparsity=pattern, colors=colors)  # returns BCOO
 
 # Verify: matches jax.jacobian
-print((J.todense() == jax.jacobian(f)(x)).all())  # True
+np.testing.assert_allclose(J.todense(), jax.jacobian(f)(x))
 ```
 
 The sparsity pattern and coloring depend only on the function structure, not the input values.
@@ -99,49 +104,38 @@ For scalar-valued functions $f: \mathbb{R}^n \to \mathbb{R}$, `asdex` can detect
 
 ```python
 import jax
+import jax.numpy as jnp
 import numpy as np
 from asdex import hessian_sparsity, color_rows, sparse_hessian
 
 def g(x):
-    return x[0]**2 + x[1]**2 + x[0]*x[1]
+    return jnp.sum(x**2)
 
 # Detect sparsity pattern
-pattern = hessian_sparsity(g, n=3)
-print(pattern.todense().astype(int))
-# [[1 1 0]
-#  [1 1 0]
-#  [0 0 0]]
+pattern = hessian_sparsity(g, n=5)  # returns SparsityPattern
+print(pattern)
+# SparsityPattern(5×5, nnz=5, density=20.0%)
+# ● ⋅ ⋅ ⋅ ⋅
+# ⋅ ● ⋅ ⋅ ⋅
+# ⋅ ⋅ ● ⋅ ⋅
+# ⋅ ⋅ ⋅ ● ⋅
+# ⋅ ⋅ ⋅ ⋅ ●
 ```
 
 Color orthogonal rows:
 ```python
-# Color rows: 2 colors needed
 colors, num_colors = color_rows(pattern)
-print(f"Colors: {colors}")                         # Colors: [0 1 0]
-print(f"HVP passes: {num_colors} (instead of 3)")  # HVP passes: 2 (instead of 3)
+print(f"HVP passes: {num_colors} (instead of {len(colors)})")  # HVP passes: 1 (instead of 5)
 ```
 
 Compute the sparse Hessian using the precomputed pattern and colors:
 
 ```python
-x = np.array([1.0, 2.0, 3.0])
+x = np.random.randn(5)
 H = sparse_hessian(g, x, sparsity=pattern, colors=colors)
-print(H.todense())
-# [[2. 1. 0.]
-#  [1. 2. 0.]
-#  [0. 0. 0.]]
 
 # Verify: matches jax.hessian
-print((H.todense() == jax.hessian(g)(x)).all())  # True
-```
-
-The sparsity pattern and coloring can be precomputed and reused, just like for Jacobians:
-
-```python
-pattern = hessian_sparsity(g, n=1000)
-colors, _ = color_rows(pattern)
-for x in inputs:
-    H = sparse_hessian(g, x, sparsity=pattern, colors=colors)
+np.testing.assert_allclose(H.todense(), jax.hessian(g)(x))
 ```
 
 ## How it works
