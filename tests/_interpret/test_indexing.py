@@ -382,7 +382,7 @@ def test_matmul():
 def test_iota_eye():
     """jnp.eye uses iota internally, triggers conservative fallback.
 
-    TODO(iota): Add iota to ZERO_DERIVATIVE_PRIMITIVES (constant output).
+    TODO(iota): Add prop_zero_derivative handler for iota (constant output).
     TODO(dot_general): Also needs dot_general handler for eye @ x.
     Precise: eye matrix has no input dependency (constant), so eye @ x = x.
     """

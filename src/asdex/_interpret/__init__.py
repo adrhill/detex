@@ -10,20 +10,12 @@ and applies the appropriate handler for each equation.
 
 from jax._src.core import Jaxpr, JaxprEqn
 
-from ._commons import (
-    NESTED_JAXPR_PRIMITIVES,
-    ZERO_DERIVATIVE_PRIMITIVES,
-    ConstVals,
-    Deps,
-    IndexSets,
-    atom_numel,
-    index_sets,
-    union_all,
-)
+from ._commons import ConstVals, Deps, IndexSets, atom_numel, index_sets, union_all
 from ._concatenate import prop_concatenate
 from ._conv import prop_conv_general_dilated
 from ._elementwise import (
     prop_binary_elementwise,
+    prop_comparison,
     prop_convert_element_type,
     prop_integer_pow,
     prop_unary_elementwise,
@@ -126,9 +118,11 @@ def prop_custom_call(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Propagate dependencies through a single equation."""
     match eqn.primitive.name:
-        case prim if prim in ZERO_DERIVATIVE_PRIMITIVES:
-            prop_zero_derivative(eqn, deps, const_vals)
-        case prim if prim in NESTED_JAXPR_PRIMITIVES:
+        case "floor" | "ceil" | "round" | "sign" | "is_finite":
+            prop_zero_derivative(eqn, deps)
+        case "eq" | "ne" | "lt" | "le" | "gt" | "ge":
+            prop_comparison(eqn, deps, const_vals)
+        case "jit" | "pjit" | "xla_call" | "named_call":
             prop_nested_jaxpr(eqn, deps, const_vals)
         case "slice":
             prop_slice(eqn, deps)

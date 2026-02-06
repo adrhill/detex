@@ -50,7 +50,7 @@ def test_reduce_along_axis():
 def test_argmax():
     """argmax has zero derivative (returns integer index, not differentiable).
 
-    TODO(argmax): Add argmax/argmin to ZERO_DERIVATIVE_PRIMITIVES.
+    TODO(argmax): Add prop_zero_derivative handler for argmax/argmin.
     Currently triggers conservative fallback.
     Precise: argmax output has zero dependency (non-differentiable).
     """

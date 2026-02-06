@@ -20,8 +20,8 @@ Missing precise handlers for:
 - [ ] `gather` - fancy indexing (`test_gather_fancy_indexing`)
 - [ ] `scatter` - in-place updates (`test_scatter_at_set`)
 - [ ] `dynamic_slice` - used by split (`test_split`)
-- [ ] `iota` - constant array generation, add to ZERO_DERIVATIVE_PRIMITIVES (`test_iota_eye`)
-- [ ] `argmax`/`argmin` - add to ZERO_DERIVATIVE_PRIMITIVES (`test_argmax`)
+- [ ] `iota` - constant array generation, add to prop_zero_derivative (`test_iota_eye`)
+- [ ] `argmax`/`argmin` - add to prop_zero_derivative (`test_argmax`)
 
 ## Architecture Improvements
 

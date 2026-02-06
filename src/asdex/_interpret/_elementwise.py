@@ -1,6 +1,5 @@
 """Propagation rules for element-wise operations."""
 
-from typing import Any
 
 import numpy as np
 from jax._src.core import JaxprEqn, Literal, Var
@@ -30,18 +29,14 @@ _COMPARISON_UFUNCS: dict[str, np.ufunc] = {
 }
 
 
-def prop_zero_derivative(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
     """Propagate dependencies through zero-derivative primitives.
 
-    Operations like floor, ceil, comparisons (eq, lt, gt, ...), and sign
-    have zero derivative almost everywhere.
-    Their outputs are piecewise constant,
-    so infinitesimal input changes don't affect outputs.
+    Operations like floor, ceil, round, sign, and is_finite have zero derivative
+    almost everywhere. Their outputs are piecewise constant, so infinitesimal
+    input changes don't affect outputs.
 
-    Also tracks const values for comparison ops: if both inputs are consts,
-    the output bool value is tracked for use in select_n → gather/scatter.
-
-    Mathematically, for f in {floor, ceil, sign, eq, ...}:
+    Mathematically, for f in {floor, ceil, sign, ...}:
         ∂f/∂x = 0  (almost everywhere)
     Therefore, output elements have no dependencies on input elements.
 
@@ -52,24 +47,36 @@ def prop_zero_derivative(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> No
     for outvar in eqn.outvars:
         deps[outvar] = [set() for _ in range(atom_numel(outvar))]
 
-    # Track const values for comparison ops (used in select_n chain)
-    prim_name = eqn.primitive.name
-    if prim_name in ("lt", "le", "gt", "ge", "eq", "ne") and len(eqn.invars) >= 2:
 
-        def get_val(atom: Any) -> Any:
-            if isinstance(atom, Literal):
-                return np.asarray(atom.val)
-            if isinstance(atom, Var) and atom in const_vals:
-                return const_vals[atom]
-            return None
+def prop_comparison(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+    """Propagate dependencies through comparison operators (lt, le, gt, ge, eq, ne).
 
-        in1_val = get_val(eqn.invars[0])
-        in2_val = get_val(eqn.invars[1])
+    Comparisons have zero derivative almost everywhere (output is boolean).
+    Also tracks const values: if both inputs are consts, the output bool array
+    is stored for use in the select_n → gather/scatter chain.
 
-        if in1_val is not None and in2_val is not None:
-            ufunc = _COMPARISON_UFUNCS.get(prim_name)
-            if ufunc is not None:
-                const_vals[eqn.outvars[0]] = ufunc(in1_val, in2_val)
+    Example: y = (x < 3) where x = [1, 4, 2]
+        Input deps:  [{0}, {1}, {2}]
+        Output deps: [{}, {}, {}]  (empty sets, no dependence)
+    """
+    for outvar in eqn.outvars:
+        deps[outvar] = [set() for _ in range(atom_numel(outvar))]
+
+    # Track const values for static index tracking
+    def get_val(atom: Var | Literal) -> np.ndarray | None:
+        if isinstance(atom, Literal):
+            return np.asarray(atom.val)
+        if isinstance(atom, Var) and atom in const_vals:
+            return const_vals[atom]
+        return None
+
+    in1_val = get_val(eqn.invars[0])
+    in2_val = get_val(eqn.invars[1])
+
+    if in1_val is not None and in2_val is not None:
+        ufunc = _COMPARISON_UFUNCS.get(eqn.primitive.name)
+        if ufunc is not None:
+            const_vals[eqn.outvars[0]] = ufunc(in1_val, in2_val)
 
 
 def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:

@@ -24,31 +24,6 @@ Atom = Var | Literal
 
 
 # =============================================================================
-# Constants
-# =============================================================================
-
-# Primitives with zero derivatives (output doesn't depend on input)
-ZERO_DERIVATIVE_PRIMITIVES = frozenset(
-    [
-        "floor",
-        "ceil",
-        "round",
-        "sign",
-        "eq",
-        "ne",
-        "lt",
-        "le",
-        "gt",
-        "ge",
-        "is_finite",
-    ]
-)
-
-# Primitives that contain nested jaxprs we should trace into
-NESTED_JAXPR_PRIMITIVES = frozenset(["jit", "pjit", "xla_call", "named_call"])
-
-
-# =============================================================================
 # Utility functions
 # =============================================================================
 
