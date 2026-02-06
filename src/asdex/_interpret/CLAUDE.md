@@ -1,7 +1,7 @@
-# _interpret — Index Set Propagation
+# _interpret — Custom Jaxpr Interpreter for Index Set Propagation
 
-Propagates per-element dependency index sets (`set[int]`) through jaxpr primitives
-to determine Jacobian sparsity patterns.
+Implements a custom jaxpr interpreter that propagates per-element dependency index sets (`set[int]`)
+through primitives to determine Jacobian sparsity patterns.
 
 ## Structure
 
@@ -44,3 +44,8 @@ This lets `gather`/`scatter` resolve static indices precisely instead of falling
 4. **Jaxpr**: The `eqn.invars` and `eqn.params` layout the handler reads.
 
 See `prop_slice` in `_indexing.py` for the reference example.
+
+## References
+
+- [Understanding jaxprs](https://docs.jax.dev/en/latest/jaxpr.html)
+- [Writing custom jaxpr interpreters](https://docs.jax.dev/en/latest/notebooks/Writing_custom_interpreters_in_Jax.html)
