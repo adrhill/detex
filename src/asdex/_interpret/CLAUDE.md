@@ -38,12 +38,11 @@ This lets `gather`/`scatter` resolve static indices precisely instead of falling
 ## Handler Docstring Style
 
 1. **Semantic summary**: What the operation does and how dependencies flow.
-   Use semantic line breaks (new line per sentence/clause).
 2. **Math**: The Jacobian structure in concise mathematical notation.
 3. **Example**: A concrete input/output trace showing dependency sets before and after.
 4. **Jaxpr**: The `eqn.invars` and `eqn.params` layout the handler reads.
 
-See `prop_slice` in `_indexing.py` for the reference example.
+Use **semantic line breaks** (new line per sentence/clause).
 
 ## References
 
