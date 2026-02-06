@@ -53,7 +53,15 @@ def atom_numel(atom: Atom) -> int:
 
 
 def atom_const_val(atom: Atom, const_vals: ConstVals) -> np.ndarray | None:
-    """Get the concrete value of an atom, if statically known."""
+    """Get the concrete value of an atom, if statically known.
+
+    The value is known in two cases:
+    - **Literals**: constants embedded directly in the jaxpr.
+    - **Tracked vars**: variables in ``const_vals``, whose values were
+      computed from constants through earlier operations.
+
+    Returns ``None`` when the value depends on runtime inputs.
+    """
     if isinstance(atom, Literal):
         return np.asarray(atom.val)
     if isinstance(atom, Var) and atom in const_vals:
