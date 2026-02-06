@@ -1,17 +1,63 @@
 """Propagation rules for element-wise operations."""
 
-from jax._src.core import JaxprEqn
+from typing import Any
 
-from ._commons import Deps, IndexSets, atom_numel, index_sets, union_all
+import numpy as np
+from jax._src.core import JaxprEqn, Literal, Var
+
+from ._commons import ConstVals, Deps, IndexSets, atom_numel, index_sets, union_all
 
 
-def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
+def _binary_op(name: str, a: Any, b: Any) -> np.ndarray:
+    """Apply a binary operation to two arrays, returning an ndarray."""
+    if name == "add" or name == "add_any":
+        return np.asarray(a + b)
+    elif name == "sub":
+        return np.asarray(a - b)
+    elif name == "mul":
+        return np.asarray(a * b)
+    elif name == "div":
+        return np.asarray(a / b)
+    elif name == "pow":
+        return np.asarray(a**b)
+    elif name == "max":
+        return np.maximum(a, b)
+    elif name == "min":
+        return np.minimum(a, b)
+    else:
+        msg = f"Unknown binary op: {name}"
+        raise ValueError(msg)
+
+
+def _comparison_op(name: str, a: Any, b: Any) -> np.ndarray:
+    """Apply a comparison operation to two arrays, returning an ndarray."""
+    if name == "lt":
+        return np.asarray(a < b)
+    elif name == "le":
+        return np.asarray(a <= b)
+    elif name == "gt":
+        return np.asarray(a > b)
+    elif name == "ge":
+        return np.asarray(a >= b)
+    elif name == "eq":
+        return np.asarray(a == b)
+    elif name == "ne":
+        return np.asarray(a != b)
+    else:
+        msg = f"Unknown comparison op: {name}"
+        raise ValueError(msg)
+
+
+def prop_zero_derivative(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Propagate dependencies through zero-derivative primitives.
 
     Operations like floor, ceil, comparisons (eq, lt, gt, ...), and sign
     have zero derivative almost everywhere.
     Their outputs are piecewise constant,
     so infinitesimal input changes don't affect outputs.
+
+    Also tracks const values for comparison ops: if both inputs are consts,
+    the output bool value is tracked for use in select_n → gather/scatter.
 
     Mathematically, for f in {floor, ceil, sign, eq, ...}:
         ∂f/∂x = 0  (almost everywhere)
@@ -23,6 +69,27 @@ def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
     """
     for outvar in eqn.outvars:
         deps[outvar] = [set() for _ in range(atom_numel(outvar))]
+
+    # Track const values for comparison ops (used in select_n chain)
+    prim_name = eqn.primitive.name
+    if prim_name in ("lt", "le", "gt", "ge", "eq", "ne") and len(eqn.invars) >= 2:
+
+        def get_val(atom: Any) -> Any:
+            if isinstance(atom, Literal):
+                return np.asarray(atom.val)
+            if isinstance(atom, Var) and atom in const_vals:
+                return const_vals[atom]
+            return None
+
+        in1_val = get_val(eqn.invars[0])
+        in2_val = get_val(eqn.invars[1])
+
+        if in1_val is not None and in2_val is not None:
+            try:
+                out_var = eqn.outvars[0]
+                const_vals[out_var] = _comparison_op(prim_name, in1_val, in2_val)
+            except ValueError:
+                pass
 
 
 def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
@@ -47,10 +114,13 @@ def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
         deps[eqn.outvars[0]] = [s.copy() for s in in_indices]
 
 
-def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Binary element-wise ops (add, mul, etc.) combine two arrays element-wise.
     Each output element depends on the corresponding elements from both inputs.
     Broadcasting is handled: scalars contribute to all output elements.
+
+    Also tracks const values: if both inputs are tracked consts, the output
+    value is computed and stored for use in gather/scatter handlers.
 
     For f(x, y) element-wise:
         ∂f/∂x[i] and ∂f/∂y[i] are generally nonzero
@@ -64,8 +134,10 @@ def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
         invars[0]: first input array
         invars[1]: second input array
     """
-    in1 = index_sets(deps, eqn.invars[0])
-    in2 = index_sets(deps, eqn.invars[1])
+    in1_atom = eqn.invars[0]
+    in2_atom = eqn.invars[1]
+    in1 = index_sets(deps, in1_atom)
+    in2 = index_sets(deps, in2_atom)
     out_size = max(len(in1), len(in2))
     out_indices: IndexSets = []
     for i in range(out_size):
@@ -81,6 +153,25 @@ def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
             to_merge.append(in2[i])
         out_indices.append(union_all(to_merge))
     deps[eqn.outvars[0]] = out_indices
+
+    # Track const values for static index tracking
+    def get_val(atom):
+        if isinstance(atom, Literal):
+            return np.asarray(atom.val)
+        if isinstance(atom, Var) and atom in const_vals:
+            return const_vals[atom]
+        return None
+
+    in1_val = get_val(in1_atom)
+    in2_val = get_val(in2_atom)
+
+    if in1_val is not None and in2_val is not None:
+        prim_name = eqn.primitive.name
+        try:
+            out_var = eqn.outvars[0]
+            const_vals[out_var] = _binary_op(prim_name, in1_val, in2_val)
+        except ValueError:
+            pass  # Unknown op, don't track
 
 
 def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:

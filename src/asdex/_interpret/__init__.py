@@ -13,6 +13,7 @@ from jax._src.core import Jaxpr, JaxprEqn
 from ._commons import (
     NESTED_JAXPR_PRIMITIVES,
     ZERO_DERIVATIVE_PRIMITIVES,
+    ConstVals,
     Deps,
     IndexSets,
     atom_numel,
@@ -30,25 +31,72 @@ from ._elementwise import (
 from ._indexing import (
     prop_broadcast_in_dim,
     prop_concatenate,
+    prop_gather,
     prop_reshape,
+    prop_scatter,
     prop_slice,
     prop_squeeze,
 )
 from ._reduction import prop_reduce_sum
 
 
-def prop_jaxpr(jaxpr: Jaxpr, input_indices: list[IndexSets]) -> list[IndexSets]:
+def prop_custom_call(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+    """Custom differentiation wrappers delegate to their forward jaxpr.
+
+    JAX's custom_jvp and custom_vjp allow users to define custom derivative
+    rules. For sparsity detection, we only need the forward pass behavior,
+    which is stored in the `call_jaxpr` parameter.
+
+    The custom derivative rules don't affect which outputs depend on which
+    inputs - they only change how derivatives are computed.
+
+    Example: jax.nn.relu uses custom_jvp for efficient gradients
+        def relu(x): return jnp.maximum(x, 0)
+        Input deps:  [{0}, {1}, {2}]
+        Output deps: [{0}, {1}, {2}]  (element-wise, traced through maximum)
+
+    Jaxpr:
+        call_jaxpr: the forward computation to trace
+    """
+    call_jaxpr = eqn.params.get("call_jaxpr")
+    if call_jaxpr is None:
+        msg = (
+            f"Primitive '{eqn.primitive.name}' has no 'call_jaxpr' parameter. "
+            "Please report this at https://github.com/adrhill/asdex/issues"
+        )
+        raise ValueError(msg)
+
+    # Handle ClosedJaxpr wrapper
+    if hasattr(call_jaxpr, "jaxpr"):
+        call_jaxpr = call_jaxpr.jaxpr
+
+    input_indices = [index_sets(deps, invar) for invar in eqn.invars]
+    output_indices = prop_jaxpr(call_jaxpr, input_indices, const_vals)
+
+    for outvar, indices in zip(eqn.outvars, output_indices, strict=False):
+        deps[outvar] = indices
+
+
+def prop_jaxpr(
+    jaxpr: Jaxpr,
+    input_indices: list[IndexSets],
+    const_vals: ConstVals | None = None,
+) -> list[IndexSets]:
     """
     Propagate index sets through a jaxpr.
 
     Args:
         jaxpr: The jaxpr to analyze
         input_indices: List of IndexSets, one per input variable
+        const_vals: Optional mapping of constant variables to their values.
+            Used for precise tracking of static indices in gather/scatter.
 
     Returns:
         List of IndexSets, one per output variable
     """
     deps: Deps = {}
+    if const_vals is None:
+        const_vals = {}
 
     # Initialize input variables
     for var, indices in zip(jaxpr.invars, input_indices, strict=False):
@@ -60,13 +108,13 @@ def prop_jaxpr(jaxpr: Jaxpr, input_indices: list[IndexSets]) -> list[IndexSets]:
 
     # Process each equation
     for eqn in jaxpr.eqns:
-        prop_equation(eqn, deps)
+        prop_equation(eqn, deps, const_vals)
 
     # Return output dependencies
     return [index_sets(deps, outvar) for outvar in jaxpr.outvars]
 
 
-def prop_nested_jaxpr(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_nested_jaxpr(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Handle primitives with nested jaxprs by recursively tracing."""
     nested_jaxpr = eqn.params.get("jaxpr")
     if nested_jaxpr is None:
@@ -81,25 +129,25 @@ def prop_nested_jaxpr(eqn: JaxprEqn, deps: Deps) -> None:
         nested_jaxpr = nested_jaxpr.jaxpr
 
     input_indices = [index_sets(deps, invar) for invar in eqn.invars]
-    output_indices = prop_jaxpr(nested_jaxpr, input_indices)
+    output_indices = prop_jaxpr(nested_jaxpr, input_indices, const_vals)
 
     for outvar, indices in zip(eqn.outvars, output_indices, strict=False):
         deps[outvar] = indices
 
 
-def prop_equation(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_equation(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Propagate dependencies through a single equation."""
     match eqn.primitive.name:
         case prim if prim in ZERO_DERIVATIVE_PRIMITIVES:
-            prop_zero_derivative(eqn, deps)
+            prop_zero_derivative(eqn, deps, const_vals)
         case prim if prim in NESTED_JAXPR_PRIMITIVES:
-            prop_nested_jaxpr(eqn, deps)
+            prop_nested_jaxpr(eqn, deps, const_vals)
         case "slice":
             prop_slice(eqn, deps)
         case "squeeze":
             prop_squeeze(eqn, deps)
         case "broadcast_in_dim":
-            prop_broadcast_in_dim(eqn, deps)
+            prop_broadcast_in_dim(eqn, deps, const_vals)
         case "concatenate":
             prop_concatenate(eqn, deps)
         case "reshape":
@@ -107,7 +155,7 @@ def prop_equation(eqn: JaxprEqn, deps: Deps) -> None:
         case "integer_pow":
             prop_integer_pow(eqn, deps)
         case "add" | "sub" | "mul" | "div" | "pow" | "max" | "min" | "add_any":
-            prop_binary_elementwise(eqn, deps)
+            prop_binary_elementwise(eqn, deps, const_vals)
         case (
             "neg"
             | "exp"
@@ -130,19 +178,24 @@ def prop_equation(eqn: JaxprEqn, deps: Deps) -> None:
             prop_convert_element_type(eqn, deps)
         case "conv_general_dilated":
             prop_conv_general_dilated(eqn, deps)
+        case "custom_jvp_call" | "custom_vjp_call":
+            prop_custom_call(eqn, deps, const_vals)
+        case "gather":
+            prop_gather(eqn, deps, const_vals)
+        case "scatter" | "scatter-add":
+            prop_scatter(eqn, deps, const_vals)
+        case "select_n":
+            prop_select_n(eqn, deps, const_vals)
         # TODO: implement precise handlers for these primitives.
         # Currently uses conservative fallback (all outputs depend on all inputs).
         case (
             "argmax"
             | "dot_general"
-            | "gather"
             | "iota"
             | "pad"
             | "reduce_max"
             | "reduce_prod"
             | "rev"
-            | "scatter"
-            | "select_n"
             | "sort"
             | "split"
             | "tile"
@@ -153,12 +206,60 @@ def prop_equation(eqn: JaxprEqn, deps: Deps) -> None:
             prop_throw_error(eqn, deps)
 
 
+def prop_select_n(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+    """select_n(pred, x, y) selects x where pred is False, y where pred is True.
+
+    For sparsity, this is conservative: each output depends on both alternatives
+    since we don't know at trace time which path will be taken.
+
+    However, for const value tracking (used in gather/scatter), if all inputs
+    are tracked consts, we can compute the concrete output value.
+
+    Jaxpr:
+        invars[0]: boolean predicate array
+        invars[1]: values selected when pred is False (on_false)
+        invars[2]: values selected when pred is True (on_true)
+    """
+    import numpy as np
+    from jax._src.core import Literal, Var
+
+    # Standard dependency propagation - conservative (each output depends on both alternatives)
+    all_inputs: IndexSets = []
+    for invar in eqn.invars:
+        all_inputs.extend(index_sets(deps, invar))
+    all_deps = union_all(all_inputs)
+    for outvar in eqn.outvars:
+        deps[outvar] = [all_deps.copy() for _ in range(atom_numel(outvar))]
+
+    # Track const values for static index tracking
+    pred = eqn.invars[0]
+    on_false = eqn.invars[1]
+    on_true = eqn.invars[2]
+    out_var = eqn.outvars[0]
+
+    # Get values for all inputs (Literal or tracked const)
+    def get_val(atom):
+        if isinstance(atom, Literal):
+            return np.asarray(atom.val)
+        if isinstance(atom, Var) and atom in const_vals:
+            return const_vals[atom]
+        return None
+
+    pred_val = get_val(pred)
+    on_false_val = get_val(on_false)
+    on_true_val = get_val(on_true)
+
+    if pred_val is not None and on_false_val is not None and on_true_val is not None:
+        # All inputs are known - compute output value
+        const_vals[out_var] = np.where(pred_val, on_true_val, on_false_val)
+
+
 def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
     """Conservative fallback for primitives without precise handlers.
     Assumes worst-case: every output element may depend on every input element.
     This is correct but may overestimate sparsity (more nonzeros than necessary).
 
-    Used for: dot_general, gather, scatter, transpose, sort, etc.
+    Used for: dot_general, transpose, sort, etc.
     """
     all_inputs: IndexSets = []
     for invar in eqn.invars:

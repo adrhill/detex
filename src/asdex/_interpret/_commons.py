@@ -2,6 +2,7 @@
 
 import math
 from collections.abc import Sequence
+from typing import Any
 
 from jax._src.core import Literal, Var
 
@@ -14,6 +15,9 @@ IndexSets = list[set[int]]
 
 Deps = dict[Var, IndexSets]
 """Maps each variable to its per-element dependency index sets."""
+
+ConstVals = dict[Var, Any]
+"""Maps constant variables to their concrete values (for static index tracking)."""
 
 Atom = Var | Literal
 """Atomic elements in jaxpressions: named intermediates (Var) or constants (Literal)."""

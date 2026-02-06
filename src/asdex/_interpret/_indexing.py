@@ -1,8 +1,18 @@
 """Propagation rules for indexing and shape manipulation operations."""
 
-from jax._src.core import JaxprEqn
+import numpy as np
+from jax._src.core import JaxprEqn, Literal, Var
 
-from ._commons import Deps, IndexSets, index_sets, numel, row_strides, union_all
+from ._commons import (
+    ConstVals,
+    Deps,
+    IndexSets,
+    atom_numel,
+    index_sets,
+    numel,
+    row_strides,
+    union_all,
+)
 
 
 def prop_slice(eqn: JaxprEqn, deps: Deps) -> None:
@@ -78,7 +88,7 @@ def prop_squeeze(eqn: JaxprEqn, deps: Deps) -> None:
     deps[eqn.outvars[0]] = index_sets(deps, eqn.invars[0])
 
 
-def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Broadcast replicates input elements across new or expanded dimensions.
     Each output element depends on exactly one input element,
     determined by projecting output coordinates onto input dimensions.
@@ -86,6 +96,9 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps) -> None:
     For broadcast_dimensions mapping input dim i → output dim d[i]:
         out[..., j, ...] = in[..., j mod in_shape[i], ...]
     Size-1 input dims are implicitly broadcast (all outputs read index 0).
+
+    Also tracks const values: if input is a Literal or known const,
+    the output value is also recorded for use in gather/scatter handlers.
 
     Example: x.shape = (3,), y = broadcast(x, shape=(2, 3), dims=(1,))
         Input deps:  [{0}, {1}, {2}]
@@ -96,17 +109,39 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps) -> None:
         shape: target output shape
         broadcast_dimensions: maps input dim i to output dim
     """
-    in_indices = index_sets(deps, eqn.invars[0])
+    in_atom = eqn.invars[0]
+    in_indices = index_sets(deps, in_atom)
     out_shape = eqn.params["shape"]
     broadcast_dims = eqn.params["broadcast_dimensions"]
     out_size = numel(out_shape)
 
+    # Track const values for static index tracking in gather/scatter
+    out_var = eqn.outvars[0]
+
+    def broadcast_const(in_val: np.ndarray) -> np.ndarray:
+        """Broadcast a const value according to broadcast_in_dim semantics."""
+        # broadcast_dimensions tells us which output dims come from input dims
+        # Create an intermediate shape that can be broadcast to out_shape
+        in_shape = in_val.shape or (1,)
+        intermediate_shape = [1] * len(out_shape)
+        for i, out_dim in enumerate(broadcast_dims):
+            intermediate_shape[out_dim] = in_shape[i] if i < len(in_shape) else 1
+        reshaped = np.reshape(in_val, intermediate_shape)
+        return np.broadcast_to(reshaped, out_shape)
+
+    if isinstance(in_atom, Literal):
+        in_val = np.asarray(in_atom.val)
+        const_vals[out_var] = broadcast_const(in_val)
+    elif isinstance(in_atom, Var) and in_atom in const_vals:
+        in_val = np.asarray(const_vals[in_atom])
+        const_vals[out_var] = broadcast_const(in_val)
+
     # Scalar case: single input dependency applies to all outputs
     if len(in_indices) == 1:
-        deps[eqn.outvars[0]] = [in_indices[0].copy() for _ in range(out_size)]
+        deps[out_var] = [in_indices[0].copy() for _ in range(out_size)]
         return
 
-    in_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+    in_shape = tuple(getattr(in_atom.aval, "shape", ()))
     in_strides = row_strides(in_shape)
     out_strides = row_strides(out_shape)
 
@@ -129,7 +164,7 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps) -> None:
         )
         out_indices.append(in_indices[in_flat].copy())
 
-    deps[eqn.outvars[0]] = out_indices
+    deps[out_var] = out_indices
 
 
 def prop_concatenate(eqn: JaxprEqn, deps: Deps) -> None:
@@ -217,3 +252,191 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
         # Conservative fallback: union all input dependencies.
         all_deps = union_all(in_indices)
         deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
+
+
+def _get_static_indices(
+    indices_atom, deps: Deps, const_vals: ConstVals
+) -> np.ndarray | None:
+    """Get concrete index values if they're static, otherwise return None.
+
+    For Literal indices, returns the value directly.
+    For Var indices that are tracked in const_vals, returns the tracked value.
+    Otherwise returns None, triggering conservative fallback.
+    """
+    if isinstance(indices_atom, Literal):
+        return np.asarray(indices_atom.val)
+    if isinstance(indices_atom, Var) and indices_atom in const_vals:
+        return np.asarray(const_vals[indices_atom])
+    return None
+
+
+def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+    """Gather extracts slices from operand at positions specified by indices.
+
+    For static indices (Literal or tracked const), each output element depends
+    on specific input elements determined by the index values. For dynamic
+    (traced) indices, we fall back to conservative.
+
+    For simple 1D gather: out[i] = operand[indices[i]]
+        Each output depends on exactly one input.
+    The Jacobian is a selection/permutation matrix.
+
+    Example: x = [a, b, c], indices = [2, 0, 1], y = x[indices] = [c, a, b]
+        Input deps:  [{0}, {1}, {2}]
+        Output deps: [{2}, {0}, {1}]  (permuted by index array)
+
+    Example with dynamic indices: x[traced_indices]
+        Cannot determine which inputs each output depends on.
+        Conservative: all outputs depend on all inputs.
+
+    Jaxpr:
+        invars[0]: operand array to gather from
+        invars[1]: indices specifying gather positions
+        dimension_numbers: GatherDimensionNumbers specifying axis mapping
+        slice_sizes: size of slice to extract at each index
+    """
+    operand_indices = index_sets(deps, eqn.invars[0])
+    indices_atom = eqn.invars[1]
+
+    # Check if we can get static index values
+    concrete_indices = _get_static_indices(indices_atom, deps, const_vals)
+
+    if concrete_indices is not None:
+        # Static indices - compute precise mapping
+        dim_nums = eqn.params["dimension_numbers"]
+        slice_sizes = eqn.params["slice_sizes"]
+
+        operand_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+
+        # Handle simple 1D case: operand is 1D, indices are 1D, slice_size is (1,)
+        # This covers x[indices] where x is 1D and indices is a 1D array
+        if (
+            len(operand_shape) == 1
+            and len(slice_sizes) == 1
+            and slice_sizes[0] == 1
+            and dim_nums.offset_dims == ()
+            and dim_nums.collapsed_slice_dims == (0,)
+            and dim_nums.start_index_map == (0,)
+        ):
+            # Simple 1D gather: out[i] = operand[indices[i]]
+            flat_indices = concrete_indices.flatten()
+            out_indices: IndexSets = []
+            for idx in flat_indices:
+                idx_int = int(idx)
+                if 0 <= idx_int < len(operand_indices):
+                    out_indices.append(operand_indices[idx_int].copy())
+                else:
+                    # Out of bounds - no dependency (will be filled with default)
+                    out_indices.append(set())
+            deps[eqn.outvars[0]] = out_indices
+            return
+
+        # For more complex gather patterns, fall through to conservative
+
+    # Dynamic indices or complex gather - conservative fallback
+    all_deps = union_all(operand_indices)
+    out_size = atom_numel(eqn.outvars[0])
+    deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
+
+
+def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+    """Scatter writes updates into operand at positions specified by indices.
+
+    For static indices (Literal or tracked const), we can precisely track which
+    output positions come from the original operand vs which receive scattered
+    updates. For dynamic indices, we fall back to conservative.
+
+    For scatter (replace): out[indices[i]] = updates[i], else out[j] = operand[j]
+        Output positions NOT in indices: depend on corresponding operand element.
+        Output positions in indices: depend on corresponding updates element.
+
+    For scatter-add: out[indices[i]] = operand[indices[i]] + updates[i]
+        Output positions in indices: depend on BOTH operand AND updates.
+
+    Example: arr = [a, b, c], arr.at[1].set(x) = [a, x, c]
+        operand deps:  [{0}, {1}, {2}]  (from arr)
+        updates deps:  [{3}]             (from x, assuming x is input index 3)
+        Output deps:   [{0}, {3}, {2}]   (index 1 replaced by x)
+
+    Example with dynamic indices: arr.at[traced_idx].set(x)
+        Cannot determine which position receives the update.
+        Conservative: all outputs depend on all inputs.
+
+    Jaxpr:
+        invars[0]: operand array (base)
+        invars[1]: indices specifying scatter positions
+        invars[2]: updates to scatter
+        dimension_numbers: ScatterDimensionNumbers specifying axis mapping
+        update_jaxpr: optional, defines combination function (e.g., add for scatter-add)
+    """
+    operand_indices = index_sets(deps, eqn.invars[0])
+    indices_atom = eqn.invars[1]
+    updates_indices = index_sets(deps, eqn.invars[2])
+
+    # Check if we can get static index values
+    concrete_indices = _get_static_indices(indices_atom, deps, const_vals)
+
+    if concrete_indices is not None:
+        # Static indices - track which positions get updates
+        dim_nums = eqn.params["dimension_numbers"]
+        update_jaxpr = eqn.params.get("update_jaxpr")
+        is_scatter_add = update_jaxpr is not None
+
+        operand_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+        out_shape = tuple(getattr(eqn.outvars[0].aval, "shape", ()))
+        out_size = numel(out_shape)
+
+        # Handle simple 1D case: operand is 1D, indices specify positions
+        # This covers arr.at[idx].set(val) and arr.at[indices].set(vals)
+        if (
+            len(operand_shape) == 1
+            and dim_nums.update_window_dims == ()
+            and dim_nums.inserted_window_dims == (0,)
+            and dim_nums.scatter_dims_to_operand_dims == (0,)
+        ):
+            # Build mapping from output position to list of update indices
+            # (multiple updates can target the same position in scatter-add)
+            flat_indices = concrete_indices.flatten()
+            scatter_positions: dict[int, list[int]] = {}
+            for update_idx, pos in enumerate(flat_indices):
+                pos_int = int(pos)
+                if 0 <= pos_int < out_size:
+                    if pos_int not in scatter_positions:
+                        scatter_positions[pos_int] = []
+                    scatter_positions[pos_int].append(update_idx)
+
+            out_indices: IndexSets = []
+            for out_pos in range(out_size):
+                if out_pos in scatter_positions:
+                    update_idx_list = scatter_positions[out_pos]
+                    if is_scatter_add:
+                        # scatter-add: depends on operand AND all updates at this position
+                        combined = operand_indices[out_pos].copy()
+                        for update_idx in update_idx_list:
+                            if update_idx < len(updates_indices):
+                                combined |= updates_indices[update_idx]
+                            elif updates_indices:
+                                combined |= updates_indices[0]
+                        out_indices.append(combined)
+                    else:
+                        # scatter (replace): last update wins, depends only on that update
+                        last_update_idx = update_idx_list[-1]
+                        if last_update_idx < len(updates_indices):
+                            out_indices.append(updates_indices[last_update_idx].copy())
+                        elif updates_indices:
+                            out_indices.append(updates_indices[0].copy())
+                        else:
+                            out_indices.append(set())
+                else:
+                    # Position not in scatter targets - keep operand dependency
+                    out_indices.append(operand_indices[out_pos].copy())
+
+            deps[eqn.outvars[0]] = out_indices
+            return
+
+        # For more complex scatter patterns, fall through to conservative
+
+    # Dynamic indices or complex scatter - conservative fallback
+    all_deps = union_all(operand_indices + updates_indices)
+    out_size = atom_numel(eqn.outvars[0])
+    deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
