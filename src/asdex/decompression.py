@@ -15,6 +15,7 @@ from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike, NDArray
 
 from asdex.coloring import color_rows
+from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_sparsity
 
 
@@ -169,7 +170,6 @@ def sparse_hessian(
     Returns:
         Sparse Hessian matrix of shape (n, n) as BCOO
     """
-    from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 
     x = np.asarray(x)
     n = x.shape[0]
