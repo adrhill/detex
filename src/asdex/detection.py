@@ -2,12 +2,12 @@
 
 import jax
 import jax.numpy as jnp
-from jax.experimental.sparse import BCOO
 
 from asdex._interpret import prop_jaxpr
+from asdex.pattern import SparsityPattern
 
 
-def jacobian_sparsity(f, n: int) -> BCOO:
+def jacobian_sparsity(f, n: int) -> SparsityPattern:
     """
     Detect global Jacobian sparsity pattern for f: R^n -> R^m.
 
@@ -24,7 +24,7 @@ def jacobian_sparsity(f, n: int) -> BCOO:
         n: Input dimension
 
     Returns:
-        BCOO sparse boolean matrix of shape (m, n) where entry (i,j) is True
+        SparsityPattern of shape (m, n) where entry (i,j) is present
         if output i depends on input j
     """
     dummy_input = jnp.zeros(n)
@@ -41,7 +41,7 @@ def jacobian_sparsity(f, n: int) -> BCOO:
     # Extract output dependencies (first output variable)
     out_indices = output_indices_list[0] if output_indices_list else []
 
-    # Build sparse matrix
+    # Build sparsity pattern
     rows = []
     cols = []
     for i, deps in enumerate(out_indices):
@@ -49,17 +49,10 @@ def jacobian_sparsity(f, n: int) -> BCOO:
             rows.append(i)
             cols.append(j)
 
-    indices = jnp.array(
-        [[r, c] for r, c in zip(rows, cols, strict=True)], dtype=jnp.int32
-    )
-    if len(rows) == 0:
-        indices = jnp.zeros((0, 2), dtype=jnp.int32)
-    data = jnp.ones(len(rows), dtype=jnp.int8)
-
-    return BCOO((data, indices), shape=(m, n))
+    return SparsityPattern.from_coordinates(rows, cols, (m, n))
 
 
-def hessian_sparsity(f, n: int) -> BCOO:
+def hessian_sparsity(f, n: int) -> SparsityPattern:
     """
     Detect global Hessian sparsity pattern for f: R^n -> R.
 
@@ -71,7 +64,7 @@ def hessian_sparsity(f, n: int) -> BCOO:
         n: Input dimension
 
     Returns:
-        BCOO sparse matrix of shape (n, n) where entry (i,j) is True
+        SparsityPattern of shape (n, n) where entry (i,j) is present
         if H[i,j] may be nonzero
     """
     return jacobian_sparsity(jax.grad(f), n)
