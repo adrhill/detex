@@ -7,45 +7,27 @@ from jax._src.core import JaxprEqn, Literal, Var
 
 from ._commons import ConstVals, Deps, IndexSets, atom_numel, index_sets, union_all
 
+# Ufuncs for evaluating constant values during tracing.
+# Used to propagate static index values through arithmetic to gather/scatter.
+_ARITHMETIC_UFUNCS: dict[str, np.ufunc] = {
+    "add": np.add,
+    "add_any": np.add,
+    "sub": np.subtract,
+    "mul": np.multiply,
+    "div": np.divide,
+    "pow": np.power,
+    "max": np.maximum,
+    "min": np.minimum,
+}
 
-def _binary_op(name: str, a: Any, b: Any) -> np.ndarray:
-    """Apply a binary operation to two arrays, returning an ndarray."""
-    if name == "add" or name == "add_any":
-        return np.asarray(a + b)
-    elif name == "sub":
-        return np.asarray(a - b)
-    elif name == "mul":
-        return np.asarray(a * b)
-    elif name == "div":
-        return np.asarray(a / b)
-    elif name == "pow":
-        return np.asarray(a**b)
-    elif name == "max":
-        return np.maximum(a, b)
-    elif name == "min":
-        return np.minimum(a, b)
-    else:
-        msg = f"Unknown binary op: {name}"
-        raise ValueError(msg)
-
-
-def _comparison_op(name: str, a: Any, b: Any) -> np.ndarray:
-    """Apply a comparison operation to two arrays, returning an ndarray."""
-    if name == "lt":
-        return np.asarray(a < b)
-    elif name == "le":
-        return np.asarray(a <= b)
-    elif name == "gt":
-        return np.asarray(a > b)
-    elif name == "ge":
-        return np.asarray(a >= b)
-    elif name == "eq":
-        return np.asarray(a == b)
-    elif name == "ne":
-        return np.asarray(a != b)
-    else:
-        msg = f"Unknown comparison op: {name}"
-        raise ValueError(msg)
+_COMPARISON_UFUNCS: dict[str, np.ufunc] = {
+    "lt": np.less,
+    "le": np.less_equal,
+    "gt": np.greater,
+    "ge": np.greater_equal,
+    "eq": np.equal,
+    "ne": np.not_equal,
+}
 
 
 def prop_zero_derivative(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -85,11 +67,9 @@ def prop_zero_derivative(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> No
         in2_val = get_val(eqn.invars[1])
 
         if in1_val is not None and in2_val is not None:
-            try:
-                out_var = eqn.outvars[0]
-                const_vals[out_var] = _comparison_op(prim_name, in1_val, in2_val)
-            except ValueError:
-                pass
+            ufunc = _COMPARISON_UFUNCS.get(prim_name)
+            if ufunc is not None:
+                const_vals[eqn.outvars[0]] = ufunc(in1_val, in2_val)
 
 
 def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
@@ -166,12 +146,9 @@ def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) ->
     in2_val = get_val(in2_atom)
 
     if in1_val is not None and in2_val is not None:
-        prim_name = eqn.primitive.name
-        try:
-            out_var = eqn.outvars[0]
-            const_vals[out_var] = _binary_op(prim_name, in1_val, in2_val)
-        except ValueError:
-            pass  # Unknown op, don't track
+        ufunc = _ARITHMETIC_UFUNCS.get(eqn.primitive.name)
+        if ufunc is not None:
+            const_vals[eqn.outvars[0]] = ufunc(in1_val, in2_val)
 
 
 def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
