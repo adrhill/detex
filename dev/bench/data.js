@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770387596966,
+  "lastUpdate": 1770394107008,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -1152,6 +1152,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.03348593097557271",
             "extra": "mean: 2.604494342799998 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ced92bb4520950b819640b6457dbbee4b71cae07",
+          "message": "Add `SparsityPattern` data structure (#16)\n\n* Add SparsityPattern data structure to replace BCOO in pipeline\n\nReplace BCOO with a custom SparsityPattern class optimized for the\ndetection->coloring->decompression pipeline:\n\n- Store row/col indices separately for direct access (no slicing)\n- Cache col_to_rows mapping for coloring algorithm\n- No unnecessary data values (pattern-only, no all-1s array)\n- Julia-style visualization: dots for small matrices, braille for large\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Update README to showcase SparsityPattern visualization\n\n- Jacobian example: n=100 with braille display\n- Hessian example: n=5 diagonal pattern with dot display\n- Show SparsityPattern pretty-printing output\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Use Julia-style bracket characters for braille frame\n\nBox-drawing characters (┌─┐│└┘) have inconsistent width with braille\nin some fonts. Switch to mathematical bracket characters (⎡⎢⎣⎤⎥⎦)\nwhich align correctly, matching Julia's SparseArrays visualization.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-06T17:07:14+01:00",
+          "tree_id": "73e1e1c2de7a7d140f94137e699577d78d38177e",
+          "url": "https://github.com/adrhill/asdex/commit/ced92bb4520950b819640b6457dbbee4b71cae07"
+        },
+        "date": 1770394106346,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 658.6643183407812,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0038036857844234674",
+            "extra": "mean: 1.5182240363635697 msec\nrounds: 165"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3386.9774510275793,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000273161587884041",
+            "extra": "mean: 295.2484964718643 usec\nrounds: 1984"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 33.45235659508205,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000571204862102254",
+            "extra": "mean: 29.893260200000782 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 31.76640590225183,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020689727169111754",
+            "extra": "mean: 31.479796709677903 msec\nrounds: 31"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.015167176784573,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013426086562642568",
+            "extra": "mean: 47.58467974999974 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 245.24665497798958,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021621249484248735",
+            "extra": "mean: 4.077527581730924 msec\nrounds: 208"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 2.7824130863022223,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002020764051644127",
+            "extra": "mean: 359.4002647999986 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 2.446697402777567,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0026561263904926846",
+            "extra": "mean: 408.71421159999954 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 44.85053583281214,
+            "unit": "iter/sec",
+            "range": "stddev: 0.009383748701236745",
+            "extra": "mean: 22.296277657142536 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 5.566664731879604,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007132352750473701",
+            "extra": "mean: 179.6407809999986 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 0.4377555001289671,
+            "unit": "iter/sec",
+            "range": "stddev: 0.022375799519721178",
+            "extra": "mean: 2.284380207000004 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 0.40402917248649256,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03129882212142588",
+            "extra": "mean: 2.475068802199999 sec\nrounds: 5"
           }
         ]
       }
