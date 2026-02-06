@@ -20,6 +20,7 @@ from ._commons import (
     index_sets,
     union_all,
 )
+from ._concatenate import prop_concatenate
 from ._conv import prop_conv_general_dilated
 from ._elementwise import (
     prop_binary_elementwise,
@@ -28,16 +29,11 @@ from ._elementwise import (
     prop_unary_elementwise,
     prop_zero_derivative,
 )
-from ._indexing import (
-    prop_broadcast_in_dim,
-    prop_concatenate,
-    prop_gather,
-    prop_reshape,
-    prop_scatter,
-    prop_slice,
-    prop_squeeze,
-)
+from ._gather import prop_gather
+from ._indexing import prop_broadcast_in_dim, prop_reshape, prop_slice, prop_squeeze
 from ._reduction import prop_reduce_sum
+from ._scatter import prop_scatter
+from ._select import prop_select_n
 
 
 def prop_custom_call(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -204,54 +200,6 @@ def prop_equation(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_conservative_fallback(eqn, deps)
         case _:
             prop_throw_error(eqn, deps)
-
-
-def prop_select_n(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
-    """select_n(pred, x, y) selects x where pred is False, y where pred is True.
-
-    For sparsity, this is conservative: each output depends on both alternatives
-    since we don't know at trace time which path will be taken.
-
-    However, for const value tracking (used in gather/scatter), if all inputs
-    are tracked consts, we can compute the concrete output value.
-
-    Jaxpr:
-        invars[0]: boolean predicate array
-        invars[1]: values selected when pred is False (on_false)
-        invars[2]: values selected when pred is True (on_true)
-    """
-    import numpy as np
-    from jax._src.core import Literal, Var
-
-    # Standard dependency propagation - conservative (each output depends on both alternatives)
-    all_inputs: IndexSets = []
-    for invar in eqn.invars:
-        all_inputs.extend(index_sets(deps, invar))
-    all_deps = union_all(all_inputs)
-    for outvar in eqn.outvars:
-        deps[outvar] = [all_deps.copy() for _ in range(atom_numel(outvar))]
-
-    # Track const values for static index tracking
-    pred = eqn.invars[0]
-    on_false = eqn.invars[1]
-    on_true = eqn.invars[2]
-    out_var = eqn.outvars[0]
-
-    # Get values for all inputs (Literal or tracked const)
-    def get_val(atom):
-        if isinstance(atom, Literal):
-            return np.asarray(atom.val)
-        if isinstance(atom, Var) and atom in const_vals:
-            return const_vals[atom]
-        return None
-
-    pred_val = get_val(pred)
-    on_false_val = get_val(on_false)
-    on_true_val = get_val(on_true)
-
-    if pred_val is not None and on_false_val is not None and on_true_val is not None:
-        # All inputs are known - compute output value
-        const_vals[out_var] = np.where(pred_val, on_true_val, on_false_val)
 
 
 def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
