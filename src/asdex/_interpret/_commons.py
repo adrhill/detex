@@ -52,6 +52,15 @@ def atom_numel(atom: Atom) -> int:
     return numel(tuple(shape)) if shape else 1
 
 
+def atom_const_val(atom: Atom, const_vals: ConstVals) -> np.ndarray | None:
+    """Get the concrete value of an atom, if statically known."""
+    if isinstance(atom, Literal):
+        return np.asarray(atom.val)
+    if isinstance(atom, Var) and atom in const_vals:
+        return const_vals[atom]
+    return None
+
+
 def index_sets(deps: Deps, atom: Atom) -> IndexSets:
     """Get the index sets for a variable or literal."""
     if isinstance(atom, Literal):

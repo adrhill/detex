@@ -8,6 +8,7 @@ The main entry point is `prop_jaxpr`, which walks the computation graph
 and applies the appropriate handler for each equation.
 """
 
+import numpy as np
 from jax._src.core import Jaxpr, JaxprEqn
 
 from ._commons import ConstVals, Deps, IndexSets, atom_numel, index_sets, union_all
@@ -15,12 +16,34 @@ from ._concatenate import prop_concatenate
 from ._conv import prop_conv_general_dilated
 from ._elementwise import (
     prop_binary_elementwise,
-    prop_comparison,
     prop_convert_element_type,
     prop_integer_pow,
     prop_unary_elementwise,
     prop_zero_derivative,
+    propagate_const_binary,
 )
+
+# Ufuncs for evaluating constant values during tracing.
+# Used to propagate static index values through arithmetic to gather/scatter.
+_ARITHMETIC_UFUNCS: dict[str, np.ufunc] = {
+    "add": np.add,
+    "add_any": np.add,
+    "sub": np.subtract,
+    "mul": np.multiply,
+    "div": np.divide,
+    "pow": np.power,
+    "max": np.maximum,
+    "min": np.minimum,
+}
+
+_COMPARISON_UFUNCS: dict[str, np.ufunc] = {
+    "lt": np.less,
+    "le": np.less_equal,
+    "gt": np.greater,
+    "ge": np.greater_equal,
+    "eq": np.equal,
+    "ne": np.not_equal,
+}
 from ._gather import prop_gather
 from ._indexing import prop_broadcast_in_dim, prop_reshape, prop_slice, prop_squeeze
 from ._reduction import prop_reduce_sum
@@ -121,7 +144,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         case "floor" | "ceil" | "round" | "sign" | "is_finite":
             prop_zero_derivative(eqn, deps)
         case "eq" | "ne" | "lt" | "le" | "gt" | "ge":
-            prop_comparison(eqn, deps, const_vals)
+            prop_zero_derivative(eqn, deps)
+            propagate_const_binary(eqn, const_vals, _COMPARISON_UFUNCS)
         case "jit" | "pjit" | "xla_call" | "named_call":
             prop_nested_jaxpr(eqn, deps, const_vals)
         case "slice":
@@ -137,7 +161,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         case "integer_pow":
             prop_integer_pow(eqn, deps)
         case "add" | "sub" | "mul" | "div" | "pow" | "max" | "min" | "add_any":
-            prop_binary_elementwise(eqn, deps, const_vals)
+            prop_binary_elementwise(eqn, deps)
+            propagate_const_binary(eqn, const_vals, _ARITHMETIC_UFUNCS)
         case (
             "neg"
             | "exp"

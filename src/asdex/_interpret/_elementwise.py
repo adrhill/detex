@@ -1,31 +1,30 @@
 """Propagation rules for element-wise operations."""
 
 import numpy as np
-from jax._src.core import JaxprEqn, Literal, Var
+from jax._src.core import JaxprEqn
 
-from ._commons import ConstVals, Deps, IndexSets, atom_numel, index_sets, union_all
+from ._commons import ConstVals, Deps, atom_const_val, atom_numel, index_sets
 
-# Ufuncs for evaluating constant values during tracing.
-# Used to propagate static index values through arithmetic to gather/scatter.
-_ARITHMETIC_UFUNCS: dict[str, np.ufunc] = {
-    "add": np.add,
-    "add_any": np.add,
-    "sub": np.subtract,
-    "mul": np.multiply,
-    "div": np.divide,
-    "pow": np.power,
-    "max": np.maximum,
-    "min": np.minimum,
-}
 
-_COMPARISON_UFUNCS: dict[str, np.ufunc] = {
-    "lt": np.less,
-    "le": np.less_equal,
-    "gt": np.greater,
-    "ge": np.greater_equal,
-    "eq": np.equal,
-    "ne": np.not_equal,
-}
+def propagate_const_binary(
+    eqn: JaxprEqn, const_vals: ConstVals, ufuncs: dict[str, np.ufunc]
+) -> None:
+    """Propagate constant values through a binary op.
+
+    If both inputs are statically known and a matching ufunc exists,
+    the output value is computed and stored.
+    Used for tracking static indices through arithmetic to gather/scatter.
+
+    Example: z = x + y where x = [1, 2], y = [3, 4]
+        const_vals before: {x: [1, 2], y: [3, 4]}
+        const_vals after:  {x: [1, 2], y: [3, 4], z: [4, 6]}
+    """
+    in1 = atom_const_val(eqn.invars[0], const_vals)
+    in2 = atom_const_val(eqn.invars[1], const_vals)
+    if in1 is not None and in2 is not None:
+        ufunc = ufuncs.get(eqn.primitive.name)
+        if ufunc is not None:
+            const_vals[eqn.outvars[0]] = ufunc(in1, in2)
 
 
 def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
@@ -45,37 +44,6 @@ def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
     """
     for outvar in eqn.outvars:
         deps[outvar] = [set() for _ in range(atom_numel(outvar))]
-
-
-def prop_comparison(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
-    """Propagate dependencies through comparison operators (lt, le, gt, ge, eq, ne).
-
-    Comparisons have zero derivative almost everywhere (output is boolean).
-    Also tracks const values: if both inputs are consts, the output bool array
-    is stored for use in the select_n → gather/scatter chain.
-
-    Example: y = (x < 3) where x = [1, 4, 2]
-        Input deps:  [{0}, {1}, {2}]
-        Output deps: [{}, {}, {}]  (empty sets, no dependence)
-    """
-    for outvar in eqn.outvars:
-        deps[outvar] = [set() for _ in range(atom_numel(outvar))]
-
-    # Track const values for static index tracking
-    def get_val(atom: Var | Literal) -> np.ndarray | None:
-        if isinstance(atom, Literal):
-            return np.asarray(atom.val)
-        if isinstance(atom, Var) and atom in const_vals:
-            return const_vals[atom]
-        return None
-
-    in1_val = get_val(eqn.invars[0])
-    in2_val = get_val(eqn.invars[1])
-
-    if in1_val is not None and in2_val is not None:
-        ufunc = _COMPARISON_UFUNCS.get(eqn.primitive.name)
-        if ufunc is not None:
-            const_vals[eqn.outvars[0]] = ufunc(in1_val, in2_val)
 
 
 def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
@@ -100,13 +68,10 @@ def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
         deps[eqn.outvars[0]] = [s.copy() for s in in_indices]
 
 
-def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     """Binary element-wise ops (add, mul, etc.) combine two arrays element-wise.
     Each output element depends on the corresponding elements from both inputs.
     Broadcasting is handled: scalars contribute to all output elements.
-
-    Also tracks const values: if both inputs are tracked consts, the output
-    value is computed and stored for use in gather/scatter handlers.
 
     For f(x, y) element-wise:
         ∂f/∂x[i] and ∂f/∂y[i] are generally nonzero
@@ -120,41 +85,17 @@ def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) ->
         invars[0]: first input array
         invars[1]: second input array
     """
-    in1_atom = eqn.invars[0]
-    in2_atom = eqn.invars[1]
-    in1 = index_sets(deps, in1_atom)
-    in2 = index_sets(deps, in2_atom)
+    in1 = index_sets(deps, eqn.invars[0])
+    in2 = index_sets(deps, eqn.invars[1])
+    # Broadcasting via modular indexing.
+    # JAX element-wise ops only broadcast scalars (len 1) against arrays.
+    # i % len gives 0 for scalars (i % 1 == 0 for all i),
+    # and i for same-sized arrays,
+    # so it naturally selects the right element without branching.
     out_size = max(len(in1), len(in2))
-    out_indices: IndexSets = []
-    for i in range(out_size):
-        to_merge: IndexSets = []
-        # Handle broadcasting: scalars apply to all
-        if len(in1) == 1:
-            to_merge.append(in1[0])
-        elif i < len(in1):
-            to_merge.append(in1[i])
-        if len(in2) == 1:
-            to_merge.append(in2[0])
-        elif i < len(in2):
-            to_merge.append(in2[i])
-        out_indices.append(union_all(to_merge))
-    deps[eqn.outvars[0]] = out_indices
-
-    # Track const values for static index tracking
-    def get_val(atom):
-        if isinstance(atom, Literal):
-            return np.asarray(atom.val)
-        if isinstance(atom, Var) and atom in const_vals:
-            return const_vals[atom]
-        return None
-
-    in1_val = get_val(in1_atom)
-    in2_val = get_val(in2_atom)
-
-    if in1_val is not None and in2_val is not None:
-        ufunc = _ARITHMETIC_UFUNCS.get(eqn.primitive.name)
-        if ufunc is not None:
-            const_vals[eqn.outvars[0]] = ufunc(in1_val, in2_val)
+    deps[eqn.outvars[0]] = [
+        in1[i % len(in1)] | in2[i % len(in2)] for i in range(out_size)
+    ]
 
 
 def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
