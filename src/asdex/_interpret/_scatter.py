@@ -1,33 +1,17 @@
 """Propagation rule for scatter operations."""
 
-import numpy as np
-from jax._src.core import JaxprEqn, Literal, Var
+from jax._src.core import JaxprEqn
 
 from ._commons import (
     ConstVals,
     Deps,
     IndexSets,
+    atom_const_val,
     atom_numel,
     index_sets,
     numel,
     union_all,
 )
-
-
-def _get_static_indices(
-    indices_atom, deps: Deps, const_vals: ConstVals
-) -> np.ndarray | None:
-    """Get concrete index values if they're static, otherwise return None.
-
-    For Literal indices, returns the value directly.
-    For Var indices that are tracked in const_vals, returns the tracked value.
-    Otherwise returns None, triggering conservative fallback.
-    """
-    if isinstance(indices_atom, Literal):
-        return np.asarray(indices_atom.val)
-    if isinstance(indices_atom, Var) and indices_atom in const_vals:
-        return np.asarray(const_vals[indices_atom])
-    return None
 
 
 def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -65,7 +49,7 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     updates_indices = index_sets(deps, eqn.invars[2])
 
     # Check if we can get static index values
-    concrete_indices = _get_static_indices(indices_atom, deps, const_vals)
+    concrete_indices = atom_const_val(indices_atom, const_vals)
 
     if concrete_indices is not None:
         # Static indices - track which positions get updates
