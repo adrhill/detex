@@ -616,8 +616,6 @@ def test_gather_2d_row_select():
     np.testing.assert_array_equal(result, expected)
 
 
-
-
 # =============================================================================
 # Additional scatter tests
 # =============================================================================

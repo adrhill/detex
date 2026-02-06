@@ -36,43 +36,6 @@ from ._scatter import prop_scatter
 from ._select import prop_select_n
 
 
-def prop_custom_call(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
-    """Custom differentiation wrappers delegate to their forward jaxpr.
-
-    JAX's custom_jvp and custom_vjp allow users to define custom derivative
-    rules. For sparsity detection, we only need the forward pass behavior,
-    which is stored in the `call_jaxpr` parameter.
-
-    The custom derivative rules don't affect which outputs depend on which
-    inputs - they only change how derivatives are computed.
-
-    Example: jax.nn.relu uses custom_jvp for efficient gradients
-        def relu(x): return jnp.maximum(x, 0)
-        Input deps:  [{0}, {1}, {2}]
-        Output deps: [{0}, {1}, {2}]  (element-wise, traced through maximum)
-
-    Jaxpr:
-        call_jaxpr: the forward computation to trace
-    """
-    call_jaxpr = eqn.params.get("call_jaxpr")
-    if call_jaxpr is None:
-        msg = (
-            f"Primitive '{eqn.primitive.name}' has no 'call_jaxpr' parameter. "
-            "Please report this at https://github.com/adrhill/asdex/issues"
-        )
-        raise ValueError(msg)
-
-    # Handle ClosedJaxpr wrapper
-    if hasattr(call_jaxpr, "jaxpr"):
-        call_jaxpr = call_jaxpr.jaxpr
-
-    input_indices = [index_sets(deps, invar) for invar in eqn.invars]
-    output_indices = prop_jaxpr(call_jaxpr, input_indices, const_vals)
-
-    for outvar, indices in zip(eqn.outvars, output_indices, strict=False):
-        deps[outvar] = indices
-
-
 def prop_jaxpr(
     jaxpr: Jaxpr,
     input_indices: list[IndexSets],
@@ -104,7 +67,7 @@ def prop_jaxpr(
 
     # Process each equation
     for eqn in jaxpr.eqns:
-        prop_equation(eqn, deps, const_vals)
+        prop_dispatch(eqn, deps, const_vals)
 
     # Return output dependencies
     return [index_sets(deps, outvar) for outvar in jaxpr.outvars]
@@ -131,7 +94,36 @@ def prop_nested_jaxpr(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         deps[outvar] = indices
 
 
-def prop_equation(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def prop_custom_call(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+    """Custom differentiation wrappers delegate to their forward jaxpr.
+
+    JAX's `custom_jvp` and `custom_vjp` allow users to define custom derivative rules.
+    For sparsity detection, we only need the forward pass behavior,
+    which is stored in the `call_jaxpr` parameter.
+
+    The custom derivative rules don't affect which outputs depend on which
+    inputs - they only change how derivatives are computed.
+    """
+    call_jaxpr = eqn.params.get("call_jaxpr")
+    if call_jaxpr is None:
+        msg = (
+            f"Primitive '{eqn.primitive.name}' has no 'call_jaxpr' parameter. "
+            "Please report this at https://github.com/adrhill/asdex/issues"
+        )
+        raise ValueError(msg)
+
+    # Handle ClosedJaxpr wrapper
+    if hasattr(call_jaxpr, "jaxpr"):
+        call_jaxpr = call_jaxpr.jaxpr
+
+    input_indices = [index_sets(deps, invar) for invar in eqn.invars]
+    output_indices = prop_jaxpr(call_jaxpr, input_indices, const_vals)
+
+    for outvar, indices in zip(eqn.outvars, output_indices, strict=False):
+        deps[outvar] = indices
+
+
+def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Propagate dependencies through a single equation."""
     match eqn.primitive.name:
         case prim if prim in ZERO_DERIVATIVE_PRIMITIVES:
