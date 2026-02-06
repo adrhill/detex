@@ -181,9 +181,9 @@ class TestVisualization:
 
         # Should have braille characters (Unicode block starting at 0x2800)
         assert any(ord(c) >= 0x2800 and ord(c) < 0x2900 for c in s)
-        # Should have box drawing borders
-        assert "┌" in s
-        assert "┘" in s
+        # Should have Julia-style bracket borders
+        assert "⎡" in s
+        assert "⎦" in s
 
     def test_repr_compact(self):
         """__repr__ is compact."""

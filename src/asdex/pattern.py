@@ -317,14 +317,18 @@ class SparsityPattern:
             visualization = self._render_dots()
         else:
             braille = self._render_braille()
-            # Add box drawing borders for braille
+            # Add bracket borders (Julia-style, consistent width with braille)
             braille_lines = braille.split("\n")
             if braille_lines and braille_lines[0] != "(empty)":
-                width = max(len(line) for line in braille_lines)
-                bordered = ["┌" + "─" * width + "┐"]
-                for line in braille_lines:
-                    bordered.append("│" + line.ljust(width) + "│")
-                bordered.append("└" + "─" * width + "┘")
+                n_lines = len(braille_lines)
+                bordered = []
+                for i, line in enumerate(braille_lines):
+                    if i == 0:
+                        bordered.append("⎡" + line + "⎤")
+                    elif i == n_lines - 1:
+                        bordered.append("⎣" + line + "⎦")
+                    else:
+                        bordered.append("⎢" + line + "⎥")
                 visualization = "\n".join(bordered)
             else:
                 visualization = braille
