@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770315040359,
+  "lastUpdate": 1770387596966,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -1044,6 +1044,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00008231375930930491",
             "extra": "mean: 1.019263454543651 msec\nrounds: 33"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c71c658ab58a0565403ced62a3e1f434d3a2039e",
+          "message": "Redesign benchmarks with realistic test functions (#15)\n\n* Redesign benchmarks with realistic test functions\n\nReplace synthetic benchmarks with 3 realistic test cases:\n- Heat equation RHS: tridiagonal Jacobian (~3 colors, 98% sparse)\n- Pure ConvNet: 3 conv layers with ReLU (~18 colors, 95% sparse)\n- Rosenbrock function: sparse Hessian (~3 colors, 98% sparse)\n\nEach function now has 4 benchmark phases: detection, coloring,\nmaterialization (with pre-computed sparsity/colors), and end-to-end.\n\nAlso add TODO for custom_vjp/custom_jvp support (needed for jax.nn.relu).\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Add Hessian tests and improve coverage to 99%\n\nAdd 6 new tests for sparse_hessian:\n- test_hessian_quadratic: basic quadratic function\n- test_hessian_rosenbrock: sparse tridiagonal pattern\n- test_hessian_precomputed_sparsity: pre-computed sparsity\n- test_hessian_precomputed_colors: pre-computed colors\n- test_hessian_zero: linear function (zero Hessian)\n- test_hessian_single_input: single dimension\n\nAlso move hessian_sparsity import to module level in decompression.py.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-06T15:18:46+01:00",
+          "tree_id": "d4fc63846af52bfae27dce0aa469a6234eaff27f",
+          "url": "https://github.com/adrhill/asdex/commit/c71c658ab58a0565403ced62a3e1f434d3a2039e"
+        },
+        "date": 1770387596647,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 444.8577397523808,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00019287888722053595",
+            "extra": "mean: 2.247909636362909 msec\nrounds: 22"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 1279.1086699046168,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001873059124719543",
+            "extra": "mean: 781.7944038129067 usec\nrounds: 1154"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 25.681951608896146,
+            "unit": "iter/sec",
+            "range": "stddev: 0.006590553478836575",
+            "extra": "mean: 38.937850799999296 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 29.61872394234056,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004703285107900902",
+            "extra": "mean: 33.7624268333343 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 19.789696478696747,
+            "unit": "iter/sec",
+            "range": "stddev: 0.014393870357419097",
+            "extra": "mean: 50.531345999999644 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 144.84349241414247,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000059335944312373055",
+            "extra": "mean: 6.904003647887466 msec\nrounds: 142"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 2.74565583610344,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0015947026986007455",
+            "extra": "mean: 364.21170739999695 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 2.3563527405611375,
+            "unit": "iter/sec",
+            "range": "stddev: 0.018450783950387448",
+            "extra": "mean: 424.3846784000013 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 10.543084128788397,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03464758780697518",
+            "extra": "mean: 94.84890642857076 msec\nrounds: 7"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 4.681852591391767,
+            "unit": "iter/sec",
+            "range": "stddev: 0.003212477475886659",
+            "extra": "mean: 213.5906631999987 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 0.43612065135260547,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012616653719753667",
+            "extra": "mean: 2.2929434708 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 0.3839516882670346,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03348593097557271",
+            "extra": "mean: 2.604494342799998 sec\nrounds: 5"
           }
         ]
       }
