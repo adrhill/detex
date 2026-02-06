@@ -297,3 +297,106 @@ def test_bcoo_format():
     result = sparse_jacobian(f, x)
 
     assert isinstance(result, BCOO)
+
+
+# =============================================================================
+# Hessian tests
+# =============================================================================
+
+
+@pytest.mark.hessian
+def test_hessian_quadratic():
+    """Hessian of quadratic function: f(x) = x^T A x."""
+    from asdex import sparse_hessian
+
+    def f(x):
+        # Simple quadratic: sum of squares
+        return jnp.sum(x**2)
+
+    x = np.array([1.0, 2.0, 3.0])
+    result = sparse_hessian(f, x).todense()
+    expected = jax.hessian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.hessian
+def test_hessian_rosenbrock():
+    """Hessian of Rosenbrock function (sparse tridiagonal-like pattern)."""
+    from asdex import sparse_hessian
+
+    def f(x):
+        return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
+
+    x = np.array([1.0, 1.0, 1.0, 1.0])
+    result = sparse_hessian(f, x).todense()
+    expected = jax.hessian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.hessian
+def test_hessian_precomputed_sparsity():
+    """Using pre-computed Hessian sparsity pattern."""
+    from asdex import hessian_sparsity, sparse_hessian
+
+    def f(x):
+        return jnp.sum(x**2)
+
+    x = np.array([1.0, 2.0, 3.0])
+    sparsity = hessian_sparsity(f, n=3)
+
+    result1 = sparse_hessian(f, x, sparsity=sparsity).todense()
+    result2 = sparse_hessian(f, x).todense()
+
+    assert_allclose(result1, result2, rtol=1e-10)
+
+
+@pytest.mark.hessian
+def test_hessian_precomputed_colors():
+    """Using pre-computed Hessian sparsity and colors."""
+    from asdex import hessian_sparsity, sparse_hessian
+
+    def f(x):
+        return jnp.sum((x[1:] - x[:-1]) ** 2)
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    sparsity = hessian_sparsity(f, n=4)
+    colors, num_colors = color_rows(sparsity)
+
+    result1 = sparse_hessian(f, x, sparsity=sparsity, colors=colors).todense()
+    result2 = sparse_hessian(f, x).todense()
+    expected = jax.hessian(f)(x)
+
+    assert_allclose(result1, result2, rtol=1e-10)
+    assert_allclose(result1, expected, rtol=1e-5)
+
+
+@pytest.mark.hessian
+def test_hessian_zero():
+    """Zero Hessian: linear function."""
+    from asdex import sparse_hessian
+
+    def f(x):
+        return jnp.sum(x)  # Linear, Hessian is zero
+
+    x = np.array([1.0, 2.0, 3.0])
+    result = sparse_hessian(f, x)
+
+    assert result.shape == (3, 3)
+    assert result.nse == 0  # All-zero Hessian
+
+
+@pytest.mark.hessian
+def test_hessian_single_input():
+    """Hessian with single input dimension."""
+    from asdex import sparse_hessian
+
+    def f(x):
+        return x[0] ** 3
+
+    x = np.array([2.0])
+    result = sparse_hessian(f, x).todense()
+    expected = jax.hessian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)

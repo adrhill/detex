@@ -1,120 +1,170 @@
-"""Benchmarks for sparsity detection performance."""
+"""Benchmarks for ASD pipeline: detection, coloring, materialization, end-to-end."""
 
+import flax.linen as nn
+import jax
 import jax.numpy as jnp
+import numpy as np
 import pytest
 
-from asdex import jacobian_sparsity
+from asdex import (
+    color_rows,
+    hessian_sparsity,
+    jacobian_sparsity,
+    sparse_hessian,
+    sparse_jacobian,
+)
+
+N = 200  # Problem size for benchmarks
 
 # -----------------------------------------------------------------------------
-# Diagonal sparsity (best case: each output depends on one input)
-# -----------------------------------------------------------------------------
-
-
-@pytest.mark.benchmark(group="diagonal")
-def test_bench_diagonal_n100(benchmark):
-    """Diagonal Jacobian, n=100"""
-
-    def f(x):
-        return x**2
-
-    benchmark(jacobian_sparsity, f, 100)
-
-
-@pytest.mark.benchmark(group="diagonal")
-def test_bench_diagonal_n500(benchmark):
-    """Diagonal Jacobian, n=500"""
-
-    def f(x):
-        return x**2
-
-    benchmark(jacobian_sparsity, f, 500)
-
-
-@pytest.mark.benchmark(group="diagonal")
-def test_bench_diagonal_n1000(benchmark):
-    """Diagonal Jacobian, n=1000"""
-
-    def f(x):
-        return x**2
-
-    benchmark(jacobian_sparsity, f, 1000)
-
-
-# -----------------------------------------------------------------------------
-# Dense sparsity (worst case: all outputs depend on all inputs)
+# Test functions
 # -----------------------------------------------------------------------------
 
 
-@pytest.mark.benchmark(group="dense")
-def test_bench_dense_sum_n100(benchmark):
-    """Dense via sum, n=100"""
-
-    def f(x):
-        return jnp.array([jnp.sum(x)])
-
-    benchmark(jacobian_sparsity, f, 100)
-
-
-@pytest.mark.benchmark(group="dense")
-def test_bench_dense_sum_n500(benchmark):
-    """Dense via sum, n=500"""
-
-    def f(x):
-        return jnp.array([jnp.sum(x)])
-
-    benchmark(jacobian_sparsity, f, 500)
+# 1. Heat equation RHS (tridiagonal Jacobian, ~3 colors)
+def heat_equation_rhs(u):
+    """RHS of 1D heat equation with Dirichlet boundaries."""
+    left = -2 * u[0:1] + u[1:2]
+    interior = u[:-2] - 2 * u[1:-1] + u[2:]
+    right = u[-2:-1] - 2 * u[-1:]
+    return jnp.concatenate([left, interior, right])
 
 
-@pytest.mark.benchmark(group="dense")
-def test_bench_dense_matmul_n100(benchmark):
-    """Dense via matmul, n=100 -> 50 outputs"""
+# 2. Pure Conv Network: Conv -> Conv -> Conv with ReLU (sparse Jacobian)
+def _relu(x):
+    """ReLU without custom_jvp (for sparsity detection compatibility)."""
+    return jnp.maximum(x, 0)
 
-    def f(x):
-        w = jnp.ones((50, 100))
-        return w @ x
 
-    benchmark(jacobian_sparsity, f, 100)
+class _ConvNet(nn.Module):
+    @nn.compact
+    def __call__(self, x):
+        x = x[:, None]  # (N,) -> (N, 1)
+
+        x = nn.Conv(features=8, kernel_size=(5,))(x)
+        x = _relu(x)
+
+        x = nn.Conv(features=4, kernel_size=(3,))(x)
+        x = _relu(x)
+
+        x = nn.Conv(features=2, kernel_size=(3,))(x)
+        x = _relu(x)
+
+        return x.flatten()
+
+
+_convnet_model = _ConvNet()
+_convnet_params = _convnet_model.init(jax.random.key(0), jnp.zeros(N))
+
+
+def convnet(x):
+    """Pure ConvNet: 3 conv layers with ReLU (~95% sparse Jacobian)."""
+    return _convnet_model.apply(_convnet_params, x)
+
+
+# 3. Rosenbrock function (sparse Hessian)
+def rosenbrock(x):
+    """Rosenbrock function for Hessian benchmarks."""
+    return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
 
 
 # -----------------------------------------------------------------------------
-# Realistic workloads
+# Heat Equation benchmarks (Jacobian)
 # -----------------------------------------------------------------------------
 
 
-@pytest.mark.benchmark(group="realistic")
-def test_bench_mlp_layer(benchmark):
-    """MLP-like: tanh(W @ x), 100 -> 64"""
-
-    def f(x):
-        w = jnp.ones((64, 100))
-        return jnp.tanh(w @ x)
-
-    benchmark(jacobian_sparsity, f, 100)
+@pytest.mark.benchmark(group="heat_equation")
+def test_heat_detection(benchmark):
+    """Heat equation: sparsity detection"""
+    benchmark(jacobian_sparsity, heat_equation_rhs, N)
 
 
-@pytest.mark.benchmark(group="realistic")
-def test_bench_elementwise_chain(benchmark):
-    """Chain of element-wise ops, n=200"""
-
-    def f(x):
-        y = x**2
-        y = jnp.sin(y)
-        y = y + x
-        y = jnp.exp(-y)
-        return y
-
-    benchmark(jacobian_sparsity, f, 200)
+@pytest.mark.benchmark(group="heat_equation")
+def test_heat_coloring(benchmark):
+    """Heat equation: graph coloring"""
+    sparsity = jacobian_sparsity(heat_equation_rhs, N)
+    benchmark(color_rows, sparsity)
 
 
-@pytest.mark.benchmark(group="realistic")
-def test_bench_mixed_ops(benchmark):
-    """Mixed operations: slicing, concat, reduction"""
+@pytest.mark.benchmark(group="heat_equation")
+def test_heat_materialization(benchmark):
+    """Heat equation: VJP computation (with known sparsity/colors)"""
+    x = np.ones(N)
+    sparsity = jacobian_sparsity(heat_equation_rhs, N)
+    colors, _ = color_rows(sparsity)
+    benchmark(sparse_jacobian, heat_equation_rhs, x, sparsity, colors)
 
-    def f(x):
-        a = x[:50] ** 2
-        b = jnp.sin(x[50:])
-        c = jnp.concatenate([a, b])
-        d = jnp.sum(c[:25])
-        return jnp.concatenate([c, jnp.array([d])])
 
-    benchmark(jacobian_sparsity, f, 100)
+@pytest.mark.benchmark(group="heat_equation")
+def test_heat_end_to_end(benchmark):
+    """Heat equation: full pipeline"""
+    x = np.ones(N)
+    benchmark(sparse_jacobian, heat_equation_rhs, x)
+
+
+# -----------------------------------------------------------------------------
+# ConvNet benchmarks (Jacobian)
+# -----------------------------------------------------------------------------
+
+
+@pytest.mark.benchmark(group="convnet")
+def test_convnet_detection(benchmark):
+    """ConvNet: sparsity detection"""
+    benchmark(jacobian_sparsity, convnet, N)
+
+
+@pytest.mark.benchmark(group="convnet")
+def test_convnet_coloring(benchmark):
+    """ConvNet: graph coloring"""
+    sparsity = jacobian_sparsity(convnet, N)
+    benchmark(color_rows, sparsity)
+
+
+@pytest.mark.benchmark(group="convnet")
+def test_convnet_materialization(benchmark):
+    """ConvNet: VJP computation (with known sparsity/colors)"""
+    x = np.ones(N)
+    sparsity = jacobian_sparsity(convnet, N)
+    colors, _ = color_rows(sparsity)
+    benchmark(sparse_jacobian, convnet, x, sparsity, colors)
+
+
+@pytest.mark.benchmark(group="convnet")
+def test_convnet_end_to_end(benchmark):
+    """ConvNet: full pipeline"""
+    x = np.ones(N)
+    benchmark(sparse_jacobian, convnet, x)
+
+
+# -----------------------------------------------------------------------------
+# Rosenbrock benchmarks (Hessian)
+# -----------------------------------------------------------------------------
+
+
+@pytest.mark.benchmark(group="rosenbrock")
+def test_rosenbrock_detection(benchmark):
+    """Rosenbrock: Hessian sparsity detection"""
+    benchmark(hessian_sparsity, rosenbrock, N)
+
+
+@pytest.mark.benchmark(group="rosenbrock")
+def test_rosenbrock_coloring(benchmark):
+    """Rosenbrock: graph coloring"""
+    sparsity = hessian_sparsity(rosenbrock, N)
+    benchmark(color_rows, sparsity)
+
+
+@pytest.mark.benchmark(group="rosenbrock")
+def test_rosenbrock_materialization(benchmark):
+    """Rosenbrock: HVP computation (with known sparsity/colors)"""
+    x = np.ones(N)
+    sparsity = hessian_sparsity(rosenbrock, N)
+    colors, _ = color_rows(sparsity)
+    benchmark(sparse_hessian, rosenbrock, x, sparsity, colors)
+
+
+@pytest.mark.benchmark(group="rosenbrock")
+def test_rosenbrock_end_to_end(benchmark):
+    """Rosenbrock: full pipeline"""
+    x = np.ones(N)
+    benchmark(sparse_hessian, rosenbrock, x)
