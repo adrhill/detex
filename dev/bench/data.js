@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770493736053,
+  "lastUpdate": 1770496452216,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -885,6 +885,135 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.009598598028524339",
             "extra": "mean: 3.733271203999999 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "89488df953a78b3644812d12be7ffffd3764b987",
+          "message": "Batch AD calls via `vmap`, keep decompression on-device\n\nReplace Python for-loops over colors with jax.vmap for VJPs, JVPs,\nand HVPs, keeping all data on-device. Use JAX indexing instead of\nnumpy for decompression. Remove redundant vmap benchmarks from tests.\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-07T21:33:21+01:00",
+          "tree_id": "708c2f9402d225a4bbaea12b578c2e8242cb085b",
+          "url": "https://github.com/adrhill/asdex/commit/89488df953a78b3644812d12be7ffffd3764b987"
+        },
+        "date": 1770496450932,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 727.301436412007,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002791524460996081",
+            "extra": "mean: 1.374945723926101 msec\nrounds: 163"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3261.790165840737,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000007259324502826258",
+            "extra": "mean: 306.58011372790037 usec\nrounds: 1996"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_decompression",
+            "value": 1144.594309998927,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007391143476312659",
+            "extra": "mean: 873.6719999952973 usec\nrounds: 7"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 39.242004886886974,
+            "unit": "iter/sec",
+            "range": "stddev: 0.019707559042545512",
+            "extra": "mean: 25.48289780000914 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 82.29673599131378,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00046944607380491405",
+            "extra": "mean: 12.151150199997574 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.94765248068138,
+            "unit": "iter/sec",
+            "range": "stddev: 0.014762750071992986",
+            "extra": "mean: 45.56295945000102 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 240.01092003531514,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00027559362983513004",
+            "extra": "mean: 4.166477091345929 msec\nrounds: 208"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_decompression",
+            "value": 913.3014660748034,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010436475886961596",
+            "extra": "mean: 1.0949287142807407 msec\nrounds: 7"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 29.958610142897008,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004471235808667465",
+            "extra": "mean: 33.37938560000566 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 10.062129139602666,
+            "unit": "iter/sec",
+            "range": "stddev: 0.026102539081607687",
+            "extra": "mean: 99.38254480000523 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 45.78957217379344,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013244675307261514",
+            "extra": "mean: 21.839033485714157 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 4.951086520516684,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012975086037200852",
+            "extra": "mean: 201.97586849999993 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_decompression",
+            "value": 827.5514089760512,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002740368779836229",
+            "extra": "mean: 1.2083841428501987 msec\nrounds: 7"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 23.608438262115232,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009079043094998093",
+            "extra": "mean: 42.357736199971896 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 0.6443891470776115,
+            "unit": "iter/sec",
+            "range": "stddev: 0.023783692165777384",
+            "extra": "mean: 1.5518572970000037 sec\nrounds: 5"
           }
         ]
       }
