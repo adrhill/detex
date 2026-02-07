@@ -72,11 +72,22 @@ class SparsityPattern:
     def col_to_rows(self) -> dict[int, list[int]]:
         """Mapping from column index to list of row indices with non-zeros in that column.
 
-        Used by the coloring algorithm to build the conflict graph.
+        Used by the coloring algorithm to build the row conflict graph.
         """
         result: dict[int, list[int]] = defaultdict(list)
         for row, col in zip(self.rows, self.cols, strict=True):
             result[int(col)].append(int(row))
+        return dict(result)
+
+    @cached_property
+    def row_to_cols(self) -> dict[int, list[int]]:
+        """Mapping from row index to list of column indices with non-zeros in that row.
+
+        Used by the coloring algorithm to build the column conflict graph.
+        """
+        result: dict[int, list[int]] = defaultdict(list)
+        for row, col in zip(self.rows, self.cols, strict=True):
+            result[int(row)].append(int(col))
         return dict(result)
 
     # -------------------------------------------------------------------------

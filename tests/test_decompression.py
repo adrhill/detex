@@ -1,4 +1,4 @@
-"""Tests for sparse Jacobian computation against jax.jacobian reference."""
+"""Tests for sparse Jacobian and Hessian computation against JAX references."""
 
 import jax
 import jax.numpy as jnp
@@ -7,10 +7,10 @@ import pytest
 from jax.experimental.sparse import BCOO
 from numpy.testing import assert_allclose
 
-from asdex import color_rows, jacobian_sparsity, sparse_jacobian
+from asdex import color_cols, color_rows, jacobian_sparsity, sparse_jacobian
 
 # =============================================================================
-# Reference tests against jax.jacobian
+# Reference tests against jax.jacobian (row coloring, default)
 # =============================================================================
 
 
@@ -117,7 +117,7 @@ def test_precomputed_sparsity():
 
 @pytest.mark.sparse_jacobian
 def test_precomputed_colors():
-    """Using pre-computed sparsity and colors."""
+    """Using pre-computed sparsity and row colors."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
@@ -126,7 +126,9 @@ def test_precomputed_colors():
     sparsity = jacobian_sparsity(f, input_shape=5)
     colors, num_colors = color_rows(sparsity)
 
-    result1 = sparse_jacobian(f, x, sparsity=sparsity, colors=colors).todense()
+    result1 = sparse_jacobian(
+        f, x, sparsity=sparsity, colors=colors, partition="row"
+    ).todense()
     result2 = sparse_jacobian(f, x).todense()  # Auto-detect
     expected = jax.jacobian(f)(x)
 
@@ -300,6 +302,142 @@ def test_bcoo_format():
 
 
 # =============================================================================
+# Column coloring (JVP) Jacobian tests
+# =============================================================================
+
+
+@pytest.mark.sparse_jacobian
+def test_column_partition_diagonal():
+    """Column coloring on diagonal Jacobian."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    result = sparse_jacobian(f, x, partition="column").todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.sparse_jacobian
+def test_column_partition_mixed():
+    """Column coloring on mixed sparsity."""
+
+    def f(x):
+        return jnp.array([x[0] ** 2, 2 * x[0] * x[1] ** 2, jnp.sin(x[2])])
+
+    x = np.array([1.0, 2.0, 0.5])
+    result = sparse_jacobian(f, x, partition="column").todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.sparse_jacobian
+def test_column_partition_tridiagonal():
+    """Column coloring on tridiagonal pattern."""
+
+    def f(x):
+        n = x.shape[0]
+        out = []
+        for i in range(n):
+            val = x[i]
+            if i > 0:
+                val = val + x[i - 1]
+            if i < n - 1:
+                val = val + x[i + 1]
+            out.append(val)
+        return jnp.array(out)
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    result = sparse_jacobian(f, x, partition="column").todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.sparse_jacobian
+def test_precomputed_col_colors():
+    """Using pre-computed column colors with partition='column'."""
+
+    def f(x):
+        return (x[1:] - x[:-1]) ** 2
+
+    x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
+    sparsity = jacobian_sparsity(f, input_shape=5)
+    colors, num_colors = color_cols(sparsity)
+
+    result = sparse_jacobian(
+        f, x, sparsity=sparsity, colors=colors, partition="column"
+    ).todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.sparse_jacobian
+def test_auto_picks_column_for_tall():
+    """Auto mode picks column coloring for tall-skinny Jacobians.
+
+    When m >> n, column coloring needs at most n colors while
+    row coloring may need up to m.
+    """
+
+    def f(x):
+        # 5 outputs, 2 inputs → tall Jacobian
+        return jnp.array([x[0], x[1], x[0] + x[1], x[0] * x[1], x[0] - x[1]])
+
+    x = np.array([2.0, 3.0])
+
+    # Auto should give same result as explicit column
+    result_auto = sparse_jacobian(f, x, partition="auto").todense()
+    result_col = sparse_jacobian(f, x, partition="column").todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result_auto, expected, rtol=1e-5)
+    assert_allclose(result_col, expected, rtol=1e-5)
+
+
+@pytest.mark.sparse_jacobian
+def test_auto_picks_row_for_wide():
+    """Auto mode picks row coloring for wide Jacobians.
+
+    When n >> m, row coloring needs at most m colors while
+    column coloring may need up to n.
+    """
+
+    def f(x):
+        # 2 outputs, 5 inputs → wide Jacobian
+        return jnp.array([jnp.sum(x[:3]), jnp.sum(x[2:])])
+
+    x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+
+    # Auto and row should give same result
+    result_auto = sparse_jacobian(f, x, partition="auto").todense()
+    result_row = sparse_jacobian(f, x, partition="row").todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result_auto, expected, rtol=1e-5)
+    assert_allclose(result_row, expected, rtol=1e-5)
+
+
+@pytest.mark.sparse_jacobian
+def test_colors_with_auto_raises():
+    """Passing colors with partition='auto' raises ValueError."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0])
+    sparsity = jacobian_sparsity(f, input_shape=3)
+    colors, _ = color_rows(sparsity)
+
+    with pytest.raises(ValueError, match="partition"):
+        sparse_jacobian(f, x, sparsity=sparsity, colors=colors, partition="auto")
+
+
+# =============================================================================
 # Hessian tests
 # =============================================================================
 
@@ -354,7 +492,7 @@ def test_hessian_precomputed_sparsity():
 
 @pytest.mark.hessian
 def test_hessian_precomputed_colors():
-    """Using pre-computed Hessian sparsity and colors."""
+    """Using pre-computed Hessian sparsity and row colors (backward compat)."""
     from asdex import hessian_sparsity, sparse_hessian
 
     def f(x):
@@ -365,10 +503,8 @@ def test_hessian_precomputed_colors():
     colors, num_colors = color_rows(sparsity)
 
     result1 = sparse_hessian(f, x, sparsity=sparsity, colors=colors).todense()
-    result2 = sparse_hessian(f, x).todense()
     expected = jax.hessian(f)(x)
 
-    assert_allclose(result1, result2, rtol=1e-10)
     assert_allclose(result1, expected, rtol=1e-5)
 
 
@@ -396,6 +532,43 @@ def test_hessian_single_input():
         return x[0] ** 3
 
     x = np.array([2.0])
+    result = sparse_hessian(f, x).todense()
+    expected = jax.hessian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.hessian
+def test_hessian_star_coloring_default():
+    """Default Hessian uses star coloring (no explicit colors passed).
+
+    Verify that the result matches jax.hessian for a non-trivial pattern.
+    """
+    from asdex import sparse_hessian
+
+    def f(x):
+        return x[0] ** 2 * x[1] + jnp.sin(x[1]) * x[2] + x[2] ** 3
+
+    x = np.array([1.0, 2.0, 0.5])
+    result = sparse_hessian(f, x).todense()
+    expected = jax.hessian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.hessian
+def test_hessian_arrow_pattern():
+    """Arrow-shaped Hessian: star coloring should use fewer colors.
+
+    f(x) = x[0] * sum(x) + sum(x**2)
+    This creates an arrow-like Hessian where row/col 0 is dense.
+    """
+    from asdex import sparse_hessian
+
+    def f(x):
+        return x[0] * jnp.sum(x) + jnp.sum(x**2)
+
+    x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     result = sparse_hessian(f, x).todense()
     expected = jax.hessian(f)(x)
 

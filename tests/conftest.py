@@ -22,3 +22,6 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "sparse_jacobian: sparse Jacobian computation tests"
     )
+    config.addinivalue_line(
+        "markers", "hessian: Hessian sparsity detection and computation"
+    )
