@@ -258,6 +258,32 @@ def test_concatenate_mixed_empty_and_nonempty_constants():
 
 
 @pytest.mark.array_ops
+def test_reshape_with_dimensions():
+    """reshape with dimensions param permutes before reshaping.
+
+    ravel(order='F') emits reshape with dimensions=(1, 0),
+    which transposes the input before flattening.
+    Each output element still depends on exactly one input element.
+    """
+
+    def f(x):
+        mat = x.reshape(2, 3)
+        return mat.ravel(order="F")  # column-major: [a, d, b, e, c, f]
+
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    # Input flat: [a=0, b=1, c=2, d=3, e=4, f=5] in (2,3)
+    # F-order ravel: [a, d, b, e, c, f] = [0, 3, 1, 4, 2, 5]
+    expected = np.zeros((6, 6), dtype=int)
+    expected[0, 0] = 1  # out[0] <- a
+    expected[1, 3] = 1  # out[1] <- d
+    expected[2, 1] = 1  # out[2] <- b
+    expected[3, 4] = 1  # out[3] <- e
+    expected[4, 2] = 1  # out[4] <- c
+    expected[5, 5] = 1  # out[5] <- f
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
 @pytest.mark.fallback
 def test_transpose_2d():
     """Transpose should preserve per-element dependencies with reordering.

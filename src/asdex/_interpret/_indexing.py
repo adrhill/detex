@@ -1,5 +1,6 @@
 """Propagation rules for indexing and shape manipulation operations."""
 
+import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import Deps, IndexSets, index_sets, numel, row_strides
@@ -87,15 +88,18 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
     Dependencies pass through unchanged in row-major (C) order.
     The Jacobian is the identity matrix.
 
-    BUG: ignores the ``dimensions`` parameter.
-    When ``dimensions`` is not None, JAX transposes the input before
-    reshaping (e.g. ``ravel(order='F')`` emits ``dimensions=(1, 0)``).
-    The handler currently passes deps through in the original flat order,
-    which produces **incorrect** (not merely conservative) results.
+    When ``dimensions`` is not None, JAX transposes the input axes
+    before reshaping (e.g. ``ravel(order='F')`` emits ``dimensions=(1, 0)``).
+    The permutation reorders which flat input each flat output reads from.
 
     Example: reshape([a,b,c,d], (2,2)) → [[a,b],[c,d]]
         Input deps:  [{0}, {1}, {2}, {3}]
         Output deps: [{0}, {1}, {2}, {3}]
+
+    Example: reshape([[a,b,c],[d,e,f]], (6,), dimensions=(1,0))
+        Transpose first → [[a,d],[b,e],[c,f]], then flatten → [a,d,b,e,c,f]
+        Input deps:  [{0}, {1}, {2}, {3}, {4}, {5}]
+        Output deps: [{0}, {3}, {1}, {4}, {2}, {5}]
 
     Jaxpr:
         invars[0]: operand — array to reshape
@@ -106,12 +110,23 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
     """
     in_indices = index_sets(deps, eqn.invars[0])
     out_size = numel(tuple(getattr(eqn.outvars[0].aval, "shape", ())))
-    if len(in_indices) == out_size:
-        deps[eqn.outvars[0]] = in_indices
-    else:
-        # TODO: Investigate when size mismatch occurs and handle precisely.
-        # Conservative fallback: union all input dependencies.
+    if len(in_indices) != out_size:
+        # Defensive fallback for unexpected size mismatches.
         from ._commons import union_all
 
         all_deps = union_all(in_indices)
         deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
+        return
+
+    dimensions = eqn.params.get("dimensions")
+    if dimensions is not None:
+        # dimensions is a permutation applied before the reshape.
+        # Build the flat index mapping: iota transposed then raveled
+        # tells us which original flat index each output position reads.
+        in_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+        perm = (
+            np.arange(len(in_indices)).reshape(in_shape).transpose(dimensions).ravel()
+        )
+        deps[eqn.outvars[0]] = [in_indices[j] for j in perm]
+    else:
+        deps[eqn.outvars[0]] = in_indices
