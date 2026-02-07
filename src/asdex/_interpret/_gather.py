@@ -47,21 +47,29 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         slice_sizes = eqn.params["slice_sizes"]
         operand_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
 
-        # Pattern: index into dim 0, keep remaining dims intact.
-        # Covers 1D (x[indices]), 2D row selection (mat[indices]), and higher.
+        # We can compute a precise mapping when the gather selects along
+        # exactly one dimension (dim 0) and keeps all others intact.
+        # This is the pattern JAX emits for x[indices] on any-rank operand.
+        #
+        # Unsupported patterns (e.g. gathering along a non-leading dim, or taking partial slices) 
+        # fall through to the conservative fallback, which is always correct but imprecise.
         if (
             dim_nums.collapsed_slice_dims == (0,)
             and dim_nums.start_index_map == (0,)
             and slice_sizes[0] == 1
             and slice_sizes[1:] == operand_shape[1:]
         ):
-            # Use numpy fancy indexing to compute output→operand flat index mapping
+            # Map each output element to the flat operand element it reads from.
+            # Fancy-indexing an iota array does this without manual stride math:
+            # iota[k] gives the flat indices of the k-th slice along dim 0.
             iota = np.arange(numel(operand_shape)).reshape(operand_shape)
             flat_map = iota[concrete_indices.flatten()].flatten()
             deps[eqn.outvars[0]] = [operand_indices[i].copy() for i in flat_map]
             return
 
-    # Dynamic indices or unsupported gather pattern - conservative fallback
+    # Conservative fallback: every output depends on every input.
+    # Always correct (never misses a dependency), but marks the full Jacobian as dense.
+    # Used when indices are dynamic or the gather pattern isn't one we handle precisely.
     all_deps = union_all(operand_indices)
     out_size = atom_numel(eqn.outvars[0])
     deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
