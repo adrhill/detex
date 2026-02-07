@@ -6,8 +6,9 @@ structure without evaluating derivatives, so results are valid for all inputs.
 """
 
 from asdex.coloring import (
-    color,
     color_cols,
+    color_hessian_pattern,
+    color_jacobian_pattern,
     color_rows,
     hessian_coloring,
     jacobian_coloring,
@@ -20,7 +21,8 @@ from asdex.pattern import ColoredPattern, SparsityPattern
 __all__ = [
     "jacobian_sparsity",
     "hessian_sparsity",
-    "color",
+    "color_jacobian_pattern",
+    "color_hessian_pattern",
     "color_rows",
     "color_cols",
     "star_color",

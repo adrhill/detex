@@ -15,7 +15,7 @@ import numpy as np
 from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike, NDArray
 
-from asdex.coloring import color, star_color
+from asdex.coloring import color_hessian_pattern, color_jacobian_pattern
 from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_sparsity
 from asdex.pattern import ColoredPattern, SparsityPattern
@@ -231,7 +231,7 @@ def jacobian(
 
     if colored_pattern is None:
         sparsity = _detect_sparsity(f, x.shape)
-        colored_pattern = color(sparsity)
+        colored_pattern = color_jacobian_pattern(sparsity)
 
     sparsity = colored_pattern.sparsity
     m = sparsity.m
@@ -245,7 +245,7 @@ def jacobian(
     if sparsity.nse == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
-    if colored_pattern.partition == "row":
+    if colored_pattern.mode == "VJP":
         return _jacobian_rows(f, x, sparsity, colored_pattern.colors, out_shape)
     else:
         return _jacobian_cols(f, x, sparsity, colored_pattern.colors)
@@ -351,9 +351,9 @@ def hessian(
         return _decompress_jacobian(sparsity, colors, grads)
 
     # Default: star coloring + symmetric decompression
-    colors, num_colors = star_color(sparsity)
-    grads = _compute_hvps(f, x, colors, num_colors)
-    return _decompress_hessian_star(sparsity, colors, grads)
+    cp = color_hessian_pattern(sparsity)
+    grads = _compute_hvps(f, x, cp.colors, cp.num_colors)
+    return _decompress_hessian_star(sparsity, cp.colors, grads)
 
 
 def _compute_hvps(

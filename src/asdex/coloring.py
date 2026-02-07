@@ -71,7 +71,7 @@ def _greedy_color(
     return colors, num_colors
 
 
-def color(
+def color_jacobian_pattern(
     sparsity: SparsityPattern,
     partition: Literal["row", "column", "auto"] = "auto",
 ) -> ColoredPattern:
@@ -92,17 +92,24 @@ def color(
         A :class:`ColoredPattern` with the color assignment,
         number of colors, and which partition was used.
     """
+    # Nothing to compute when there are no nonzeros.
+    if sparsity.nnz == 0:
+        mode = "VJP" if partition == "row" else "JVP"
+        n_vertices = sparsity.m if partition == "row" else sparsity.n
+        return ColoredPattern(
+            sparsity,
+            colors=np.full(n_vertices, -1, dtype=np.int32),
+            num_colors=0,
+            mode=mode,
+        )
+
     if partition == "row":
         colors_arr, num = color_rows(sparsity)
-        return ColoredPattern(
-            sparsity, colors=colors_arr, num_colors=num, partition="row"
-        )
+        return ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="VJP")
 
     if partition == "column":
         colors_arr, num = color_cols(sparsity)
-        return ColoredPattern(
-            sparsity, colors=colors_arr, num_colors=num, partition="column"
-        )
+        return ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="JVP")
 
     # Auto: pick whichever uses fewer colors.
     # Ties go to column coloring (JVPs are cheaper than VJPs).
@@ -111,11 +118,11 @@ def color(
 
     if num_col <= num_row:
         return ColoredPattern(
-            sparsity, colors=col_colors, num_colors=num_col, partition="column"
+            sparsity, colors=col_colors, num_colors=num_col, mode="JVP"
         )
     else:
         return ColoredPattern(
-            sparsity, colors=row_colors, num_colors=num_row, partition="row"
+            sparsity, colors=row_colors, num_colors=num_row, mode="VJP"
         )
 
 
@@ -318,6 +325,30 @@ def star_color(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
     return colors, num_colors
 
 
+def color_hessian_pattern(sparsity: SparsityPattern) -> ColoredPattern:
+    """Color a sparsity pattern for sparse Hessian computation.
+
+    Uses star coloring,
+    which exploits Hessian symmetry for fewer colors than row coloring.
+
+    Args:
+        sparsity: Symmetric sparsity pattern of shape (n, n).
+
+    Returns:
+        A :class:`ColoredPattern` with ``mode="HVP"``
+        ready for :func:`hessian`.
+    """
+    if sparsity.nnz == 0:
+        return ColoredPattern(
+            sparsity,
+            colors=np.full(sparsity.n, -1, dtype=np.int32),
+            num_colors=0,
+            mode="HVP",
+        )
+    colors_arr, num = star_color(sparsity)
+    return ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="HVP")
+
+
 def jacobian_coloring(
     f: Callable,
     input_shape: tuple[int, ...],
@@ -335,7 +366,7 @@ def jacobian_coloring(
         A :class:`ColoredPattern` ready for :func:`jacobian`.
     """
     sparsity = _detect_jacobian_sparsity(f, input_shape)
-    return color(sparsity, partition)
+    return color_jacobian_pattern(sparsity, partition)
 
 
 def hessian_coloring(
@@ -352,11 +383,8 @@ def hessian_coloring(
         input_shape: Shape of the input array.
 
     Returns:
-        A :class:`ColoredPattern` with ``partition="column"``
+        A :class:`ColoredPattern` with ``mode="HVP"``
         ready for :func:`hessian`.
     """
     sparsity = _detect_hessian_sparsity(f, input_shape)
-    colors_arr, num = star_color(sparsity)
-    return ColoredPattern(
-        sparsity, colors=colors_arr, num_colors=num, partition="column"
-    )
+    return color_hessian_pattern(sparsity)

@@ -7,7 +7,7 @@ import pytest
 from jax.experimental.sparse import BCOO
 from numpy.testing import assert_allclose
 
-from asdex import color, color_rows, jacobian, jacobian_sparsity
+from asdex import color_jacobian_pattern, color_rows, jacobian, jacobian_sparsity
 
 # =============================================================================
 # Reference tests against jax.jacobian (row coloring, default)
@@ -109,7 +109,7 @@ def test_precomputed_sparsity():
     x = np.array([1.0, 2.0, 3.0])
     sparsity = jacobian_sparsity(f, input_shape=3)
 
-    result1 = jacobian(f, x, color(sparsity)).todense()
+    result1 = jacobian(f, x, color_jacobian_pattern(sparsity)).todense()
     result2 = jacobian(f, x).todense()  # Auto-detect
 
     assert_allclose(result1, result2, rtol=1e-10)
@@ -124,7 +124,7 @@ def test_precomputed_colors():
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
     sparsity = jacobian_sparsity(f, input_shape=5)
-    colored_pattern = color(sparsity, "row")
+    colored_pattern = color_jacobian_pattern(sparsity, "row")
 
     result1 = jacobian(f, x, colored_pattern).todense()
     result2 = jacobian(f, x).todense()  # Auto-detect
@@ -148,7 +148,7 @@ def test_different_input_points():
         np.array([0.0, 0.0, 0.0]),
         np.array([-1.0, 3.0, -0.5]),
     ]:
-        result = jacobian(f, x, color(sparsity)).todense()
+        result = jacobian(f, x, color_jacobian_pattern(sparsity)).todense()
         expected = jax.jacobian(f)(x)
         assert_allclose(result, expected, rtol=1e-5)
 
@@ -313,7 +313,7 @@ def test_column_partition_diagonal():
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = jacobian(f, x, color(sparsity, "column")).todense()
+    result = jacobian(f, x, color_jacobian_pattern(sparsity, "column")).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -328,7 +328,7 @@ def test_column_partition_mixed():
 
     x = np.array([1.0, 2.0, 0.5])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = jacobian(f, x, color(sparsity, "column")).todense()
+    result = jacobian(f, x, color_jacobian_pattern(sparsity, "column")).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -352,7 +352,7 @@ def test_column_partition_tridiagonal():
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = jacobian(f, x, color(sparsity, "column")).todense()
+    result = jacobian(f, x, color_jacobian_pattern(sparsity, "column")).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -366,7 +366,7 @@ def test_precomputed_col_colors():
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
-    colored_pattern = color(jacobian_sparsity(f, input_shape=5), "column")
+    colored_pattern = color_jacobian_pattern(jacobian_sparsity(f, input_shape=5), "column")
 
     result = jacobian(f, x, colored_pattern).todense()
     expected = jax.jacobian(f)(x)
@@ -391,7 +391,7 @@ def test_auto_picks_column_for_tall():
 
     # Auto should give same result as explicit column
     result_auto = jacobian(f, x).todense()
-    result_col = jacobian(f, x, color(sparsity, "column")).todense()
+    result_col = jacobian(f, x, color_jacobian_pattern(sparsity, "column")).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result_auto, expected, rtol=1e-5)
@@ -415,7 +415,7 @@ def test_auto_picks_row_for_wide():
 
     # Auto and row should give same result
     result_auto = jacobian(f, x).todense()
-    result_row = jacobian(f, x, color(sparsity, "row")).todense()
+    result_row = jacobian(f, x, color_jacobian_pattern(sparsity, "row")).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result_auto, expected, rtol=1e-5)
@@ -424,13 +424,13 @@ def test_auto_picks_row_for_wide():
 
 @pytest.mark.jacobian
 def test_precomputed_auto_coloring():
-    """Passing color(sparsity) with auto partition."""
+    """Passing color_jacobian_pattern(sparsity) with auto partition."""
 
     def f(x):
         return x**2
 
     x = np.array([1.0, 2.0, 3.0])
-    colored_pattern = color(jacobian_sparsity(f, input_shape=3))
+    colored_pattern = color_jacobian_pattern(jacobian_sparsity(f, input_shape=3))
 
     result = jacobian(f, x, colored_pattern).todense()
     expected = jax.jacobian(f)(x)

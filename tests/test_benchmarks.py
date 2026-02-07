@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from asdex import (
-    color,
+    color_jacobian_pattern,
     color_rows,
     hessian,
     hessian_sparsity,
@@ -86,7 +86,7 @@ def test_heat_coloring(benchmark):
 def test_heat_materialization(benchmark):
     """Heat equation: VJP computation (with known sparsity/colors)"""
     x = np.ones(N)
-    colored_pattern = color(jacobian_sparsity(heat_equation_rhs, N), "row")
+    colored_pattern = color_jacobian_pattern(jacobian_sparsity(heat_equation_rhs, N), "row")
     benchmark(jacobian, heat_equation_rhs, x, colored_pattern)
 
 
@@ -119,7 +119,7 @@ def test_convnet_coloring(benchmark):
 def test_convnet_materialization(benchmark):
     """ConvNet: VJP computation (with known sparsity/colors)"""
     x = np.ones(N)
-    colored_pattern = color(jacobian_sparsity(convnet, N), "row")
+    colored_pattern = color_jacobian_pattern(jacobian_sparsity(convnet, N), "row")
     benchmark(jacobian, convnet, x, colored_pattern)
 
 

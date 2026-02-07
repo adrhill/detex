@@ -51,7 +51,7 @@ jacobian(f, x)                           hessian(f, x)
   │     └─ SparsityPattern                 │
   │                                        │
   ├─ 2. COLORING                           ├─ 2. COLORING
-  │     color(sparsity) → ColoredPattern   │     star_color(sparsity) → ColoredPattern
+  │     color_jacobian_pattern(sparsity)    │     color_hessian_pattern(sparsity)
   │                                        │
   └─ 3. DECOMPRESSION                      └─ 3. DECOMPRESSION
         One VJP or JVP per color                 One HVP per color (fwd-over-rev)

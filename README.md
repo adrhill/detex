@@ -90,13 +90,13 @@ for x in inputs:
     J = jacobian(f, x, colored_pattern)
 ```
 
-For more control, you can also call `jacobian_sparsity` and `color` separately:
+For more control, you can also call `jacobian_sparsity` and `color_jacobian_pattern` separately:
 
 ```python
-from asdex import jacobian_sparsity, color
+from asdex import jacobian_sparsity, color_jacobian_pattern
 
 sparsity_pattern = jacobian_sparsity(f, input_shape=1000)
-colored_pattern = color(sparsity_pattern, partition="column")
+colored_pattern = color_jacobian_pattern(sparsity_pattern, partition="column")
 ```
 
 ### Hessians
@@ -133,7 +133,7 @@ The sparsity interpreter composes naturally with JAX's autodiff transforms.
 **Coloring**: Two rows can be computed together if they don't share any non-zero columns (row coloring, uses VJPs).
 Analogously, two columns can be computed together if they don't share any non-zero rows (column coloring, uses JVPs).
 `asdex` builds a conflict graph and greedily assigns colors using a LargestFirst ordering.
-By default, `color(sparsity_pattern)` runs both row and column coloring
+By default, `color_jacobian_pattern(sparsity_pattern)` runs both row and column coloring
 and automatically selects whichever partition needs fewer colors,
 choosing the corresponding AD mode (VJPs for row coloring, JVPs for column coloring).
 
