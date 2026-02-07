@@ -1,19 +1,40 @@
 """Propagation rules for element-wise operations."""
 
+import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, IndexSets, atom_numel, index_sets, union_all
+from ._commons import ConstVals, Deps, atom_const_val, atom_numel, index_sets
+
+
+def propagate_const_binary(
+    eqn: JaxprEqn, const_vals: ConstVals, ufuncs: dict[str, np.ufunc]
+) -> None:
+    """Propagate constant values through a binary op.
+
+    If both inputs are statically known and a matching ufunc exists,
+    the output value is computed and stored.
+    Used for tracking static indices through arithmetic to gather/scatter.
+
+    Example: z = x + y where x = [1, 2], y = [3, 4]
+        const_vals before: {x: [1, 2], y: [3, 4]}
+        const_vals after:  {x: [1, 2], y: [3, 4], z: [4, 6]}
+    """
+    in1 = atom_const_val(eqn.invars[0], const_vals)
+    in2 = atom_const_val(eqn.invars[1], const_vals)
+    if in1 is not None and in2 is not None:
+        ufunc = ufuncs.get(eqn.primitive.name)
+        if ufunc is not None:
+            const_vals[eqn.outvars[0]] = ufunc(in1, in2)
 
 
 def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
     """Propagate dependencies through zero-derivative primitives.
 
-    Operations like floor, ceil, comparisons (eq, lt, gt, ...), and sign
-    have zero derivative almost everywhere.
-    Their outputs are piecewise constant,
-    so infinitesimal input changes don't affect outputs.
+    Operations like floor, ceil, round, sign, and is_finite have zero derivative
+    almost everywhere. Their outputs are piecewise constant, so infinitesimal
+    input changes don't affect outputs.
 
-    Mathematically, for f in {floor, ceil, sign, eq, ...}:
+    Mathematically, for f in {floor, ceil, sign, ...}:
         ∂f/∂x = 0  (almost everywhere)
     Therefore, output elements have no dependencies on input elements.
 
@@ -66,21 +87,15 @@ def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     """
     in1 = index_sets(deps, eqn.invars[0])
     in2 = index_sets(deps, eqn.invars[1])
+    # Broadcasting via modular indexing.
+    # JAX element-wise ops only broadcast scalars (len 1) against arrays.
+    # i % len gives 0 for scalars (i % 1 == 0 for all i),
+    # and i for same-sized arrays,
+    # so it naturally selects the right element without branching.
     out_size = max(len(in1), len(in2))
-    out_indices: IndexSets = []
-    for i in range(out_size):
-        to_merge: IndexSets = []
-        # Handle broadcasting: scalars apply to all
-        if len(in1) == 1:
-            to_merge.append(in1[0])
-        elif i < len(in1):
-            to_merge.append(in1[i])
-        if len(in2) == 1:
-            to_merge.append(in2[0])
-        elif i < len(in2):
-            to_merge.append(in2[i])
-        out_indices.append(union_all(to_merge))
-    deps[eqn.outvars[0]] = out_indices
+    deps[eqn.outvars[0]] = [
+        in1[i % len(in1)] | in2[i % len(in2)] for i in range(out_size)
+    ]
 
 
 def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:

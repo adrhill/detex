@@ -3,6 +3,7 @@
 import math
 from collections.abc import Sequence
 
+import numpy as np
 from jax._src.core import Literal, Var
 
 # =============================================================================
@@ -15,33 +16,11 @@ IndexSets = list[set[int]]
 Deps = dict[Var, IndexSets]
 """Maps each variable to its per-element dependency index sets."""
 
+ConstVals = dict[Var, np.ndarray]
+"""Maps variables to their concrete numpy array values (for static index tracking)."""
+
 Atom = Var | Literal
 """Atomic elements in jaxpressions: named intermediates (Var) or constants (Literal)."""
-
-
-# =============================================================================
-# Constants
-# =============================================================================
-
-# Primitives with zero derivatives (output doesn't depend on input)
-ZERO_DERIVATIVE_PRIMITIVES = frozenset(
-    [
-        "floor",
-        "ceil",
-        "round",
-        "sign",
-        "eq",
-        "ne",
-        "lt",
-        "le",
-        "gt",
-        "ge",
-        "is_finite",
-    ]
-)
-
-# Primitives that contain nested jaxprs we should trace into
-NESTED_JAXPR_PRIMITIVES = frozenset(["jit", "pjit", "xla_call", "named_call"])
 
 
 # =============================================================================
@@ -71,6 +50,23 @@ def atom_numel(atom: Atom) -> int:
         return numel(tuple(shape)) if shape else 1
     shape = getattr(atom.aval, "shape", ())
     return numel(tuple(shape)) if shape else 1
+
+
+def atom_const_val(atom: Atom, const_vals: ConstVals) -> np.ndarray | None:
+    """Get the concrete value of an atom, if statically known.
+
+    The value is known in two cases:
+    - **Literals**: constants embedded directly in the jaxpr.
+    - **Tracked vars**: variables in ``const_vals``, whose values were
+      computed from constants through earlier operations.
+
+    Returns ``None`` when the value depends on runtime inputs.
+    """
+    if isinstance(atom, Literal):
+        return np.asarray(atom.val)
+    if isinstance(atom, Var) and atom in const_vals:
+        return const_vals[atom]
+    return None
 
 
 def index_sets(deps: Deps, atom: Atom) -> IndexSets:

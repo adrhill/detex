@@ -1,5 +1,7 @@
 """Tests for array manipulation operations."""
 
+import jax
+import jax.lax as lax
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -36,12 +38,10 @@ def test_multidim_slice():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_gather_fancy_indexing():
-    """Fancy indexing (gather) triggers conservative fallback.
+    """Fancy indexing (gather) with static indices tracks precise dependencies.
 
-    TODO(gather): Implement precise handler for gather with static indices.
-    Precise: each output element depends on the corresponding indexed input.
+    Each output element depends on the corresponding indexed input.
     """
 
     def f(x):
@@ -49,8 +49,49 @@ def test_gather_fancy_indexing():
         return x[indices]
 
     result = jacobian_sparsity(f, n=3).todense().astype(int)
-    # TODO: Should be permutation [[0,0,1], [1,0,0], [0,1,0]]
-    expected = np.ones((3, 3), dtype=int)
+    # Permutation: out[0] <- in[2], out[1] <- in[0], out[2] <- in[1]
+    expected = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]], dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_gather_indices_through_select_n():
+    """Gather stays precise when indices pass through select_n.
+
+    JAX's negative-index normalization emits select_n between the literal
+    indices and the gather.
+    Const tracking through select_n keeps the indices statically known.
+    """
+
+    def f(x):
+        indices = jnp.array([2, 0, 1])
+        pred = indices < 0
+        wrapped = indices + 3
+        final_indices = lax.select(pred, wrapped, indices)
+        return x[final_indices]
+
+    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    # Permutation: out[0] <- in[2], out[1] <- in[0], out[2] <- in[1]
+    expected = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]], dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_gather_dynamic_indices_fallback():
+    """Gather with dynamic (traced) indices uses conservative fallback.
+
+    When indices depend on input, we cannot determine dependencies at trace time.
+    """
+
+    def f(x):
+        # indices depend on x, so they're dynamic
+        idx = jnp.argmax(x[:2])  # Dynamic index based on input
+        indices = jnp.array([0, 1]) + idx
+        return jnp.take(x, indices)
+
+    result = jacobian_sparsity(f, n=4).todense().astype(int)
+    # Conservative: all outputs depend on all inputs
+    expected = np.ones((2, 4), dtype=int)
     np.testing.assert_array_equal(result, expected)
 
 
@@ -337,13 +378,10 @@ def test_split():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_scatter_at_set():
-    """In-place update with .at[].set() is partially precise.
+    """In-place update with .at[].set() tracks precise dependencies.
 
-    TODO(scatter): Implement precise handler for scatter primitive.
-    Currently: all outputs depend on x[0] (the value being set).
-    Precise: only output[1] should depend on x[0].
+    Only the updated position depends on the update value.
     """
 
     def f(x):
@@ -351,8 +389,8 @@ def test_scatter_at_set():
         return arr.at[1].set(x[0])
 
     result = jacobian_sparsity(f, n=2).todense().astype(int)
-    # TODO: Should be [[0,0], [1,0], [0,0]] (only index 1 depends on x[0])
-    expected = np.array([[1, 0], [1, 0], [1, 0]], dtype=int)
+    # Only index 1 depends on x[0], indices 0 and 2 are constant (zeros)
+    expected = np.array([[0, 0], [1, 0], [0, 0]], dtype=int)
     np.testing.assert_array_equal(result, expected)
 
 
@@ -386,7 +424,7 @@ def test_matmul():
 def test_iota_eye():
     """jnp.eye uses iota internally, triggers conservative fallback.
 
-    TODO(iota): Add iota to ZERO_DERIVATIVE_PRIMITIVES (constant output).
+    TODO(iota): Add prop_zero_derivative handler for iota (constant output).
     TODO(dot_general): Also needs dot_general handler for eye @ x.
     Precise: eye matrix has no input dependency (constant), so eye @ x = x.
     """
@@ -592,3 +630,160 @@ def test_zero_size_input():
     result = jacobian_sparsity(f, n=0)
     assert result.shape == (1, 0)
     assert result.nse == 0
+
+
+# =============================================================================
+# Additional gather tests
+# =============================================================================
+
+
+@pytest.mark.array_ops
+def test_gather_2d_row_select():
+    """2D gather selecting rows tracks per-row dependencies.
+
+    Each output row depends only on the corresponding selected input row.
+    """
+
+    def f(x):
+        mat = x.reshape(3, 2)
+        indices = jnp.array([2, 0])  # Select rows 2 and 0
+        return mat[indices].flatten()
+
+    result = jacobian_sparsity(f, n=6).todense().astype(int)
+    # Output: row 2 (indices 4,5), then row 0 (indices 0,1)
+    expected = np.array(
+        [
+            [0, 0, 0, 0, 1, 0],  # out[0] <- in[4]
+            [0, 0, 0, 0, 0, 1],  # out[1] <- in[5]
+            [1, 0, 0, 0, 0, 0],  # out[2] <- in[0]
+            [0, 1, 0, 0, 0, 0],  # out[3] <- in[1]
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Additional scatter tests
+# =============================================================================
+
+
+@pytest.mark.array_ops
+def test_scatter_add():
+    """Scatter-add unions dependencies from operand and updates.
+
+    Positions receiving updates depend on both the original value and the update.
+    """
+
+    def f(x):
+        arr = jnp.array([1.0, 2.0, 3.0])
+        return arr.at[1].add(x[0])  # arr[1] += x[0]
+
+    result = jacobian_sparsity(f, n=2).todense().astype(int)
+    # Index 1 depends on x[0] (no dependency on arr since arr is constant)
+    expected = np.array(
+        [
+            [0, 0],  # out[0] <- constant
+            [1, 0],  # out[1] <- x[0]
+            [0, 0],  # out[2] <- constant
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_scatter_multiple():
+    """Scatter at multiple indices tracks each update separately."""
+
+    def f(x):
+        arr = jnp.zeros(4)
+        return arr.at[jnp.array([0, 2])].set(x[:2])
+
+    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    expected = np.array(
+        [
+            [1, 0, 0],  # out[0] <- x[0]
+            [0, 0, 0],  # out[1] <- zeros (constant)
+            [0, 1, 0],  # out[2] <- x[1]
+            [0, 0, 0],  # out[3] <- zeros (constant)
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Custom JVP/VJP tests
+# =============================================================================
+
+
+@pytest.mark.array_ops
+def test_custom_jvp_relu():
+    """jax.nn.relu uses custom_jvp but tracks element-wise dependencies.
+
+    ReLU is element-wise: each output depends only on corresponding input.
+    """
+    import jax.nn
+
+    def f(x):
+        return jax.nn.relu(x)
+
+    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_custom_vjp_user_defined():
+    """User-defined custom_vjp traces forward computation."""
+    import jax
+
+    @jax.custom_vjp
+    def my_square(x):
+        return x**2
+
+    def my_square_fwd(x):
+        return my_square(x), x
+
+    def my_square_bwd(res, g):
+        x = res
+        return (2 * x * g,)
+
+    my_square.defvjp(my_square_fwd, my_square_bwd)
+
+    def f(x):
+        return my_square(x)
+
+    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    expected = np.eye(3, dtype=int)  # Element-wise operation
+    np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# segment_sum (via scatter-add)
+# =============================================================================
+
+
+@pytest.mark.array_ops
+def test_segment_sum():
+    """segment_sum groups elements by segment ID.
+
+    Each output depends on all inputs in the corresponding segment.
+    """
+
+    def f(x):
+        segment_ids = jnp.array([0, 0, 1, 1, 1])
+        return jax.ops.segment_sum(x, segment_ids, num_segments=2)
+
+    result = jacobian_sparsity(f, n=5).todense().astype(int)
+    # Segment 0: inputs 0,1 -> output 0
+    # Segment 1: inputs 2,3,4 -> output 1
+    expected = np.array(
+        [
+            [1, 1, 0, 0, 0],  # out[0] <- x[0] + x[1]
+            [0, 0, 1, 1, 1],  # out[1] <- x[2] + x[3] + x[4]
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)

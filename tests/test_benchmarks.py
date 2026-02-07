@@ -31,24 +31,19 @@ def heat_equation_rhs(u):
 
 
 # 2. Pure Conv Network: Conv -> Conv -> Conv with ReLU (sparse Jacobian)
-def _relu(x):
-    """ReLU without custom_jvp (for sparsity detection compatibility)."""
-    return jnp.maximum(x, 0)
-
-
 class _ConvNet(nn.Module):
     @nn.compact
     def __call__(self, x):
         x = x[:, None]  # (N,) -> (N, 1)
 
         x = nn.Conv(features=8, kernel_size=(5,))(x)
-        x = _relu(x)
+        x = nn.relu(x)
 
         x = nn.Conv(features=4, kernel_size=(3,))(x)
-        x = _relu(x)
+        x = nn.relu(x)
 
         x = nn.Conv(features=2, kernel_size=(3,))(x)
-        x = _relu(x)
+        x = nn.relu(x)
 
         return x.flatten()
 

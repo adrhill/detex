@@ -1,8 +1,17 @@
 """Propagation rules for indexing and shape manipulation operations."""
 
+import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, IndexSets, index_sets, numel, row_strides, union_all
+from ._commons import (
+    ConstVals,
+    Deps,
+    IndexSets,
+    atom_const_val,
+    index_sets,
+    numel,
+    row_strides,
+)
 
 
 def prop_slice(eqn: JaxprEqn, deps: Deps) -> None:
@@ -78,7 +87,7 @@ def prop_squeeze(eqn: JaxprEqn, deps: Deps) -> None:
     deps[eqn.outvars[0]] = index_sets(deps, eqn.invars[0])
 
 
-def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Broadcast replicates input elements across new or expanded dimensions.
     Each output element depends on exactly one input element,
     determined by projecting output coordinates onto input dimensions.
@@ -86,6 +95,9 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps) -> None:
     For broadcast_dimensions mapping input dim i → output dim d[i]:
         out[..., j, ...] = in[..., j mod in_shape[i], ...]
     Size-1 input dims are implicitly broadcast (all outputs read index 0).
+
+    Also tracks const values: if input is a Literal or known const,
+    the output value is also recorded for use in gather/scatter handlers.
 
     Example: x.shape = (3,), y = broadcast(x, shape=(2, 3), dims=(1,))
         Input deps:  [{0}, {1}, {2}]
@@ -96,102 +108,47 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps) -> None:
         shape: target output shape
         broadcast_dimensions: maps input dim i to output dim
     """
-    in_indices = index_sets(deps, eqn.invars[0])
+
+    in_atom = eqn.invars[0]
+    in_indices = index_sets(deps, in_atom)
     out_shape = eqn.params["shape"]
     broadcast_dims = eqn.params["broadcast_dimensions"]
-    out_size = numel(out_shape)
+    out_var = eqn.outvars[0]
 
-    # Scalar case: single input dependency applies to all outputs
-    if len(in_indices) == 1:
-        deps[eqn.outvars[0]] = [in_indices[0].copy() for _ in range(out_size)]
-        return
-
-    in_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
-    in_strides = row_strides(in_shape)
-    out_strides = row_strides(out_shape)
-
-    out_indices: IndexSets = []
-    for out_flat in range(out_size):
-        # Convert flat output index to output coordinates
-        out_coord = []
-        remaining = out_flat
-        for s in out_strides:
-            out_coord.append(remaining // s)
-            remaining %= s
-
-        # Map to input coordinates using broadcast_dimensions.
-        # broadcast_dims[i] = which output dim corresponds to input dim i.
-        # Size-1 input dims are replicated: input (3,1) -> output (3,2) means
-        # out[i,0] and out[i,1] both come from in[i,0], so we clamp to 0.
-        in_flat = sum(
-            (out_coord[broadcast_dims[i]] if in_shape[i] > 1 else 0) * in_strides[i]
-            for i in range(len(in_shape))
+    # Gather/scatter handlers need concrete index arrays to resolve which input elements are accessed.
+    # When the broadcast input is statically known (literal or traced from constants),
+    # propagate its value so downstream handlers can use it
+    # instead of falling back to conservative all-to-all dependencies.
+    in_val = atom_const_val(in_atom, const_vals)
+    if in_val is not None:
+        intermediate_shape = [1] * len(out_shape)
+        for i, out_dim in enumerate(broadcast_dims):
+            intermediate_shape[out_dim] = (in_val.shape or (1,))[i]
+        const_vals[out_var] = np.broadcast_to(
+            np.reshape(in_val, intermediate_shape), out_shape
         )
-        out_indices.append(in_indices[in_flat].copy())
 
-    deps[eqn.outvars[0]] = out_indices
-
-
-def prop_concatenate(eqn: JaxprEqn, deps: Deps) -> None:
-    """Concatenate joins arrays along a specified axis.
-    Each output element comes from exactly one input element.
-
-    For concat([A, B], axis=0): output = [A; B] (vertical stack).
-    For concat([A, B], axis=1): output = [A | B] (horizontal stack).
-    The Jacobian is a permuted identity matrix.
-
-    Example: concat([[a,b], [c,d]], axis=0) → [a,b,c,d]
-        Input deps:  [{0}, {1}], [{2}, {3}]
-        Output deps: [{0}, {1}, {2}, {3}]
-
-    Jaxpr:
-        invars: list of input arrays to concatenate
-        dimension: axis along which to concatenate
-    """
-    dim = eqn.params["dimension"]
-
-    # Concat along dim 0: flat arrays are contiguous, just append
-    if dim == 0:
-        out_indices: IndexSets = []
-        for invar in eqn.invars:
-            out_indices.extend(index_sets(deps, invar))
-        deps[eqn.outvars[0]] = out_indices
+    # Scalars have a single dependency set shared by all output elements,
+    # so we can skip the coordinate mapping below and just replicate it.
+    # Early return avoids building the np.indices grid for this common case.
+    out_size = numel(out_shape)
+    if len(in_indices) == 1:
+        deps[out_var] = [in_indices[0].copy() for _ in range(out_size)]
         return
 
-    # Inner dimension: output coord along `dim` determines which input it's from.
-    # E.g., concat([A(2x1), B(2x1)], dim=1) -> C(2x2): C[i,0] from A, C[i,1] from B.
-    out_shape = tuple(getattr(eqn.outvars[0].aval, "shape", ()))
-    in_shapes = [tuple(getattr(iv.aval, "shape", ())) for iv in eqn.invars]
-    in_dim_sizes = [s[dim] for s in in_shapes]
+    # General case: map each output element back to the input element it reads.
+    # np.indices gives all output coordinates.
+    # We select the output dim corresponding to each input dim via broadcast_dims.
+    # Size-1 input dims are broadcast (every output reads index 0), so we clamp to 0.
+    in_shape = tuple(getattr(in_atom.aval, "shape", ()))
+    out_coords = np.indices(out_shape)
+    in_coords = tuple(
+        out_coords[broadcast_dims[i]] if in_shape[i] > 1 else 0
+        for i in range(len(in_shape))
+    )
+    flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    # dim_offsets[i] = starting position of input i along concat dimension
-    dim_offsets = [sum(in_dim_sizes[:i]) for i in range(len(in_dim_sizes) + 1)]
-
-    out_strides = row_strides(out_shape)
-    all_in_indices = [index_sets(deps, iv) for iv in eqn.invars]
-    all_in_strides = [row_strides(s) for s in in_shapes]
-
-    out_indices = []
-    for out_flat in range(numel(out_shape)):
-        out_coord = []
-        remaining = out_flat
-        for s in out_strides:
-            out_coord.append(remaining // s)
-            remaining %= s
-
-        # Find which input owns this position along the concat dimension
-        pos_along_dim = out_coord[dim]
-        for i in range(len(eqn.invars)):
-            if dim_offsets[i] <= pos_along_dim < dim_offsets[i + 1]:
-                in_coord = list(out_coord)
-                in_coord[dim] = pos_along_dim - dim_offsets[i]
-                in_flat = sum(
-                    c * s for c, s in zip(in_coord, all_in_strides[i], strict=True)
-                )
-                out_indices.append(all_in_indices[i][in_flat].copy())
-                break
-
-    deps[eqn.outvars[0]] = out_indices
+    deps[out_var] = [in_indices[j].copy() for j in flat_map]
 
 
 def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
@@ -215,5 +172,7 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
     else:
         # TODO: Investigate when size mismatch occurs and handle precisely.
         # Conservative fallback: union all input dependencies.
+        from ._commons import union_all
+
         all_deps = union_all(in_indices)
         deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]

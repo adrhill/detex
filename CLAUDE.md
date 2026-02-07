@@ -4,23 +4,25 @@ This package implements [Automatic Sparse Differentiation](https://iclr-blogpost
 
 ## Overview
 
-ASD exploits Jacobian sparsity to reduce the cost of computing sparse Jacobians:
+ASD exploits sparsity to reduce the cost of computing sparse Jacobians and Hessians:
 
 1. **Detection**: Analyze the jaxpr computation graph to detect the global sparsity pattern
 2. **Coloring**: Assign colors to rows so that rows sharing non-zero columns get different colors
-3. **Decompression**: Compute one VJP per color instead of one per row, then extract the sparse Jacobian
+3. **Decompression**: Compute one VJP/HVP per color instead of one per row, then extract the sparse matrix
 
 ## Structure
 
 ```
 src/asdex/
 ├── __init__.py         # Public API
-├── detection.py        # Sparsity pattern detection via jaxpr analysis
+├── pattern.py          # SparsityPattern data structure
+├── detection.py        # Jacobian and Hessian sparsity detection via jaxpr analysis
 ├── coloring.py         # Row-wise graph coloring
-├── decompression.py    # Sparse Jacobian computation via VJPs
-└── _interpret/         # Primitive handlers for index set propagation
+├── decompression.py    # Sparse Jacobian (VJP) and Hessian (HVP) computation
+└── _interpret/         # Custom jaxpr interpreter for index set propagation
 ```
 
+The interpreter internals are described in `src/asdex/_interpret/CLAUDE.md`.
 The structure of the test folder is described in `tests/CLAUDE.md`.
 
 ## Development
@@ -40,21 +42,19 @@ uv run pytest
 ## Architecture
 
 ```
-sparse_jacobian(f, x)
-  │
-  ├─ 1. DETECTION: jacobian_sparsity(f, n)
-  │     ├─ make_jaxpr(f) → computation graph
-  │     ├─ Initialize env: input[i] depends on {i}
-  │     ├─ prop_jaxpr() → propagate index sets through primitives
-  │     └─ Build BCOO sparsity pattern from output dependencies
-  │
-  ├─ 2. COLORING: color_rows(sparsity)
-  │     ├─ Build conflict graph (rows sharing columns)
-  │     └─ Greedy coloring → rows with same color are orthogonal
-  │
-  └─ 3. DECOMPRESSION
-        ├─ For each color: VJP with combined seed vector
-        └─ Extract J[i,j] = grad[color[i]][j]
+sparse_jacobian(f, x)                    sparse_hessian(f, x)
+  │                                        │
+  ├─ 1. DETECTION                          ├─ 1. DETECTION
+  │     jacobian_sparsity(f, n)            │     hessian_sparsity(f, n)
+  │     ├─ make_jaxpr(f) → jaxpr           │     └─ jacobian_sparsity(grad(f), n)
+  │     ├─ prop_jaxpr() → index sets       │
+  │     └─ Build SparsityPattern           │
+  │                                        │
+  ├─ 2. COLORING                           ├─ 2. COLORING
+  │     color_rows(sparsity)               │     color_rows(sparsity)
+  │                                        │
+  └─ 3. DECOMPRESSION                      └─ 3. DECOMPRESSION
+        One VJP per color                        One HVP per color (fwd-over-rev)
 ```
 
 ## Design philosophy

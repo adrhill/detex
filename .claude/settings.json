@@ -13,7 +13,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -e '.tool_input.file_path | endswith(\".py\")' > /dev/null && uv run ruff check --fix . && uv run ty check",
+            "command": "jq -e '.tool_input.file_path | endswith(\".py\")' > /dev/null && uv run ruff check --fix . && uv run ruff format . && uv run ty check",
             "timeout": 60
           }
         ]
