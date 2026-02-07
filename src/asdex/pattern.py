@@ -231,8 +231,12 @@ class SparsityPattern:
 
         Each braille character represents a 4x2 block of the matrix.
         Dots are lit where the pattern has non-zero entries.
+        Large matrices are downsampled by linearly interpolating each
+        non-zero position to the output grid,
+        following Julia's SparseArrays approach.
 
-        Braille dot positions and bit values:
+        Braille dot bits indexed by ``(col_offset % 2) * 4 + (row_offset % 4)``::
+
             [0,0]=0x01  [0,1]=0x08
             [1,0]=0x02  [1,1]=0x10
             [2,0]=0x04  [2,1]=0x20
@@ -248,60 +252,30 @@ class SparsityPattern:
         if self.m == 0 or self.n == 0:
             return "(empty)"
 
-        # Each braille char covers 4 rows x 2 cols
-        braille_rows = (self.m + 3) // 4
-        braille_cols = (self.n + 1) // 2
+        # Target size in dot space (each braille char is 4 rows × 2 cols)
+        scale_height = min(self.m, max_height * 4)
+        scale_width = min(self.n, max_width * 2)
 
-        # Downsample if needed
-        row_scale = max(1, (braille_rows + max_height - 1) // max_height)
-        col_scale = max(1, (braille_cols + max_width - 1) // max_width)
+        # Output braille grid dimensions
+        out_rows = (scale_height - 1) // 4 + 1
+        out_cols = (scale_width - 1) // 2 + 1
 
-        out_rows = (braille_rows + row_scale - 1) // row_scale
-        out_cols = (braille_cols + col_scale - 1) // col_scale
+        # Braille dot bits: index = (col_offset % 2) * 4 + (row_offset % 4)
+        braille_bits = [0x01, 0x02, 0x04, 0x40, 0x08, 0x10, 0x20, 0x80]
 
-        # Build a dense boolean matrix for the pattern
-        dense = self.todense()
+        grid = [[0] * out_cols for _ in range(out_rows)]
 
-        # Braille bit positions: maps (row_offset, col_offset) -> bit
-        bit_map = {
-            (0, 0): 0x01,
-            (1, 0): 0x02,
-            (2, 0): 0x04,
-            (3, 0): 0x40,
-            (0, 1): 0x08,
-            (1, 1): 0x10,
-            (2, 1): 0x20,
-            (3, 1): 0x80,
-        }
+        # Scale each non-zero to the output grid via linear interpolation
+        row_denom = max(self.m - 1, 1)
+        col_denom = max(self.n - 1, 1)
+        for i, j in zip(self.rows, self.cols, strict=True):
+            si = round(int(i) * (scale_height - 1) / row_denom)
+            sj = round(int(j) * (scale_width - 1) / col_denom)
+            grid[si // 4][sj // 2] |= braille_bits[(sj % 2) * 4 + (si % 4)]
 
         lines = []
-        for br in range(out_rows):
-            line = []
-            for bc in range(out_cols):
-                # Compute which braille cells this output char covers
-                br_start = br * row_scale
-                br_end = min((br + 1) * row_scale, braille_rows)
-                bc_start = bc * col_scale
-                bc_end = min((bc + 1) * col_scale, braille_cols)
-
-                # Check if any dot should be lit
-                char_bits = 0
-                for sub_br in range(br_start, br_end):
-                    for sub_bc in range(bc_start, bc_end):
-                        for dr in range(4):
-                            for dc in range(2):
-                                mat_r = sub_br * 4 + dr
-                                mat_c = sub_bc * 2 + dc
-                                if (
-                                    mat_r < self.m
-                                    and mat_c < self.n
-                                    and dense[mat_r, mat_c]
-                                ):
-                                    char_bits |= bit_map[(dr, dc)]
-
-                line.append(chr(0x2800 + char_bits))
-            lines.append("".join(line))
-
+        for row in grid:
+            lines.append("".join(chr(0x2800 + bits) for bits in row))
         return "\n".join(lines)
 
     def __str__(self) -> str:

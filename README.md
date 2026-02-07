@@ -4,13 +4,15 @@
 [![codecov](https://codecov.io/gh/adrhill/asdex/graph/badge.svg)](https://codecov.io/gh/adrhill/asdex)
 [![Benchmarks](https://img.shields.io/badge/benchmarks-view-blue)](https://adrianhill.de/asdex/dev/bench/)
 
-`asdex` implements [Automatic Sparse Differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) in JAX.
+[Automatic Sparse Differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) in JAX.
+`asdex` (rumored to be pronounced like _Aztecs_) implements a custom [Jaxpr](https://docs.jax.dev/en/latest/jaxpr.html) interpreter for sparsity detection,
+allowing you to quickly and efficiently materialize Jacobians and Hessians.
 
 > [!WARNING]
-> The primary purpose of this package is to evaluate the capabilities of coding agents [on a familiar task](https://github.com/adrhill/SparseConnectivityTracer.jl) I consider to be out-of-distribution.
-> Surprisingly, it seems to work.
->
-> Use `asdex` at your own risk.
+> The original purpose of this package was to evaluate the capabilities of coding agents [on a familiar task](https://github.com/adrhill/SparseConnectivityTracer.jl) I consider to be out-of-distribution.
+> Surprisingly, it seems to work. Use at your own risk.
+
+## Background
 
 For a function $f: \mathbb{R}^n \to \mathbb{R}^m$, the Jacobian $J \in \mathbb{R}^{m \times n}$ is defined as $J_{ij} = \frac{\partial f_i}{\partial x_j}$.
 Computing the full Jacobian requires $n$ forward-mode AD passes or $m$ reverse-mode passes.
@@ -18,7 +20,7 @@ But many Jacobians are *sparse*: most entries are structurally zero for all inpu
 The same applies to Hessians of scalar-valued functions.
 
 `asdex` exploits this sparsity:
-1. **Detect sparsity** by tracing the function into a jaxpr and propagating index sets through the graph
+1. **Detect sparsity** by tracing the function into a Jaxpr and propagating index sets through the graph
 2. **Color the sparsity pattern** to find orthogonal rows
 3. **Compute the sparse Jacobian** with one VJP per color instead of one per row
 
@@ -52,38 +54,37 @@ def f(x):
     return (x[1:] - x[:-1]) ** 2
 
 # Detect sparsity pattern
-pattern = jacobian_sparsity(f, n=100)  # returns SparsityPattern
+pattern = jacobian_sparsity(f, n=50)
 print(pattern)
-# SparsityPattern(99×100, nnz=198, density=2.0%)
-# ⎡⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤
-# ⎢⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⡀⎥
-# ⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠿⎦
+# SparsityPattern(49×50, nnz=98, density=4.0%)
+# ⎡⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤
+# ⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+# ⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⎥
+# ⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⎦
 ```
 
-Color orthogonal rows. Only two colors are needed for this banded structure:
+Next, we find orthogonal rows in this pattern.
+Only two colors are needed here:
+
 ```python
 colors, num_colors = color_rows(pattern)
-print(f"VJP passes: {num_colors} (instead of {len(colors)})")  # VJP passes: 2 (instead of 99)
+print(f"VJP passes: {num_colors} (instead of {len(colors)})")  # VJP passes: 2 (instead of 49)
 ```
 
-Compute the sparse Jacobian using the precomputed pattern and colors:
+Finally, we can compute the sparse Jacobian using the precomputed pattern and colors:
 
 ```python
-x = np.random.randn(100)
+x = np.random.randn(50)
 J = sparse_jacobian(f, x, sparsity=pattern, colors=colors)  # returns BCOO
-
-# Verify: matches jax.jacobian
-np.testing.assert_allclose(J.todense(), jax.jacobian(f)(x))
 ```
 
 The sparsity pattern and coloring depend only on the function structure, not the input values.
@@ -110,7 +111,7 @@ def g(x):
     return jnp.sum(x**2)
 
 # Detect sparsity pattern
-pattern = hessian_sparsity(g, n=5)  # returns SparsityPattern
+pattern = hessian_sparsity(g, n=5)
 print(pattern)
 # SparsityPattern(5×5, nnz=5, density=20.0%)
 # ● ⋅ ⋅ ⋅ ⋅
@@ -120,21 +121,18 @@ print(pattern)
 # ⋅ ⋅ ⋅ ⋅ ●
 ```
 
-Color orthogonal rows:
+We can now compute the full Hessian:
 ```python
 colors, num_colors = color_rows(pattern)
 print(f"HVP passes: {num_colors} (instead of {len(colors)})")  # HVP passes: 1 (instead of 5)
-```
 
-Compute the sparse Hessian using the precomputed pattern and colors:
-
-```python
 x = np.random.randn(5)
 H = sparse_hessian(g, x, sparsity=pattern, colors=colors)
-
-# Verify: matches jax.hessian
-np.testing.assert_allclose(H.todense(), jax.hessian(g)(x))
 ```
+
+Just like for the Jacobian, precomputed sparsity patterns and colorings only need to be computed once
+and can be reused for repeated evaluations.
+
 
 ## How it works
 
@@ -158,3 +156,5 @@ This is more efficient than reverse-over-reverse (VJP on gradient) because forwa
 ## Related work
 
 - [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl): `asdex` started as a primitive port of this Julia package, which provides global and local Jacobian and Hessian sparsity detection via operator overloading.
+- [SparseMatrixColorings.jl](https://github.com/gdalle/SparseMatrixColorings.jl): Julia package for coloring algorithms on sparse matrices.
+
