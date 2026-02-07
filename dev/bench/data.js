@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770430434575,
+  "lastUpdate": 1770433247949,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -540,6 +540,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0462404923428099",
             "extra": "mean: 2.4896362557999994 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d8abf294b5d4ddae8c812d2e644ef0ac8d8c476a",
+          "message": "Support multi-dimensional input and output shapes (#20)\n\nRename `n` parameter to `input_shape: int | tuple[int, ...]` in\n`jacobian_sparsity` and `hessian_sparsity`, allowing functions on\nmatrices and higher-dimensional arrays. Update `sparse_jacobian` and\n`sparse_hessian` to reshape VJP seeds and HVP tangents to match the\nactual input/output shapes, flattening the results for the sparse matrix.\n\nAdd `tests/test_multidim.py` with 15 tests including a tiny LeNet convnet\non 2D image input and multi-dimensional output correctness checks.\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-07T03:59:33+01:00",
+          "tree_id": "fcd47f0333d6b530b2b096b90a97b33d8c9cce83",
+          "url": "https://github.com/adrhill/asdex/commit/d8abf294b5d4ddae8c812d2e644ef0ac8d8c476a"
+        },
+        "date": 1770433247037,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 677.0611109918782,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004061364787030313",
+            "extra": "mean: 1.476971552146931 msec\nrounds: 163"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3386.6689157342335,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000070882499742896586",
+            "extra": "mean: 295.27539446034064 usec\nrounds: 2094"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 32.40890601922615,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005419426385338814",
+            "extra": "mean: 30.855716000002076 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 30.88782834943404,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00032284454246964475",
+            "extra": "mean: 32.37521229032352 msec\nrounds: 31"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 20.801689971334365,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01978838608618007",
+            "extra": "mean: 48.073017210526814 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 242.23554974659962,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020534673833592633",
+            "extra": "mean: 4.128213224880043 msec\nrounds: 209"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 2.393174173306563,
+            "unit": "iter/sec",
+            "range": "stddev: 0.007365247221694762",
+            "extra": "mean: 417.855086000003 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 2.1573432906933694,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002967856038761839",
+            "extra": "mean: 463.53308920000416 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 42.20352927158153,
+            "unit": "iter/sec",
+            "range": "stddev: 0.015042547078038955",
+            "extra": "mean: 23.69470082857187 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 5.072152789405264,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010596527878468382",
+            "extra": "mean: 197.1549441666672 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 0.4389887497409245,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010187656164640688",
+            "extra": "mean: 2.2779627054000002 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 0.4007114364841244,
+            "unit": "iter/sec",
+            "range": "stddev: 0.008588270173646582",
+            "extra": "mean: 2.4955614163999997 sec\nrounds: 5"
           }
         ]
       }
