@@ -86,7 +86,9 @@ def test_heat_coloring(benchmark):
 def test_heat_materialization(benchmark):
     """Heat equation: VJP computation (with known sparsity/colors)"""
     x = np.ones(N)
-    colored_pattern = color_jacobian_pattern(jacobian_sparsity(heat_equation_rhs, N), "row")
+    colored_pattern = color_jacobian_pattern(
+        jacobian_sparsity(heat_equation_rhs, N), "row"
+    )
     benchmark(jacobian, heat_equation_rhs, x, colored_pattern)
 
 

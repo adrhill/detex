@@ -366,7 +366,9 @@ def test_precomputed_col_colors():
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
-    colored_pattern = color_jacobian_pattern(jacobian_sparsity(f, input_shape=5), "column")
+    colored_pattern = color_jacobian_pattern(
+        jacobian_sparsity(f, input_shape=5), "column"
+    )
 
     result = jacobian(f, x, colored_pattern).todense()
     expected = jax.jacobian(f)(x)

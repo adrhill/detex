@@ -1,4 +1,9 @@
-"""Pattern data structures for the detection->coloring->decompression pipeline."""
+"""Pattern data structures for the detection->coloring->decompression pipeline.
+
+Pretty-printing adapted from SparseArrays.jl (MIT license)
+Copyright (c) 2018-2024 SparseArrays.jl contributors: https://github.com/JuliaSparse/SparseArrays.jl/contributors
+https://github.com/JuliaSparse/SparseArrays.jl/
+"""
 
 from __future__ import annotations
 
@@ -319,7 +324,7 @@ class SparsityPattern:
         Uses dot display (●/⋅) for small matrices, braille for large ones.
         Follows Julia's SparseArrays display heuristics.
         """
-        header = f"SparsityPattern({self.m}×{self.n}, nnz={self.nse}, density={self.density:.1%})"
+        header = f"SparsityPattern({self.m}×{self.n}, nnz={self.nse}, sparsity={1 - self.density:.1%})"
         return f"{header}\n{self._render()}"
 
     def __repr__(self) -> str:
@@ -334,40 +339,50 @@ class ColoredPattern:
     Attributes:
         sparsity: The sparsity pattern that was colored.
         colors: Color assignment array.
-            Shape ``(m,)`` for row partition, ``(n,)`` for column partition.
+            Shape ``(m,)`` for ``"VJP"`` mode,
+            ``(n,)`` for ``"JVP"`` and ``"HVP"`` modes.
         num_colors: Total number of colors used.
-        partition: Whether rows or columns were colored.
+        mode: The AD primitive used per color.
+            ``"VJP"`` for row-colored Jacobians,
+            ``"JVP"`` for column-colored Jacobians,
+            ``"HVP"`` for star-colored Hessians.
     """
 
     sparsity: SparsityPattern
     colors: NDArray[np.int32]
     num_colors: int
-    partition: Literal["row", "column"]
+    mode: Literal["JVP", "VJP", "HVP"]
+
+    @property
+    def _compresses_columns(self) -> bool:
+        """Whether coloring compresses columns (JVP/HVP) or rows (VJP)."""
+        return self.mode in ("JVP", "HVP")
 
     def __repr__(self) -> str:
         """Return compact representation."""
         sp = self.sparsity
         m, n = sp.shape
+        c = self.num_colors
         return (
-            f"ColoredPattern({m}×{n}, nnz={sp.nse}, density={sp.density:.1%}, "
-            f"{self.partition}, {self.num_colors} colors)"
+            f"ColoredPattern({m}×{n}, nnz={sp.nse}, sparsity={1 - sp.density:.1%}, "
+            f"{self.mode}, {c} {'color' if c == 1 else 'colors'})"
         )
 
     def _compressed_pattern(self) -> SparsityPattern:
         """Build the compressed sparsity pattern after coloring.
 
-        For column partition (shape ``(m, num_colors)``):
+        For column compression (JVP/HVP, shape ``(m, num_colors)``):
         entry ``(i, c)`` is present iff any column ``j``
         with ``colors[j] == c`` has a nonzero at ``(i, j)``.
 
-        For row partition (shape ``(num_colors, n)``):
+        For row compression (VJP, shape ``(num_colors, n)``):
         entry ``(c, j)`` is present iff any row ``i``
         with ``colors[i] == c`` has a nonzero at ``(i, j)``.
         """
         comp_rows: list[int] = []
         comp_cols: list[int] = []
 
-        if self.partition == "column":
+        if self._compresses_columns:
             # Compress columns: (m, n) → (m, num_colors)
             seen: set[tuple[int, int]] = set()
             for i, j in zip(self.sparsity.rows, self.sparsity.cols, strict=True):
@@ -395,22 +410,27 @@ class ColoredPattern:
     def __str__(self) -> str:
         """Return string with AD savings summary and visualization.
 
-        Column partition shows side-by-side with ``→`` (columns shrink).
-        Row partition shows stacked with ``↓`` (rows shrink).
+        Column compression (JVP/HVP) shows side-by-side with ``→``.
+        Row compression (VJP) shows stacked with ``↓``.
         """
         m, n = self.sparsity.shape
-        ad_type = "JVPs" if self.partition == "column" else "VJPs"
-        header = (
-            f"{repr(self)}\n"
-            f"  {self.num_colors} {ad_type} "
-            f"(instead of {m} VJPs or {n} JVPs)"
-        )
+        c = self.num_colors
+        s = "" if c == 1 else "s"
+
+        def _plural(count: int, word: str) -> str:
+            return f"{count} {word}" if count == 1 else f"{count} {word}s"
+
+        if self.mode == "HVP":
+            instead = f"instead of {_plural(n, 'HVP')}"
+        else:
+            instead = f"instead of {_plural(m, 'VJP')} or {_plural(n, 'JVP')}"
+        header = f"{repr(self)}\n  {c} {self.mode}{s} ({instead})"
 
         compressed = self._compressed_pattern()
         left_lines = self.sparsity._render().split("\n")
         right_lines = compressed._render().split("\n")
 
-        if self.partition == "column":
+        if self._compresses_columns:
             viz = _render_side_by_side(left_lines, right_lines)
         else:
             viz = _render_stacked(left_lines, right_lines)

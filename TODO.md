@@ -12,7 +12,7 @@ Missing precise handlers for:
 - [ ] `dot_general` - matrix multiply sparsity (`test_matmul`, `test_iota_eye`)
 - [ ] `reduce_*` variants (max, min, prod with axes)
 - [ ] `rev` - reverse/flip array (`test_reverse`)
-- [ ] `pad` - constant padding (`test_pad`)
+- [ ] `pad` - constant padding (`test_pad`). High priority: JAX's `grad` emits `pad` for sliced operations, so this causes fully dense Hessian patterns (e.g. `hessian_coloring(lambda x: ((x[1:]-x[:-1])**2).sum(), input_shape=5)` gives 25 nnz instead of tridiagonal 13).
 - [ ] `dynamic_slice` - used by split (`test_split`)
 - [ ] `dynamic_update_slice` - like scatter but contiguous
 - [ ] `reduce_and`, `reduce_or`, `reduce_xor` - same structure as `reduce_sum`
