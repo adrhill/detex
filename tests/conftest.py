@@ -23,3 +23,6 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "hessian: Hessian sparsity detection and computation"
     )
+    config.addinivalue_line(
+        "markers", "dashboard: benchmarks tracked in the GitHub Pages dashboard"
+    )

@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
       - name: Run benchmarks
-        run: uv run pytest tests/test_benchmarks.py --benchmark-json=benchmark.json
+        run: uv run pytest tests/test_benchmarks.py -m dashboard --benchmark-json=benchmark.json
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
