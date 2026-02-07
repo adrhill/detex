@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770497063339,
+  "lastUpdate": 1770506275948,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -1122,6 +1122,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.011518020236517212",
             "extra": "mean: 1.523539873799996 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9f13bfd1303ff58eeb096d81748ddea232b82ecd",
+          "message": "Support `while_loop`, `cond`, and `dynamic_slice` primitives (#24)\n\n* Add brusselator sparsity demo with diffrax\n\nDemonstrates asdex on a realistic reaction-diffusion ODE: detects the\nJacobian sparsity of the brusselator RHS (768 nnz, 11 colors) and\nshows the expected failure on diffrax's `while` primitive.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Support while_loop, cond, dynamic_slice, and diffrax primitives\n\nAdd handlers for 10 new JAX primitives needed by diffrax's diffeqsolve:\n- while: fixed-point iteration over body jaxpr\n- cond: union output deps across all branch jaxprs\n- dynamic_slice / dynamic_update_slice: precise when starts are static\n- not: zero derivative\n- select_if_vmap, nonbatchable, unvmap_any, unvmap_max, pure_callback:\n  conservative fallback\n\nAlso fix select_n to be element-wise instead of globally conservative,\nwhich is necessary for correct sparsity through diffrax control flow.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Simplify dynamic_slice handlers, move select_if_vmap to conservative\n\nReplace manual stride loops with np.indices + np.ravel_multi_index,\nextract _resolve_starts helper. Move select_if_vmap back to the\nconservative fallback since it's a different primitive from select_n.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Fix const_vals propagation into nested jaxprs, clean up handlers\n\nForward const_vals from outer-scope atoms to inner jaxpr variables so\nthat gather/scatter inside cond, while_loop, jit, and custom_jvp can\nresolve static indices precisely instead of falling back to conservative.\n\n- Add seed_const_vals and forward_const_vals helpers to _commons.py\n- Apply both helpers in prop_cond, prop_while, prop_nested_jaxpr,\n  and prop_custom_call\n- Extract prop_broadcast_in_dim into _broadcast.py\n- Clean up select_n: remove dead scalar broadcast, rename branches→cases\n- Add JAX doc URLs to handler docstrings\n- Add scan/associative_scan as explicit TODO errors\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Remove examples/ directory\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-08T00:17:07+01:00",
+          "tree_id": "bb07835873f0a87d8bd6df37bd2c719aaf555793",
+          "url": "https://github.com/adrhill/asdex/commit/9f13bfd1303ff58eeb096d81748ddea232b82ecd"
+        },
+        "date": 1770506274960,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 712.9003945119997,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0029397769552276408",
+            "extra": "mean: 1.4027205030297787 msec\nrounds: 165"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3207.5571957888783,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000007936247832828974",
+            "extra": "mean: 311.7637313881339 usec\nrounds: 1988"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 58.33989375160917,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004206301673954495",
+            "extra": "mean: 17.140929400002847 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 80.17760429766584,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003403211083427419",
+            "extra": "mean: 12.472310800001196 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.871985056219785,
+            "unit": "iter/sec",
+            "range": "stddev: 0.014465384747426549",
+            "extra": "mean: 45.720587200000296 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 243.01367099820655,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003484183347459255",
+            "extra": "mean: 4.114994830917887 msec\nrounds: 207"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 28.623636284809454,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002642951939543367",
+            "extra": "mean: 34.936162200003196 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 11.450401888038437,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009428151194036761",
+            "extra": "mean: 87.33317919999308 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 47.654767640950446,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010315826024813544",
+            "extra": "mean: 20.984259277778644 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 5.0968249917397666,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001562820144485054",
+            "extra": "mean: 196.20057616666506 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 17.47956588057925,
+            "unit": "iter/sec",
+            "range": "stddev: 0.031907677120338165",
+            "extra": "mean: 57.20965879999653 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 0.6563157068829131,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0072790151265666484",
+            "extra": "mean: 1.5236569680000058 sec\nrounds: 5"
           }
         ]
       }
