@@ -24,20 +24,6 @@ Missing precise handlers for:
 - [ ] `cond` - requires unioning outputs across multiple branch jaxprs
 - [ ] Cache jaxpr analysis for repeated calls
 
-## Comparison with SCT
-
-- [ ] Compare operator classification schemes
-
-## Potential Extensions
-
-- [ ] Local sparsity via Dual-number style tracking
-- [ ] Export to sparse AD libraries
-
-## Known Limitations
-
-- Control flow unions all branches (global sparsity)
-- Not all JAX primitives have precise handlers (falls back to conservative union)
-
 ## Conservative Propagators
 
 These propagators use conservative fallbacks that could be made precise:
@@ -57,10 +43,3 @@ These tests verify conservative behavior that could be made precise:
 - [ ] `test_split` - dynamic_slice produces dense, should preserve structure
 - [ ] `test_iota_eye` - iota + dot_general produce dense, should be identity
 - [ ] `test_stack` - block-wise deps instead of per-element (reshape limitation)
-
-## References
-
-- SparseConnectivityTracer.jl: https://github.com/adrhill/SparseConnectivityTracer.jl
-- JAX jaxpr docs: https://jax.readthedocs.io/en/latest/jaxpr.html
-- Writing custom Jaxpr interpreters in JAX: https://docs.jax.dev/en/latest/notebooks/Writing_custom_interpreters_in_Jax.html
-- SparseDiffTools.jl for coloring algorithms
