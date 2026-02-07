@@ -4,7 +4,15 @@ from itertools import product
 
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, IndexSets, index_sets, numel, row_strides
+from ._commons import (
+    Deps,
+    IndexSets,
+    atom_shape,
+    flat_to_coords,
+    index_sets,
+    numel,
+    row_strides,
+)
 
 
 def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
@@ -38,9 +46,9 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     lhs_indices = index_sets(deps, eqn.invars[0])  # Input image dependencies
 
     # Get shapes from avals
-    lhs_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
-    rhs_shape = tuple(getattr(eqn.invars[1].aval, "shape", ()))
-    out_shape = tuple(getattr(eqn.outvars[0].aval, "shape", ()))
+    lhs_shape = atom_shape(eqn.invars[0])
+    rhs_shape = atom_shape(eqn.invars[1])
+    out_shape = atom_shape(eqn.outvars[0])
 
     # Parse dimension numbers
     dim_nums = eqn.params["dimension_numbers"]
@@ -75,12 +83,7 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     out_indices: IndexSets = []
 
     for out_flat in range(numel(out_shape)):
-        # Convert flat output index to coordinates
-        out_coord = []
-        remaining = out_flat
-        for s in out_strides:
-            out_coord.append(remaining // s)
-            remaining %= s
+        out_coord = flat_to_coords(out_flat, out_strides)
 
         batch_idx = out_coord[out_batch_dim]
         out_spatial_coord = [out_coord[d] for d in out_spatial_dims]

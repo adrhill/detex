@@ -8,9 +8,10 @@ from ._commons import (
     Deps,
     atom_const_val,
     atom_numel,
+    atom_shape,
+    conservative_deps,
     index_sets,
     numel,
-    union_all,
 )
 
 
@@ -52,7 +53,7 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     if concrete_indices is not None:
         dim_nums = eqn.params["dimension_numbers"]
         slice_sizes = eqn.params["slice_sizes"]
-        operand_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+        operand_shape = atom_shape(eqn.invars[0])
 
         # We can compute a precise mapping when the gather selects along
         # exactly one dimension (dim 0) and keeps all others intact.
@@ -77,6 +78,6 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     # Conservative fallback: every output depends on every input.
     # Always correct (never misses a dependency), but marks the full Jacobian as dense.
     # Used when indices are dynamic or the gather pattern isn't one we handle precisely.
-    all_deps = union_all(operand_indices)
-    out_size = atom_numel(eqn.outvars[0])
-    deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
+    deps[eqn.outvars[0]] = conservative_deps(
+        operand_indices, atom_numel(eqn.outvars[0])
+    )

@@ -17,10 +17,10 @@ from ._commons import (
     Deps,
     IndexSets,
     atom_numel,
+    conservative_deps,
     forward_const_vals,
     index_sets,
     seed_const_vals,
-    union_all,
 )
 from ._concatenate import prop_concatenate
 from ._cond import prop_cond
@@ -339,9 +339,8 @@ def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
     all_inputs: IndexSets = []
     for invar in eqn.invars:
         all_inputs.extend(index_sets(deps, invar))
-    all_deps = union_all(all_inputs)
     for outvar in eqn.outvars:
-        deps[outvar] = [all_deps.copy() for _ in range(atom_numel(outvar))]
+        deps[outvar] = conservative_deps(all_inputs, atom_numel(outvar))
 
 
 def prop_throw_error(eqn: JaxprEqn, deps: Deps) -> None:

@@ -105,6 +105,29 @@ def forward_const_vals(
             const_vals[inner] = val
 
 
+def atom_shape(atom: Atom) -> tuple[int, ...]:
+    """Get the shape of a variable or literal."""
+    if isinstance(atom, Literal):
+        return tuple(getattr(atom.val, "shape", ()))
+    return tuple(getattr(atom.aval, "shape", ()))
+
+
+def flat_to_coords(flat: int, strides: tuple[int, ...]) -> list[int]:
+    """Convert a flat index to multi-dimensional coordinates using row-major strides."""
+    coord = []
+    remaining = flat
+    for s in strides:
+        coord.append(remaining // s)
+        remaining %= s
+    return coord
+
+
+def conservative_deps(all_indices: IndexSets, out_size: int) -> IndexSets:
+    """Build conservative output deps where every element depends on the union of all inputs."""
+    all_deps = union_all(all_indices)
+    return [all_deps.copy() for _ in range(out_size)]
+
+
 def row_strides(shape: Sequence[int]) -> tuple[int, ...]:
     """Compute row-major strides for multi-dimensional index tracking.
 

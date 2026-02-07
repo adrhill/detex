@@ -8,9 +8,10 @@ from ._commons import (
     IndexSets,
     atom_const_val,
     atom_numel,
+    atom_shape,
+    conservative_deps,
     index_sets,
     numel,
-    union_all,
 )
 
 
@@ -66,8 +67,8 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         update_jaxpr = eqn.params.get("update_jaxpr")
         is_scatter_add = update_jaxpr is not None
 
-        operand_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
-        out_shape = tuple(getattr(eqn.outvars[0].aval, "shape", ()))
+        operand_shape = atom_shape(eqn.invars[0])
+        out_shape = atom_shape(eqn.outvars[0])
         out_size = numel(out_shape)
 
         # Handle simple 1D case: operand is 1D, indices specify positions
@@ -121,6 +122,6 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         # For more complex scatter patterns, fall through to conservative
 
     # Dynamic indices or complex scatter - conservative fallback
-    all_deps = union_all(operand_indices + updates_indices)
-    out_size = atom_numel(eqn.outvars[0])
-    deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
+    deps[eqn.outvars[0]] = conservative_deps(
+        operand_indices + updates_indices, atom_numel(eqn.outvars[0])
+    )

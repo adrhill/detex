@@ -8,9 +8,10 @@ from ._commons import (
     Deps,
     IndexSets,
     atom_const_val,
+    atom_shape,
+    conservative_deps,
     index_sets,
     numel,
-    union_all,
 )
 
 
@@ -54,12 +55,11 @@ def prop_dynamic_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None
 
     starts = _resolve_starts(eqn, 1, const_vals)
     if starts is None:
-        all_deps = union_all(in_indices)
-        deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(numel(slice_sizes))]
+        deps[eqn.outvars[0]] = conservative_deps(in_indices, numel(slice_sizes))
         return
 
     # Build flat index map: for each output element, which input element it reads
-    in_shape = tuple(getattr(operand.aval, "shape", ()))
+    in_shape = atom_shape(operand)
     out_coords = np.indices(tuple(slice_sizes))
     in_coords = tuple(s + out_coords[d] for d, s in enumerate(starts))
     flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
@@ -91,13 +91,14 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
     update = eqn.invars[1]
     op_indices = index_sets(deps, operand)
     upd_indices = index_sets(deps, update)
-    op_shape = tuple(getattr(operand.aval, "shape", ()))
-    upd_shape = tuple(getattr(update.aval, "shape", ()))
+    op_shape = atom_shape(operand)
+    upd_shape = atom_shape(update)
 
     starts = _resolve_starts(eqn, 2, const_vals)
     if starts is None:
-        all_deps = union_all(op_indices + upd_indices)
-        deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(numel(op_shape))]
+        deps[eqn.outvars[0]] = conservative_deps(
+            op_indices + upd_indices, numel(op_shape)
+        )
         return
 
     # Start with operand deps, then overwrite the update region

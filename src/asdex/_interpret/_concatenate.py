@@ -3,7 +3,7 @@
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, IndexSets, index_sets
+from ._commons import Deps, IndexSets, atom_shape, index_sets
 
 
 def prop_concatenate(eqn: JaxprEqn, deps: Deps) -> None:
@@ -36,7 +36,7 @@ def prop_concatenate(eqn: JaxprEqn, deps: Deps) -> None:
         in_deps = index_sets(deps, invar)
         offset = len(all_deps)
         all_deps.extend(in_deps)
-        shape = tuple(getattr(invar.aval, "shape", ()))
+        shape = atom_shape(invar)
         index_arrays.append(np.arange(offset, offset + len(in_deps)).reshape(shape))
 
     mapping = np.concatenate(index_arrays, axis=dim).ravel()

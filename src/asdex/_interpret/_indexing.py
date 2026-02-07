@@ -3,7 +3,16 @@
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, IndexSets, index_sets, numel, row_strides
+from ._commons import (
+    Deps,
+    IndexSets,
+    atom_shape,
+    conservative_deps,
+    flat_to_coords,
+    index_sets,
+    numel,
+    row_strides,
+)
 
 
 def prop_slice(eqn: JaxprEqn, deps: Deps) -> None:
@@ -32,7 +41,7 @@ def prop_slice(eqn: JaxprEqn, deps: Deps) -> None:
     limit = eqn.params["limit_indices"]
     slice_strides = eqn.params.get("strides") or tuple(1 for _ in start)
 
-    in_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+    in_shape = atom_shape(eqn.invars[0])
     out_shape = tuple(
         (limit[d] - start[d] + slice_strides[d] - 1) // slice_strides[d]
         for d in range(len(start))
@@ -44,12 +53,7 @@ def prop_slice(eqn: JaxprEqn, deps: Deps) -> None:
 
     out_indices: IndexSets = []
     for out_flat in range(out_size):
-        # Convert flat output index to output coordinates
-        out_coord = []
-        remaining = out_flat
-        for s in out_strides:
-            out_coord.append(remaining // s)
-            remaining %= s
+        out_coord = flat_to_coords(out_flat, out_strides)
 
         # Map to input coordinates: in_coord[d] = start[d] + out_coord[d] * slice_strides[d]
         in_flat = sum(
@@ -109,13 +113,10 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.reshape.html
     """
     in_indices = index_sets(deps, eqn.invars[0])
-    out_size = numel(tuple(getattr(eqn.outvars[0].aval, "shape", ())))
+    out_size = numel(atom_shape(eqn.outvars[0]))
     if len(in_indices) != out_size:
         # Defensive fallback for unexpected size mismatches.
-        from ._commons import union_all
-
-        all_deps = union_all(in_indices)
-        deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
+        deps[eqn.outvars[0]] = conservative_deps(in_indices, out_size)
         return
 
     dimensions = eqn.params.get("dimensions")
@@ -123,7 +124,7 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
         # dimensions is a permutation applied before the reshape.
         # Build the flat index mapping: iota transposed then raveled
         # tells us which original flat index each output position reads.
-        in_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+        in_shape = atom_shape(eqn.invars[0])
         perm = (
             np.arange(len(in_indices)).reshape(in_shape).transpose(dimensions).ravel()
         )
