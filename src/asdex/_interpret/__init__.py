@@ -35,10 +35,12 @@ from ._elementwise import (
     propagate_const_binary,
 )
 from ._gather import prop_gather
-from ._indexing import prop_reshape, prop_slice, prop_squeeze
 from ._reduction import prop_reduce_sum
+from ._reshape import prop_reshape
 from ._scatter import prop_scatter
 from ._select import prop_select_n
+from ._slice import prop_slice
+from ._squeeze import prop_squeeze
 from ._while import prop_while
 
 # Ufuncs for evaluating constant values during tracing.

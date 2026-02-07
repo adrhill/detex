@@ -16,7 +16,7 @@ from asdex._interpret import (
     prop_jaxpr,
     prop_nested_jaxpr,
 )
-from asdex._interpret._indexing import prop_reshape
+from asdex._interpret._reshape import prop_reshape
 
 
 class FakeAval:

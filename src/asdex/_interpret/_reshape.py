@@ -1,0 +1,52 @@
+"""Propagation rule for reshape operations."""
+
+import numpy as np
+from jax._src.core import JaxprEqn
+
+from ._commons import Deps, atom_shape, conservative_deps, index_sets, numel
+
+
+def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
+    """Reshape changes array shape without changing data or element count.
+    Dependencies pass through unchanged in row-major (C) order.
+    The Jacobian is the identity matrix.
+
+    When ``dimensions`` is not None, JAX transposes the input axes
+    before reshaping (e.g. ``ravel(order='F')`` emits ``dimensions=(1, 0)``).
+    The permutation reorders which flat input each flat output reads from.
+
+    Example: reshape([a,b,c,d], (2,2)) → [[a,b],[c,d]]
+        Input deps:  [{0}, {1}, {2}, {3}]
+        Output deps: [{0}, {1}, {2}, {3}]
+
+    Example: reshape([[a,b,c],[d,e,f]], (6,), dimensions=(1,0))
+        Transpose first → [[a,d],[b,e],[c,f]], then flatten → [a,d,b,e,c,f]
+        Input deps:  [{0}, {1}, {2}, {3}, {4}, {5}]
+        Output deps: [{0}, {3}, {1}, {4}, {2}, {5}]
+
+    Jaxpr:
+        invars[0]: operand — array to reshape
+        new_sizes: target shape
+        dimensions: optional axis permutation applied before reshape
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.reshape.html
+    """
+    in_indices = index_sets(deps, eqn.invars[0])
+    out_size = numel(atom_shape(eqn.outvars[0]))
+    if len(in_indices) != out_size:
+        # Defensive fallback for unexpected size mismatches.
+        deps[eqn.outvars[0]] = conservative_deps(in_indices, out_size)
+        return
+
+    dimensions = eqn.params.get("dimensions")
+    if dimensions is not None:
+        # dimensions is a permutation applied before the reshape.
+        # Build the flat index mapping: iota transposed then raveled
+        # tells us which original flat index each output position reads.
+        in_shape = atom_shape(eqn.invars[0])
+        perm = (
+            np.arange(len(in_indices)).reshape(in_shape).transpose(dimensions).ravel()
+        )
+        deps[eqn.outvars[0]] = [in_indices[j] for j in perm]
+    else:
+        deps[eqn.outvars[0]] = in_indices
