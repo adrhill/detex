@@ -38,6 +38,7 @@ Issues = "https://github.com/adrhill/asdex/issues"
 
 [dependency-groups]
 dev = [
+    "diffrax>=0.7.1",
     "flax>=0.10.0",
     "pre-commit>=4.0.0",
     "pytest>=8.0.0",
