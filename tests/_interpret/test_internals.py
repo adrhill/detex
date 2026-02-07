@@ -129,7 +129,7 @@ def test_stop_gradient():
     def f(x):
         return jax.lax.stop_gradient(x)
 
-    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
     expected = np.eye(3, dtype=int)
     np.testing.assert_array_equal(result, expected)
 

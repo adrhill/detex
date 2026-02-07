@@ -107,7 +107,7 @@ def test_precomputed_sparsity():
         return x**2
 
     x = np.array([1.0, 2.0, 3.0])
-    sparsity = jacobian_sparsity(f, n=3)
+    sparsity = jacobian_sparsity(f, input_shape=3)
 
     result1 = sparse_jacobian(f, x, sparsity=sparsity).todense()
     result2 = sparse_jacobian(f, x).todense()  # Auto-detect
@@ -123,7 +123,7 @@ def test_precomputed_colors():
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
-    sparsity = jacobian_sparsity(f, n=5)
+    sparsity = jacobian_sparsity(f, input_shape=5)
     colors, num_colors = color_rows(sparsity)
 
     result1 = sparse_jacobian(f, x, sparsity=sparsity, colors=colors).todense()
@@ -141,7 +141,7 @@ def test_different_input_points():
     def f(x):
         return jnp.array([x[0] * x[1], x[1] ** 2, jnp.exp(x[2])])
 
-    sparsity = jacobian_sparsity(f, n=3)
+    sparsity = jacobian_sparsity(f, input_shape=3)
 
     for x in [
         np.array([1.0, 2.0, 0.5]),
@@ -344,7 +344,7 @@ def test_hessian_precomputed_sparsity():
         return jnp.sum(x**2)
 
     x = np.array([1.0, 2.0, 3.0])
-    sparsity = hessian_sparsity(f, n=3)
+    sparsity = hessian_sparsity(f, input_shape=3)
 
     result1 = sparse_hessian(f, x, sparsity=sparsity).todense()
     result2 = sparse_hessian(f, x).todense()
@@ -361,7 +361,7 @@ def test_hessian_precomputed_colors():
         return jnp.sum((x[1:] - x[:-1]) ** 2)
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    sparsity = hessian_sparsity(f, n=4)
+    sparsity = hessian_sparsity(f, input_shape=4)
     colors, num_colors = color_rows(sparsity)
 
     result1 = sparse_hessian(f, x, sparsity=sparsity, colors=colors).todense()

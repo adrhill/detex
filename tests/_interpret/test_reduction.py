@@ -18,7 +18,7 @@ def test_reduce_max():
     def f(x):
         return jnp.array([jnp.max(x)])
 
-    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
     # All inputs can affect the max (global sparsity)
     expected = np.array([[1, 1, 1]])
     np.testing.assert_array_equal(result, expected)
@@ -32,7 +32,7 @@ def test_reduce_along_axis():
         mat = x.reshape(2, 3)
         return jnp.sum(mat, axis=1)  # Sum each row
 
-    result = jacobian_sparsity(f, n=6).todense().astype(int)
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
     # out[0] = sum of row 0 = x[0]+x[1]+x[2], depends on inputs 0,1,2
     # out[1] = sum of row 1 = x[3]+x[4]+x[5], depends on inputs 3,4,5
     expected = np.array(
@@ -57,6 +57,6 @@ def test_argmax():
         idx = jnp.argmax(x)
         return x[0] * idx.astype(float)
 
-    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
     expected = np.array([[1, 0, 0]])
     np.testing.assert_array_equal(result, expected)

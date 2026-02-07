@@ -24,6 +24,7 @@ def _compute_vjp_for_color(
     f: Callable[[ArrayLike], ArrayLike],
     x: NDArray,
     row_mask: NDArray[np.bool_],
+    out_shape: tuple[int, ...],
 ) -> NDArray:
     """Compute VJP with seed vector having 1s at masked positions.
 
@@ -31,20 +32,22 @@ def _compute_vjp_for_color(
         f: Function to differentiate
         x: Input point
         row_mask: Boolean mask of shape (m,) indicating which rows to compute
+        out_shape: Shape of the function output, used to reshape the seed
 
     Returns:
-        Gradient vector of shape (n,) - the VJP result
+        Flattened gradient vector of shape (n,) - the VJP result
     """
     _, vjp_fn = jax.vjp(f, x)
-    seed = row_mask.astype(x.dtype)
+    seed = row_mask.astype(x.dtype).reshape(out_shape)
     (grad,) = vjp_fn(seed)
-    return np.asarray(grad)
+    return np.asarray(grad).ravel()
 
 
 def _compute_hvp_for_color(
     f: Callable[[ArrayLike], ArrayLike],
     x: NDArray,
     row_mask: NDArray[np.bool_],
+    in_shape: tuple[int, ...],
 ) -> NDArray:
     """Compute HVP with tangent vector having 1s at masked positions.
 
@@ -54,13 +57,14 @@ def _compute_hvp_for_color(
         f: Scalar-valued function to differentiate
         x: Input point
         row_mask: Boolean mask of shape (n,) indicating which rows to compute
+        in_shape: Shape of the function input, used to reshape the tangent
 
     Returns:
-        HVP result vector of shape (n,)
+        Flattened HVP result vector of shape (n,)
     """
-    tangent = row_mask.astype(x.dtype)
+    tangent = row_mask.astype(x.dtype).reshape(in_shape)
     _, hvp = jax.jvp(jax.grad(f), (x,), (tangent,))
-    return np.asarray(hvp)
+    return np.asarray(hvp).ravel()
 
 
 def _decompress_jacobian(
@@ -106,23 +110,26 @@ def sparse_jacobian(
     computes the Jacobian with one VJP per color instead of one per row.
 
     Args:
-        f: Function from R^n to R^m (takes 1D array, returns 1D array)
-        x: Input point of shape (n,)
+        f: Function taking an array and returning an array.
+            Both may be multi-dimensional.
+        x: Input point (any shape).
         sparsity: Optional pre-computed sparsity pattern. If None, detected
             automatically.
         colors: Optional pre-computed row coloring from color_rows(). If None,
             computed automatically from sparsity.
 
     Returns:
-        Sparse Jacobian matrix of shape (m, n) as BCOO
+        Sparse Jacobian matrix of shape (m, n) as BCOO,
+        where n = x.size and m = prod(output_shape)
     """
     x = np.asarray(x)
-    n = x.shape[0]
+    n = x.size
 
     if sparsity is None:
-        sparsity = _detect_sparsity(f, n)
+        sparsity = _detect_sparsity(f, x.shape)
 
     m = sparsity.m
+    out_shape = jax.eval_shape(f, jnp.zeros_like(x)).shape
 
     # Handle edge case: no outputs
     if m == 0:
@@ -141,7 +148,7 @@ def sparse_jacobian(
     grads: list[NDArray] = []
     for c in range(num_colors):
         row_mask = colors == c
-        grad = _compute_vjp_for_color(f, x, row_mask)
+        grad = _compute_vjp_for_color(f, x, row_mask, out_shape)
         grads.append(grad)
 
     return _decompress_jacobian(sparsity, colors, grads)
@@ -160,8 +167,9 @@ def sparse_hessian(
     overhead than reverse-mode for the outer differentiation.
 
     Args:
-        f: Scalar-valued function from R^n to R (takes 1D array, returns scalar)
-        x: Input point of shape (n,)
+        f: Scalar-valued function returning a scalar.
+            Input may be multi-dimensional.
+        x: Input point (any shape).
         sparsity: Optional pre-computed Hessian sparsity pattern from
             hessian_sparsity(). If None, detected automatically.
         colors: Optional pre-computed row coloring from color_rows(). If None,
@@ -172,10 +180,10 @@ def sparse_hessian(
     """
 
     x = np.asarray(x)
-    n = x.shape[0]
+    n = x.size
 
     if sparsity is None:
-        sparsity = _detect_hessian_sparsity(f, n)
+        sparsity = _detect_hessian_sparsity(f, x.shape)
 
     if colors is None:
         colors, num_colors = color_rows(sparsity)
@@ -190,7 +198,7 @@ def sparse_hessian(
     grads: list[NDArray] = []
     for c in range(num_colors):
         row_mask = colors == c
-        hvp_result = _compute_hvp_for_color(f, x, row_mask)
+        hvp_result = _compute_hvp_for_color(f, x, row_mask, x.shape)
         grads.append(hvp_result)
 
     return _decompress_jacobian(sparsity, colors, grads)

@@ -38,7 +38,7 @@ def check_conv_sparsity(
         y = conv(x)
         return y.flatten()
 
-    sparsity = jacobian_sparsity(f, n=input_size)
+    sparsity = jacobian_sparsity(f, input_shape=input_size)
 
     # Expected output shape with VALID padding
     out_h = H - kernel_size[0] + 1
@@ -95,7 +95,7 @@ def test_conv_with_padding():
         y = conv(x)
         return y.flatten()
 
-    sparsity = jacobian_sparsity(f, n=input_size)
+    sparsity = jacobian_sparsity(f, input_shape=input_size)
 
     # With SAME padding, output size equals input size
     expected_out_size = H * W * C_out
@@ -128,7 +128,7 @@ def test_conv_with_strides():
         y = conv(x)
         return y.flatten()
 
-    sparsity = jacobian_sparsity(f, n=input_size)
+    sparsity = jacobian_sparsity(f, input_shape=input_size)
 
     # Output size with stride 2 and VALID padding
     out_h = (H - 3) // 2 + 1  # 2
@@ -165,7 +165,7 @@ def test_conv_transpose():
         y = conv_t(x)
         return y.flatten()
 
-    sparsity = jacobian_sparsity(f, n=input_size)
+    sparsity = jacobian_sparsity(f, input_shape=input_size)
 
     assert sparsity.nse > 0
 

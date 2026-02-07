@@ -45,8 +45,8 @@ uv run pytest
 sparse_jacobian(f, x)                    sparse_hessian(f, x)
   │                                        │
   ├─ 1. DETECTION                          ├─ 1. DETECTION
-  │     jacobian_sparsity(f, n)            │     hessian_sparsity(f, n)
-  │     ├─ make_jaxpr(f) → jaxpr           │     └─ jacobian_sparsity(grad(f), n)
+  │     jacobian_sparsity(f, input_shape)   │     hessian_sparsity(f, input_shape)
+  │     ├─ make_jaxpr(f) → jaxpr           │     └─ jacobian_sparsity(grad(f), input_shape)
   │     ├─ prop_jaxpr() → index sets       │
   │     └─ Build SparsityPattern           │
   │                                        │

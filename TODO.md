@@ -2,8 +2,6 @@
 
 ## Immediate
 
-- [ ] Support multiple input arrays via input shape (currently assumes single 1D input)
-- [ ] Support multi-dimensional outputs with proper indexing
 - [ ] Add more test cases from SparseConnectivityTracer's "Jacobian Global" testset: https://github.com/adrhill/SparseConnectivityTracer.jl/blob/main/test/test_gradient.jl
 - [ ] Handle `dynamic_slice` primitive precisely
 
@@ -22,6 +20,7 @@ Missing precise handlers for:
 - [ ] `top_k` - conservative is correct (or close to it)
 - [ ] `scatter_sub`, `scatter_mul`, `scatter_max`, `scatter_min` - extend existing `prop_scatter`
 - [ ] `custom_jvp_call_jaxpr` - variant of already-handled `custom_jvp_call`
+- [ ] `platform_index` - used by `jnp.diag` and other platform-dispatched ops
 
 ## Control Flow
 

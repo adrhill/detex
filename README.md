@@ -54,7 +54,7 @@ def f(x):
     return (x[1:] - x[:-1]) ** 2
 
 # Detect sparsity pattern
-pattern = jacobian_sparsity(f, n=50)
+pattern = jacobian_sparsity(f, input_shape=50)
 print(pattern)
 # SparsityPattern(49×50, nnz=98, density=4.0%)
 # ⎡⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤
@@ -91,7 +91,7 @@ The sparsity pattern and coloring depend only on the function structure, not the
 Precompute them once and reuse them for repeated evaluations:
 
 ```python
-pattern = jacobian_sparsity(f, n=1000)
+pattern = jacobian_sparsity(f, input_shape=1000)
 colors, _ = color_rows(pattern)
 for x in inputs:
     J = sparse_jacobian(f, x, sparsity=pattern, colors=colors)
@@ -111,7 +111,7 @@ def g(x):
     return jnp.sum(x**2)
 
 # Detect sparsity pattern
-pattern = hessian_sparsity(g, n=5)
+pattern = hessian_sparsity(g, input_shape=5)
 print(pattern)
 # SparsityPattern(5×5, nnz=5, density=20.0%)
 # ● ⋅ ⋅ ⋅ ⋅
@@ -141,7 +141,7 @@ Each input element starts with its own index `{i}`, and operations combine these
 Output index sets reveal which inputs affect each output.
 The result is a global sparsity pattern, valid for all input values.
 
-**Hessian sparsity detection**: Since the Hessian is the Jacobian of the gradient, `hessian_sparsity(f, n)` simply calls `jacobian_sparsity(jax.grad(f), n)`.
+**Hessian sparsity detection**: Since the Hessian is the Jacobian of the gradient, `hessian_sparsity(f, input_shape)` simply calls `jacobian_sparsity(jax.grad(f), input_shape)`.
 The sparsity interpreter composes naturally with JAX's autodiff transforms.
 
 **Row coloring**: Two rows can be computed together if they don't share any non-zero columns.
