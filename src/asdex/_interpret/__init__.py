@@ -246,7 +246,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_gather(eqn, deps, const_vals)
         case "scatter" | "scatter-add":
             prop_scatter(eqn, deps, const_vals)
-        case "select_n" | "select_if_vmap":
+        case "select_n":
             prop_select_n(eqn, deps, const_vals)
         case "iota":
             _prop_iota(eqn, deps, const_vals)
@@ -272,6 +272,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             | "split"
             | "tile"
             | "transpose"
+            | "select_if_vmap"
             | "nonbatchable"
             | "unvmap_any"
             | "unvmap_max"

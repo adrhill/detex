@@ -1,5 +1,6 @@
 """Propagation rules for dynamic_slice and dynamic_update_slice."""
 
+import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
@@ -9,9 +10,23 @@ from ._commons import (
     atom_const_val,
     index_sets,
     numel,
-    row_strides,
     union_all,
 )
+
+
+def _resolve_starts(
+    eqn: JaxprEqn, start_offset: int, const_vals: ConstVals
+) -> list[int] | None:
+    """Try to resolve start indices as static ints.
+    Returns None if any start depends on runtime values.
+    """
+    starts: list[int] = []
+    for atom in eqn.invars[start_offset:]:
+        val = atom_const_val(atom, const_vals)
+        if val is None:
+            return None
+        starts.append(int(val.flat[0]))
+    return starts
 
 
 def prop_dynamic_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -32,52 +47,22 @@ def prop_dynamic_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None
         params: slice_sizes
     """
     operand = eqn.invars[0]
-    start_atoms = eqn.invars[1:]
-    slice_sizes = eqn.params["slice_sizes"]
     in_indices = index_sets(deps, operand)
+    slice_sizes = eqn.params["slice_sizes"]
 
-    # Try to resolve start indices statically
-    starts: list[int | None] = []
-    for atom in start_atoms:
-        val = atom_const_val(atom, const_vals)
-        if val is not None:
-            starts.append(int(val.flat[0]))
-        else:
-            starts.append(None)
-
-    # If any start index is dynamic, fall back to conservative
-    if any(s is None for s in starts):
+    starts = _resolve_starts(eqn, 1, const_vals)
+    if starts is None:
         all_deps = union_all(in_indices)
-        out_size = numel(slice_sizes)
-        deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
+        deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(numel(slice_sizes))]
         return
 
-    # All starts are static: precise element mapping (like prop_slice)
-    static_starts: list[int] = starts  # type: ignore[assignment]
+    # Build flat index map: for each output element, which input element it reads
     in_shape = tuple(getattr(operand.aval, "shape", ()))
-    out_shape = tuple(slice_sizes)
+    out_coords = np.indices(tuple(slice_sizes))
+    in_coords = tuple(s + out_coords[d] for d, s in enumerate(starts))
+    flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    in_strides = row_strides(in_shape)
-    out_strides = row_strides(out_shape)
-    out_size = numel(out_shape)
-
-    out_indices: IndexSets = []
-    for out_flat in range(out_size):
-        # Convert flat output index to output coordinates
-        out_coord = []
-        remaining = out_flat
-        for s in out_strides:
-            out_coord.append(remaining // s)
-            remaining %= s
-
-        # Map to input: in_coord[d] = start[d] + out_coord[d]
-        in_flat = sum(
-            (static_starts[d] + out_coord[d]) * in_strides[d]
-            for d in range(len(out_shape))
-        )
-        out_indices.append(in_indices[in_flat].copy())
-
-    deps[eqn.outvars[0]] = out_indices
+    deps[eqn.outvars[0]] = [in_indices[j].copy() for j in flat_map]
 
 
 def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -100,60 +85,26 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
     """
     operand = eqn.invars[0]
     update = eqn.invars[1]
-    start_atoms = eqn.invars[2:]
-
     op_indices = index_sets(deps, operand)
     upd_indices = index_sets(deps, update)
-
-    # Try to resolve start indices statically
-    starts: list[int | None] = []
-    for atom in start_atoms:
-        val = atom_const_val(atom, const_vals)
-        if val is not None:
-            starts.append(int(val.flat[0]))
-        else:
-            starts.append(None)
-
     op_shape = tuple(getattr(operand.aval, "shape", ()))
     upd_shape = tuple(getattr(update.aval, "shape", ()))
 
-    # If any start index is dynamic, fall back to conservative
-    if any(s is None for s in starts):
+    starts = _resolve_starts(eqn, 2, const_vals)
+    if starts is None:
         all_deps = union_all(op_indices + upd_indices)
-        out_size = numel(op_shape)
-        deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
+        deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(numel(op_shape))]
         return
 
-    # All starts are static: precise mapping
-    static_starts: list[int] = starts  # type: ignore[assignment]
-    op_strides = row_strides(op_shape)
-    upd_strides = row_strides(upd_shape)
-    out_size = numel(op_shape)
+    # Start with operand deps, then overwrite the update region
+    out_indices: IndexSets = [s.copy() for s in op_indices]
 
-    out_indices: IndexSets = []
-    for out_flat in range(out_size):
-        # Convert flat index to multi-dim coordinates in operand shape
-        coord = []
-        remaining = out_flat
-        for s in op_strides:
-            coord.append(remaining // s)
-            remaining %= s
+    # Map each update element to its flat position in the operand
+    upd_coords = np.indices(upd_shape)
+    op_coords = tuple(s + upd_coords[d] for d, s in enumerate(starts))
+    flat_map = np.ravel_multi_index(op_coords, op_shape).ravel()
 
-        # Check if this coordinate falls within the update region
-        in_update = True
-        upd_coord = []
-        for d in range(len(op_shape)):
-            offset = coord[d] - static_starts[d]
-            if 0 <= offset < upd_shape[d]:
-                upd_coord.append(offset)
-            else:
-                in_update = False
-                break
-
-        if in_update:
-            upd_flat = sum(upd_coord[d] * upd_strides[d] for d in range(len(upd_shape)))
-            out_indices.append(upd_indices[upd_flat].copy())
-        else:
-            out_indices.append(op_indices[out_flat].copy())
+    for upd_flat, op_flat in enumerate(flat_map):
+        out_indices[op_flat] = upd_indices[upd_flat].copy()
 
     deps[eqn.outvars[0]] = out_indices
