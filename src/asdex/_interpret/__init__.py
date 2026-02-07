@@ -39,6 +39,9 @@ _ARITHMETIC_UFUNCS: dict[str, np.ufunc] = {
     "pow": np.power,
     "max": np.maximum,
     "min": np.minimum,
+    "atan2": np.arctan2,
+    "rem": np.remainder,
+    "nextafter": np.nextafter,
 }
 
 _COMPARISON_UFUNCS: dict[str, np.ufunc] = {
@@ -48,6 +51,12 @@ _COMPARISON_UFUNCS: dict[str, np.ufunc] = {
     "ge": np.greater_equal,
     "eq": np.equal,
     "ne": np.not_equal,
+}
+
+_BITWISE_UFUNCS: dict[str, np.ufunc] = {
+    "and": np.bitwise_and,
+    "or": np.bitwise_or,
+    "xor": np.bitwise_xor,
 }
 
 
@@ -141,11 +150,24 @@ def prop_custom_call(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Propagate dependencies through a single equation."""
     match eqn.primitive.name:
-        case "floor" | "ceil" | "round" | "sign" | "is_finite":
+        case (
+            "floor"
+            | "ceil"
+            | "round"
+            | "sign"
+            | "is_finite"
+            | "argmax"
+            | "argmin"
+            | "clz"
+            | "population_count"
+        ):
             prop_zero_derivative(eqn, deps)
         case "eq" | "ne" | "lt" | "le" | "gt" | "ge":
             prop_zero_derivative(eqn, deps)
             propagate_const_binary(eqn, const_vals, _COMPARISON_UFUNCS)
+        case "and" | "or" | "xor":
+            prop_zero_derivative(eqn, deps)
+            propagate_const_binary(eqn, const_vals, _BITWISE_UFUNCS)
         case "jit" | "pjit" | "xla_call" | "named_call":
             prop_nested_jaxpr(eqn, deps, const_vals)
         case "slice":
@@ -160,7 +182,20 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_reshape(eqn, deps)
         case "integer_pow":
             prop_integer_pow(eqn, deps)
-        case "add" | "sub" | "mul" | "div" | "pow" | "max" | "min" | "add_any":
+        case (
+            "add"
+            | "sub"
+            | "mul"
+            | "div"
+            | "pow"
+            | "max"
+            | "min"
+            | "add_any"
+            | "atan2"
+            | "rem"
+            | "nextafter"
+            | "complex"
+        ):
             prop_binary_elementwise(eqn, deps)
             propagate_const_binary(eqn, const_vals, _ARITHMETIC_UFUNCS)
         case (
@@ -177,11 +212,28 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             | "tanh"
             | "log1p"
             | "expm1"
+            | "acos"
+            | "acosh"
+            | "asin"
+            | "asinh"
+            | "atan"
+            | "atanh"
+            | "cbrt"
+            | "conj"
+            | "copy"
+            | "exp2"
+            | "logistic"
+            | "real"
+            | "imag"
+            | "rsqrt"
+            | "square"
         ):
             prop_unary_elementwise(eqn, deps)
         case "reduce_sum":
             prop_reduce_sum(eqn, deps)
-        case "convert_element_type":
+        case "convert_element_type" | "bitcast_convert_type" | "reduce_precision":
+            prop_convert_element_type(eqn, deps)
+        case "stop_gradient":
             prop_convert_element_type(eqn, deps)
         case "conv_general_dilated":
             prop_conv_general_dilated(eqn, deps)
@@ -193,12 +245,12 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_scatter(eqn, deps, const_vals)
         case "select_n":
             prop_select_n(eqn, deps, const_vals)
-        # TODO: implement precise handlers for these primitives.
-        # Currently uses conservative fallback (all outputs depend on all inputs).
+        case "iota":
+            _prop_iota(eqn, deps, const_vals)
+        # Conservative fallback: all outputs depend on all inputs.
+        # sort is correctly conservative since sorting is a global operation.
         case (
-            "argmax"
-            | "dot_general"
-            | "iota"
+            "dot_general"
             | "pad"
             | "reduce_max"
             | "reduce_prod"
@@ -211,6 +263,33 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_conservative_fallback(eqn, deps)
         case _:
             prop_throw_error(eqn, deps)
+
+
+def _prop_iota(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+    """iota generates a constant index array with no input dependencies.
+
+    The output is fully determined by the parameters (shape, dtype, dimension),
+    so all dependency sets are empty.
+    We also track the concrete values for downstream gather/scatter precision.
+
+    Jaxpr:
+        invars: [] (no inputs)
+        shape: output shape
+        dtype: output dtype
+        dimension: axis along which indices increase
+    """
+    shape = eqn.params["shape"]
+    numel = int(np.prod(shape))
+    deps[eqn.outvars[0]] = [set() for _ in range(numel)]
+
+    dtype = eqn.params["dtype"]
+    dim = eqn.params["dimension"]
+    const_vals[eqn.outvars[0]] = np.broadcast_to(
+        np.arange(shape[dim], dtype=dtype).reshape(
+            [shape[dim] if i == dim else 1 for i in range(len(shape))]
+        ),
+        shape,
+    ).ravel()
 
 
 def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:

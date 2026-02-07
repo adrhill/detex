@@ -46,13 +46,10 @@ def test_reduce_along_axis():
 
 
 @pytest.mark.reduction
-@pytest.mark.fallback
 def test_argmax():
     """argmax has zero derivative (returns integer index, not differentiable).
 
-    TODO(argmax): Add prop_zero_derivative handler for argmax/argmin.
-    Currently triggers conservative fallback.
-    Precise: argmax output has zero dependency (non-differentiable).
+    Only x[0] contributes because argmax output has empty dependency sets.
     """
 
     def f(x):
@@ -61,6 +58,5 @@ def test_argmax():
         return x[0] * idx.astype(float)
 
     result = jacobian_sparsity(f, n=3).todense().astype(int)
-    # TODO: Should be [[1, 0, 0]] - only x[0] contributes (argmax has zero derivative)
-    expected = np.array([[1, 1, 1]])
+    expected = np.array([[1, 0, 0]])
     np.testing.assert_array_equal(result, expected)

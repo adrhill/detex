@@ -16,12 +16,21 @@ Missing precise handlers for:
 - [ ] `rev` - reverse/flip array (`test_reverse`)
 - [ ] `pad` - constant padding (`test_pad`)
 - [ ] `dynamic_slice` - used by split (`test_split`)
-- [ ] `iota` - constant array generation, add to prop_zero_derivative (`test_iota_eye`)
-- [ ] `argmax`/`argmin` - add to prop_zero_derivative (`test_argmax`)
+- [ ] `dynamic_update_slice` - like scatter but contiguous
+- [ ] `reduce_and`, `reduce_or`, `reduce_xor` - same structure as `reduce_sum`
+- [ ] `clamp` - ternary element-wise
+- [ ] `top_k` - conservative is correct (or close to it)
+- [ ] `scatter_sub`, `scatter_mul`, `scatter_max`, `scatter_min` - extend existing `prop_scatter`
+- [ ] `custom_jvp_call_jaxpr` - variant of already-handled `custom_jvp_call`
+
+## Control Flow
+
+- [ ] `cond` - requires unioning outputs across multiple branch jaxprs
+- [ ] `scan` - iterative jaxpr application
+- [ ] `while` - loop with unknown iteration count
 
 ## Architecture Improvements
 
-- [ ] `cond` - requires unioning outputs across multiple branch jaxprs
 - [ ] Cache jaxpr analysis for repeated calls
 
 ## Conservative Propagators
@@ -36,10 +45,9 @@ These propagators use conservative fallbacks that could be made precise:
 These tests verify conservative behavior that could be made precise:
 - [ ] `test_transpose_2d` - transpose produces dense, should be permutation matrix
 - [ ] `test_matmul` - dot_general produces dense, should track row/column deps
-- [ ] `test_argmax` - argmax falls to default, should have zero derivative
 - [ ] `test_reverse` - rev produces dense, should be anti-diagonal permutation
 - [ ] `test_pad` - pad produces dense, should be sparse (pad values have no deps)
 - [ ] `test_tile` - broadcast_in_dim produces dense, should track mod pattern
 - [ ] `test_split` - dynamic_slice produces dense, should preserve structure
-- [ ] `test_iota_eye` - iota + dot_general produce dense, should be identity
+- [ ] `test_iota_eye` - dot_general produces dense, should be identity (iota is now precise)
 - [ ] `test_stack` - block-wise deps instead of per-element (reshape limitation)

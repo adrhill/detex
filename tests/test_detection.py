@@ -1,5 +1,6 @@
 """Core API tests and simple element-wise operations."""
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -378,4 +379,74 @@ def test_unary_functions():
             [0, 0, 1],  # tanh(x2)
         ]
     )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_unary_inverse_trig():
+    """Inverse trigonometric functions preserve element structure."""
+
+    def f(x):
+        return jnp.array(
+            [
+                jnp.arcsin(x[0]),
+                jnp.arccos(x[1]),
+                jnp.arctan(x[2]),
+                jnp.arcsinh(x[0]),
+                jnp.arccosh(x[1] + 2),
+                jnp.arctanh(x[2] * 0.5),
+            ]
+        )
+
+    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    expected = np.array(
+        [
+            [1, 0, 0],  # arcsin(x0)
+            [0, 1, 0],  # arccos(x1)
+            [0, 0, 1],  # arctan(x2)
+            [1, 0, 0],  # arcsinh(x0)
+            [0, 1, 0],  # arccosh(x1+2)
+            [0, 0, 1],  # arctanh(x2*0.5)
+        ]
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_unary_misc():
+    """cbrt, rsqrt, square, exp2, logistic preserve element structure."""
+
+    def f(x):
+        return jnp.array(
+            [
+                jnp.cbrt(x[0]),
+                jax.lax.rsqrt(jnp.abs(x[1]) + 1),
+                jax.lax.square(x[2]),
+                jnp.exp2(x[0]),
+                jax.nn.sigmoid(x[1]),
+            ]
+        )
+
+    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    expected = np.array(
+        [
+            [1, 0, 0],  # cbrt(x0)
+            [0, 1, 0],  # rsqrt(|x1|+1)
+            [0, 0, 1],  # square(x2)
+            [1, 0, 0],  # exp2(x0)
+            [0, 1, 0],  # sigmoid(x1)
+        ]
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_binary_atan2_rem():
+    """atan2 and remainder are binary element-wise ops."""
+
+    def f(x):
+        return jnp.array([jnp.arctan2(x[0], x[1]), jnp.remainder(x[1], x[2])])
+
+    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    expected = np.array([[1, 1, 0], [0, 1, 1]])
     np.testing.assert_array_equal(result, expected)
