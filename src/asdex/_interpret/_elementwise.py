@@ -92,7 +92,8 @@ def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     # i % len gives 0 for scalars (i % 1 == 0 for all i),
     # and i for same-sized arrays,
     # so it naturally selects the right element without branching.
-    out_size = max(len(in1), len(in2))
+    # Size-0 arrays propagate to size-0 output (no elements to combine).
+    out_size = 0 if len(in1) == 0 or len(in2) == 0 else max(len(in1), len(in2))
     deps[eqn.outvars[0]] = [
         in1[i % len(in1)] | in2[i % len(in2)] for i in range(out_size)
     ]

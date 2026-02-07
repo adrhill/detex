@@ -632,6 +632,20 @@ def test_zero_size_input():
     assert result.nse == 0
 
 
+@pytest.mark.array_ops
+def test_zero_size_binary_elementwise():
+    """Binary elementwise on size-0 arrays produces size-0 output."""
+
+    def f(x):
+        # Slicing to empty then adding exercises the size-0 binary path.
+        a = x[:0]
+        return a + a
+
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nse == 0
+
+
 # =============================================================================
 # Additional gather tests
 # =============================================================================
