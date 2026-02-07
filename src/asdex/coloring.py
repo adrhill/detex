@@ -21,20 +21,37 @@ from numpy.typing import NDArray
 from asdex.pattern import SparsityPattern
 
 
-@dataclass(frozen=True)
-class ColoringResult:
+@dataclass(frozen=True, repr=False)
+class ColoredPattern:
     """Result of a graph coloring for sparse differentiation.
 
     Attributes:
+        sparsity: The sparsity pattern that was colored.
         colors: Color assignment array.
             Shape ``(m,)`` for row partition, ``(n,)`` for column partition.
         num_colors: Total number of colors used.
         partition: Whether rows or columns were colored.
     """
 
+    sparsity: SparsityPattern
     colors: NDArray[np.int32]
     num_colors: int
     partition: Literal["row", "column"]
+
+    def __repr__(self) -> str:
+        """Return compact representation."""
+        m, n = self.sparsity.shape
+        return f"ColoredPattern({self.partition}, {self.num_colors} colors, {m}×{n})"
+
+    def __str__(self) -> str:
+        """Return string with AD savings summary."""
+        m, n = self.sparsity.shape
+        ad_type = "JVPs" if self.partition == "column" else "VJPs"
+        return (
+            f"{repr(self)}\n"
+            f"  {self.num_colors} {ad_type} "
+            f"(instead of {m} VJPs or {n} JVPs)"
+        )
 
 
 def _greedy_color(
@@ -88,7 +105,7 @@ def _greedy_color(
 def color(
     sparsity: SparsityPattern,
     partition: Literal["row", "column", "auto"] = "auto",
-) -> ColoringResult:
+) -> ColoredPattern:
     """Color a sparsity pattern for sparse Jacobian computation.
 
     Assigns colors so that same-colored rows (or columns) can be
@@ -103,16 +120,20 @@ def color(
             (ties go to column coloring since JVPs are cheaper).
 
     Returns:
-        A :class:`ColoringResult` with the color assignment,
+        A :class:`ColoredPattern` with the color assignment,
         number of colors, and which partition was used.
     """
     if partition == "row":
         colors_arr, num = color_rows(sparsity)
-        return ColoringResult(colors=colors_arr, num_colors=num, partition="row")
+        return ColoredPattern(
+            sparsity, colors=colors_arr, num_colors=num, partition="row"
+        )
 
     if partition == "column":
         colors_arr, num = color_cols(sparsity)
-        return ColoringResult(colors=colors_arr, num_colors=num, partition="column")
+        return ColoredPattern(
+            sparsity, colors=colors_arr, num_colors=num, partition="column"
+        )
 
     # Auto: pick whichever uses fewer colors.
     # Ties go to column coloring (JVPs are cheaper than VJPs).
@@ -120,9 +141,13 @@ def color(
     col_colors, num_col = color_cols(sparsity)
 
     if num_col <= num_row:
-        return ColoringResult(colors=col_colors, num_colors=num_col, partition="column")
+        return ColoredPattern(
+            sparsity, colors=col_colors, num_colors=num_col, partition="column"
+        )
     else:
-        return ColoringResult(colors=row_colors, num_colors=num_row, partition="row")
+        return ColoredPattern(
+            sparsity, colors=row_colors, num_colors=num_row, partition="row"
+        )
 
 
 def _build_row_conflict_sets(sparsity: SparsityPattern) -> list[set[int]]:

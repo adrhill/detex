@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from asdex import (
-    ColoringResult,
+    ColoredPattern,
     SparsityPattern,
     color,
     color_cols,
@@ -743,12 +743,12 @@ def test_star_empty():
 
 @pytest.mark.coloring
 def test_color_returns_coloring_result():
-    """color() returns a ColoringResult with correct fields."""
+    """color() returns a ColoredPattern with correct fields."""
     sparsity = _make_pattern([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
 
     result = color(sparsity)
 
-    assert isinstance(result, ColoringResult)
+    assert isinstance(result, ColoredPattern)
     assert isinstance(result.num_colors, int)
     assert result.partition in ("row", "column")
     assert len(result.colors) in (4, 4)  # m or n (both 4 here)

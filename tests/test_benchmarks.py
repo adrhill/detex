@@ -86,9 +86,8 @@ def test_heat_coloring(benchmark):
 def test_heat_materialization(benchmark):
     """Heat equation: VJP computation (with known sparsity/colors)"""
     x = np.ones(N)
-    sparsity = jacobian_sparsity(heat_equation_rhs, N)
-    coloring = color(sparsity, "row")
-    benchmark(sparse_jacobian, heat_equation_rhs, x, sparsity, coloring)
+    coloring = color(jacobian_sparsity(heat_equation_rhs, N), "row")
+    benchmark(sparse_jacobian, heat_equation_rhs, x, coloring)
 
 
 @pytest.mark.benchmark(group="heat_equation")
@@ -120,9 +119,8 @@ def test_convnet_coloring(benchmark):
 def test_convnet_materialization(benchmark):
     """ConvNet: VJP computation (with known sparsity/colors)"""
     x = np.ones(N)
-    sparsity = jacobian_sparsity(convnet, N)
-    coloring = color(sparsity, "row")
-    benchmark(sparse_jacobian, convnet, x, sparsity, coloring)
+    coloring = color(jacobian_sparsity(convnet, N), "row")
+    benchmark(sparse_jacobian, convnet, x, coloring)
 
 
 @pytest.mark.benchmark(group="convnet")

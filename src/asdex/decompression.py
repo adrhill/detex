@@ -15,7 +15,7 @@ import numpy as np
 from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike, NDArray
 
-from asdex.coloring import ColoringResult, color, star_color
+from asdex.coloring import ColoredPattern, color, star_color
 from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_sparsity
 from asdex.pattern import SparsityPattern
@@ -207,8 +207,7 @@ def _decompress_hessian_star(
 def sparse_jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     x: ArrayLike,
-    sparsity: SparsityPattern | None = None,
-    coloring: ColoringResult | None = None,
+    coloring: ColoredPattern | None = None,
 ) -> BCOO:
     """Compute sparse Jacobian using coloring and AD.
 
@@ -219,11 +218,9 @@ def sparse_jacobian(
         f: Function taking an array and returning an array.
             Both may be multi-dimensional.
         x: Input point (any shape).
-        sparsity: Optional pre-computed sparsity pattern.
-            If None, detected automatically.
-        coloring: Optional pre-computed :class:`ColoringResult`
+        coloring: Optional pre-computed :class:`ColoredPattern`
             from :func:`color`.
-            If None, computed automatically from sparsity.
+            If None, sparsity is detected and colored automatically.
 
     Returns:
         Sparse Jacobian matrix of shape (m, n) as BCOO,
@@ -232,9 +229,11 @@ def sparse_jacobian(
     x = np.asarray(x)
     n = x.size
 
-    if sparsity is None:
+    if coloring is None:
         sparsity = _detect_sparsity(f, x.shape)
+        coloring = color(sparsity)
 
+    sparsity = coloring.sparsity
     m = sparsity.m
     out_shape = jax.eval_shape(f, jnp.zeros_like(x)).shape
 
@@ -245,9 +244,6 @@ def sparse_jacobian(
     # Handle edge case: all-zero Jacobian
     if sparsity.nse == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
-
-    if coloring is None:
-        coloring = color(sparsity)
 
     if coloring.partition == "row":
         return _sparse_jacobian_rows(f, x, sparsity, coloring.colors, out_shape)
