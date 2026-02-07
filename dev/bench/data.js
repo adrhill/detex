@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770428361841,
+  "lastUpdate": 1770430434575,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -432,6 +432,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.01239900780296027",
             "extra": "mean: 2.2368162023999956 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8e7a89254eca1fef6ff552de025165ae85d3a22f",
+          "message": "Fix braille rendering and update README (#19)\n\nRewrite _render_braille to use Julia-style linear interpolation instead\nof block-OR downsampling, which made sparse patterns look artificially\ndense. Each non-zero is now scaled individually to the output grid,\nmatching Julia's SparseArrays braille display.\n\nAlso update README: use n=50 example, fix typos, add\nSparseMatrixColorings.jl to related work.\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-07T03:12:43+01:00",
+          "tree_id": "da9db562770e5d87075ef0236b6b7e7b686921c9",
+          "url": "https://github.com/adrhill/asdex/commit/8e7a89254eca1fef6ff552de025165ae85d3a22f"
+        },
+        "date": 1770430434170,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 632.6359101279828,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004989920799901693",
+            "extra": "mean: 1.5806880134226005 msec\nrounds: 149"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3375.452495076986,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000019369329820816824",
+            "extra": "mean: 296.2565764022677 usec\nrounds: 2068"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 33.47028951847288,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006378333460978401",
+            "extra": "mean: 29.87724380000003 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 32.05348280668388,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003232185976418458",
+            "extra": "mean: 31.19785784374973 msec\nrounds: 32"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 22.4763094539022,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012531810323954727",
+            "extra": "mean: 44.49128990909075 msec\nrounds: 11"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 245.06784583679834,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004461178809096297",
+            "extra": "mean: 4.080502672986095 msec\nrounds: 211"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 2.413456895420666,
+            "unit": "iter/sec",
+            "range": "stddev: 0.009399210465201339",
+            "extra": "mean: 414.3434266000014 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 2.0929974236503535,
+            "unit": "iter/sec",
+            "range": "stddev: 0.02821716685887922",
+            "extra": "mean: 477.78367460000055 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 42.51216505341042,
+            "unit": "iter/sec",
+            "range": "stddev: 0.014668885374465038",
+            "extra": "mean: 23.522678714284343 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 5.307858176014629,
+            "unit": "iter/sec",
+            "range": "stddev: 0.005045169364548127",
+            "extra": "mean: 188.39990950000166 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 0.4430832314347581,
+            "unit": "iter/sec",
+            "range": "stddev: 0.021892536267014966",
+            "extra": "mean: 2.256912311399998 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 0.40166510174743103,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0462404923428099",
+            "extra": "mean: 2.4896362557999994 sec\nrounds: 5"
           }
         ]
       }
