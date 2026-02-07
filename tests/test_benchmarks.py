@@ -1,4 +1,4 @@
-"""Benchmarks for ASD pipeline: detection, coloring, decompression, materialization, end-to-end."""
+"""Benchmarks for ASD pipeline: detection, coloring, materialization, end-to-end."""
 
 import flax.linen as nn
 import jax
@@ -14,8 +14,6 @@ from asdex import (
     jacobian,
     jacobian_sparsity,
 )
-from asdex.coloring import color_hessian_pattern
-from asdex.decompression import _decompress
 
 N = 200  # Problem size for benchmarks
 
@@ -88,16 +86,6 @@ def test_heat_coloring(benchmark):
 
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="heat_equation")
-def test_heat_decompression(benchmark):
-    """Heat equation: decompression only (VJP row coloring)"""
-    cp = color_jacobian_pattern(jacobian_sparsity(heat_equation_rhs, N), "row")
-    compressed = jax.random.normal(jax.random.key(0), (cp.num_colors, N))
-    _ = cp._extraction_indices
-    benchmark(_decompress, cp, compressed)
-
-
-@pytest.mark.dashboard
-@pytest.mark.benchmark(group="heat_equation")
 def test_heat_materialization(benchmark):
     """Heat equation: VJP computation (with known sparsity/colors)"""
     x = np.ones(N)
@@ -137,16 +125,6 @@ def test_convnet_coloring(benchmark):
 
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="convnet")
-def test_convnet_decompression(benchmark):
-    """ConvNet: decompression only (VJP row coloring)"""
-    cp = color_jacobian_pattern(jacobian_sparsity(convnet, N), "row")
-    compressed = jax.random.normal(jax.random.key(0), (cp.num_colors, N))
-    _ = cp._extraction_indices
-    benchmark(_decompress, cp, compressed)
-
-
-@pytest.mark.dashboard
-@pytest.mark.benchmark(group="convnet")
 def test_convnet_materialization(benchmark):
     """ConvNet: VJP computation (with known sparsity/colors)"""
     x = np.ones(N)
@@ -180,16 +158,6 @@ def test_rosenbrock_coloring(benchmark):
     """Rosenbrock: graph coloring"""
     sparsity = hessian_sparsity(rosenbrock, N)
     benchmark(color_rows, sparsity)
-
-
-@pytest.mark.dashboard
-@pytest.mark.benchmark(group="rosenbrock")
-def test_rosenbrock_decompression(benchmark):
-    """Rosenbrock: decompression only (HVP star coloring)"""
-    cp = color_hessian_pattern(hessian_sparsity(rosenbrock, N))
-    compressed = jax.random.normal(jax.random.key(0), (cp.num_colors, N))
-    _ = cp._extraction_indices
-    benchmark(_decompress, cp, compressed)
 
 
 @pytest.mark.dashboard
