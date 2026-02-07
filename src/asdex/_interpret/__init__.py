@@ -22,6 +22,11 @@ from ._elementwise import (
     prop_zero_derivative,
     propagate_const_binary,
 )
+from ._gather import prop_gather
+from ._indexing import prop_broadcast_in_dim, prop_reshape, prop_slice, prop_squeeze
+from ._reduction import prop_reduce_sum
+from ._scatter import prop_scatter
+from ._select import prop_select_n
 
 # Ufuncs for evaluating constant values during tracing.
 # Used to propagate static index values through arithmetic to gather/scatter.
@@ -44,11 +49,6 @@ _COMPARISON_UFUNCS: dict[str, np.ufunc] = {
     "eq": np.equal,
     "ne": np.not_equal,
 }
-from ._gather import prop_gather
-from ._indexing import prop_broadcast_in_dim, prop_reshape, prop_slice, prop_squeeze
-from ._reduction import prop_reduce_sum
-from ._scatter import prop_scatter
-from ._select import prop_select_n
 
 
 def prop_jaxpr(
