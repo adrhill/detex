@@ -73,7 +73,7 @@
       }
       .benchmark-graphs {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 8px;
         width: 100%;
       }
@@ -168,6 +168,12 @@
 
         function renderAllChars(dataSets) {
 
+          function shortName(name) {
+            // "tests/test_benchmarks.py::test_heat_detection" → "heat detection"
+            const match = name.match(/::test_(.+)$/);
+            return match ? match[1].replace(/_/g, ' ') : name;
+          }
+
           function renderGraph(parent, name, dataset) {
             const wrapper = document.createElement('div');
             wrapper.className = 'benchmark-chart';
@@ -180,7 +186,7 @@
               labels: dataset.map(d => d.commit.id.slice(0, 7)),
               datasets: [
                 {
-                  label: name,
+                  label: shortName(name),
                   data: dataset.map(d => d.bench.value),
                   borderColor: color,
                   backgroundColor: color + '60', // Add alpha for #rrggbbaa
@@ -263,8 +269,17 @@
             graphsElem.className = 'benchmark-graphs';
             setElem.appendChild(graphsElem);
 
-            for (const [benchName, benches] of benchSet.entries()) {
-              renderGraph(graphsElem, benchName, benches)
+            const problems = ['heat', 'convnet', 'rosenbrock'];
+            const phases = ['detection', 'coloring', 'decompression', 'materialization', 'end_to_end'];
+
+            for (const problem of problems) {
+              for (const phase of phases) {
+                for (const [benchName, benches] of benchSet.entries()) {
+                  if (benchName.includes(problem) && benchName.includes(phase)) {
+                    renderGraph(graphsElem, benchName, benches);
+                  }
+                }
+              }
             }
           }
 
