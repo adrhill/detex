@@ -91,9 +91,9 @@ def test_heat_coloring(benchmark):
 def test_heat_decompression(benchmark):
     """Heat equation: decompression only (VJP row coloring)"""
     cp = color_jacobian_pattern(jacobian_sparsity(heat_equation_rhs, N), "row")
-    grads = [np.random.default_rng(c).standard_normal(N) for c in range(cp.num_colors)]
+    compressed = jax.random.normal(jax.random.key(0), (cp.num_colors, N))
     _ = cp._extraction_indices
-    benchmark(_decompress, cp, grads)
+    benchmark(_decompress, cp, compressed)
 
 
 @pytest.mark.dashboard
@@ -140,9 +140,9 @@ def test_convnet_coloring(benchmark):
 def test_convnet_decompression(benchmark):
     """ConvNet: decompression only (VJP row coloring)"""
     cp = color_jacobian_pattern(jacobian_sparsity(convnet, N), "row")
-    grads = [np.random.default_rng(c).standard_normal(N) for c in range(cp.num_colors)]
+    compressed = jax.random.normal(jax.random.key(0), (cp.num_colors, N))
     _ = cp._extraction_indices
-    benchmark(_decompress, cp, grads)
+    benchmark(_decompress, cp, compressed)
 
 
 @pytest.mark.dashboard
@@ -187,9 +187,9 @@ def test_rosenbrock_coloring(benchmark):
 def test_rosenbrock_decompression(benchmark):
     """Rosenbrock: decompression only (HVP star coloring)"""
     cp = color_hessian_pattern(hessian_sparsity(rosenbrock, N))
-    grads = [np.random.default_rng(c).standard_normal(N) for c in range(cp.num_colors)]
+    compressed = jax.random.normal(jax.random.key(0), (cp.num_colors, N))
     _ = cp._extraction_indices
-    benchmark(_decompress, cp, grads)
+    benchmark(_decompress, cp, compressed)
 
 
 @pytest.mark.dashboard
