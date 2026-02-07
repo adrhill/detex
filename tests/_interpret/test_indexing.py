@@ -1,6 +1,7 @@
 """Tests for array manipulation operations."""
 
 import jax
+import jax.lax as lax
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -46,6 +47,28 @@ def test_gather_fancy_indexing():
     def f(x):
         indices = jnp.array([2, 0, 1])
         return x[indices]
+
+    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    # Permutation: out[0] <- in[2], out[1] <- in[0], out[2] <- in[1]
+    expected = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]], dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_gather_indices_through_select_n():
+    """Gather stays precise when indices pass through select_n.
+
+    JAX's negative-index normalization emits select_n between the literal
+    indices and the gather.
+    Const tracking through select_n keeps the indices statically known.
+    """
+
+    def f(x):
+        indices = jnp.array([2, 0, 1])
+        pred = indices < 0
+        wrapped = indices + 3
+        final_indices = lax.select(pred, wrapped, indices)
+        return x[final_indices]
 
     result = jacobian_sparsity(f, n=3).todense().astype(int)
     # Permutation: out[0] <- in[2], out[1] <- in[0], out[2] <- in[1]

@@ -1,9 +1,17 @@
 """Propagation rule for select_n operations."""
 
 import numpy as np
-from jax._src.core import JaxprEqn, Literal, Var
+from jax._src.core import JaxprEqn
 
-from ._commons import ConstVals, Deps, IndexSets, atom_numel, index_sets, union_all
+from ._commons import (
+    ConstVals,
+    Deps,
+    IndexSets,
+    atom_const_val,
+    atom_numel,
+    index_sets,
+    union_all,
+)
 
 
 def prop_select_n(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -20,7 +28,8 @@ def prop_select_n(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         invars[1]: values selected when pred is False (on_false)
         invars[2]: values selected when pred is True (on_true)
     """
-    # Standard dependency propagation - conservative
+    # We can't know at trace time which branch the predicate selects,
+    # so every output must conservatively depend on all inputs (pred + both branches).
     all_inputs: IndexSets = []
     for invar in eqn.invars:
         all_inputs.extend(index_sets(deps, invar))
@@ -28,22 +37,16 @@ def prop_select_n(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     for outvar in eqn.outvars:
         deps[outvar] = [all_deps.copy() for _ in range(atom_numel(outvar))]
 
-    # Track const values for static index tracking
+    # When all three inputs are statically known, compute the concrete result
+    # so const_vals tracking isn't broken by this op.
     pred = eqn.invars[0]
     on_false = eqn.invars[1]
     on_true = eqn.invars[2]
     out_var = eqn.outvars[0]
 
-    def get_val(atom):
-        if isinstance(atom, Literal):
-            return np.asarray(atom.val)
-        if isinstance(atom, Var) and atom in const_vals:
-            return const_vals[atom]
-        return None
-
-    pred_val = get_val(pred)
-    on_false_val = get_val(on_false)
-    on_true_val = get_val(on_true)
+    pred_val = atom_const_val(pred, const_vals)
+    on_false_val = atom_const_val(on_false, const_vals)
+    on_true_val = atom_const_val(on_true, const_vals)
 
     if pred_val is not None and on_false_val is not None and on_true_val is not None:
         const_vals[out_var] = np.where(pred_val, on_true_val, on_false_val)
