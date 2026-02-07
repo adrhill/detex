@@ -258,11 +258,10 @@ def test_concatenate_mixed_empty_and_nonempty_constants():
 
 
 @pytest.mark.array_ops
-def test_reshape_with_dimensions():
-    """reshape with dimensions param permutes before reshaping.
+def test_reshape_with_dimensions_2d():
+    """reshape with dimensions=(1,0) permutes a 2D array before flattening.
 
-    ravel(order='F') emits reshape with dimensions=(1, 0),
-    which transposes the input before flattening.
+    ravel(order='F') on a (2, 3) matrix emits dimensions=(1, 0).
     Each output element still depends on exactly one input element.
     """
 
@@ -281,6 +280,26 @@ def test_reshape_with_dimensions():
     expected[4, 2] = 1  # out[4] <- c
     expected[5, 5] = 1  # out[5] <- f
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_reshape_with_dimensions_3d():
+    """reshape with dimensions=(2,1,0) permutes a 3D array before flattening.
+
+    ravel(order='F') on a (2, 3, 4) tensor emits dimensions=(2, 1, 0).
+    Verifies correct handling with higher-rank permutations.
+    """
+
+    def f(x):
+        tensor = x.reshape(2, 3, 4)
+        return tensor.ravel(order="F")
+
+    result = jacobian_sparsity(f, input_shape=24).todense().astype(int)
+    # Verify against actual Jacobian
+    x_test = jax.random.normal(jax.random.key(42), (24,))
+    actual_jac = jax.jacobian(f)(x_test)
+    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
+    np.testing.assert_array_equal(result, actual_nonzero)
 
 
 @pytest.mark.array_ops
