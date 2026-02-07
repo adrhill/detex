@@ -1,9 +1,10 @@
-# Test cases inspired by SparseMatrixColorings.jl (MIT license)
-# Copyright (c) 2024 Guillaume Dalle, Alexis Montoison, and contributors
-# https://github.com/gdalle/SparseMatrixColorings.jl
-# See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
+"""Tests for graph coloring algorithms.
 
-"""Tests for graph coloring algorithms (row, column, star)."""
+Test cases inspired by SparseMatrixColorings.jl (MIT license)
+Copyright (c) 2024 Guillaume Dalle, Alexis Montoison, and contributors
+https://github.com/gdalle/SparseMatrixColorings.jl
+See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
+"""
 
 import numpy as np
 import pytest
@@ -16,6 +17,40 @@ def _make_pattern(
 ) -> SparsityPattern:
     """Helper to create SparsityPattern from row/col lists."""
     return SparsityPattern.from_coordinates(rows, cols, shape)
+
+
+def _from_dense(matrix: list[list[int]]) -> SparsityPattern:
+    """Helper to create SparsityPattern from dense 0/1 matrix."""
+    return SparsityPattern.from_dense(np.array(matrix))
+
+
+def _make_banded(n: int, half_bandwidth: int) -> SparsityPattern:
+    """Symmetric banded matrix with given half-bandwidth.
+
+    Matches SparseMatrixColorings.jl's ``banded_matrix(n, 2*half_bandwidth)``.
+    """
+    rows, cols = [], []
+    for i in range(n):
+        for k in range(-half_bandwidth, half_bandwidth + 1):
+            j = i + k
+            if 0 <= j < n:
+                rows.append(i)
+                cols.append(j)
+    return _make_pattern(rows, cols, (n, n))
+
+
+def _make_arrow(n: int) -> SparsityPattern:
+    """Arrow matrix: diagonal + dense first row/column."""
+    rows, cols = [], []
+    for i in range(n):
+        rows.append(i)
+        cols.append(i)  # diagonal
+        if i > 0:
+            rows.append(0)
+            cols.append(i)  # first row
+            rows.append(i)
+            cols.append(0)  # first col
+    return _make_pattern(rows, cols, (n, n))
 
 
 def _is_valid_row_coloring(sparsity: SparsityPattern, colors: np.ndarray) -> bool:
@@ -237,65 +272,14 @@ def test_checkerboard():
 
 @pytest.mark.coloring
 def test_largest_first_improves_coloring():
-    """LargestFirst achieves fewer colors than natural order on a star graph.
+    """LargestFirst achieves optimal coloring on bridged cliques.
 
-    Star graph: vertex 0 connects to all others via a shared column.
-    Vertices 1..4 each have a private column too.
-    Natural order colors vertex 0 first (color 0),
-    then must give each of 1..4 a unique color because they conflict
-    with vertex 0 through column 0, but not with each other through
-    different private columns.
-
-    With LargestFirst, vertex 0 (highest degree) is colored first, which
-    is the same for this graph. The key difference is on bipartite-like
-    graphs where natural order is provably suboptimal.
-
-    Here we use a crown graph (bipartite) where LargestFirst matches optimal.
+    Two 3-cliques (rows {0,1,2} via col 0, rows {3,4,5} via col 1)
+    bridged by col 2 (rows 0 and 3).
+    Chromatic number is 3.
+    LargestFirst colors the high-degree bridge vertices (0, 3) first,
+    allowing the cliques to share colors optimally.
     """
-    # Crown graph on 6 vertices: two groups {0,1,2} and {3,4,5}
-    # Each vertex in group A connects to all in group B except its pair.
-    # Row conflict graph is a complete bipartite K(3,3) minus a perfect matching.
-    # Chromatic number = 3, but natural order can use more.
-    #
-    # Instead, test a concrete case: arrow pattern where degree ordering matters.
-    # Row 0 has entries in ALL columns (high degree).
-    # Rows 1..4 each have entry only in column 0 and their own diagonal column.
-    #
-    # All rows conflict with row 0 (via column 0).
-    # Rows 1..4 also conflict with each other via column 0.
-    # So this is a complete graph on 5 vertices → needs 5 colors regardless.
-    #
-    # Better test: a pattern where natural order uses extra colors but
-    # LargestFirst doesn't. Use the classic example from graph coloring literature.
-    #
-    # Concrete example: 5 rows, 4 columns
-    # Row 0: col 0
-    # Row 1: col 1
-    # Row 2: col 0, col 1 (conflicts with rows 0 and 1)
-    # Row 3: col 2
-    # Row 4: col 2, col 3
-    # Row 5: col 3
-    # Row 6: col 2, col 3 (conflicts with rows 3, 4, 5)
-    #
-    # Natural order: row 0=c0, row 1=c0, row 2=c1 (conflicts 0,1),
-    #                row 3=c0, row 4=c0(?), row 5=c0, row 6=c1
-    # Hmm this is getting complicated. Let's just verify the result is valid
-    # and uses <= as many colors as a known bound.
-
-    # Simpler approach: just verify LargestFirst produces a valid coloring
-    # with at most as many colors as the chromatic number upper bound
-    # (max_degree + 1), and test on a pattern where this matters.
-
-    # 6 rows, 3 columns:
-    # Col 0: rows 0, 1, 2 (3-clique)
-    # Col 1: rows 3, 4, 5 (3-clique)
-    # Col 2: rows 0, 3 (bridge between cliques)
-    #
-    # Conflict graph:
-    # {0,1,2} all conflict via col 0
-    # {3,4,5} all conflict via col 1
-    # {0,3} conflict via col 2
-    # Chromatic number = 3 (each 3-clique needs 3 colors, but they can share)
     rows = [0, 1, 2, 3, 4, 5, 0, 3]
     cols = [0, 0, 0, 1, 1, 1, 2, 2]
     sparsity = _make_pattern(rows, cols, (6, 3))
@@ -303,9 +287,91 @@ def test_largest_first_improves_coloring():
     colors, num_colors = color_rows(sparsity)
 
     assert _is_valid_row_coloring(sparsity, colors)
-    # With LargestFirst, vertices 0 and 3 (degree 3 each) are colored first.
-    # Optimal is 3 colors. Greedy with good ordering should achieve this.
     assert num_colors == 3
+
+
+@pytest.mark.coloring
+def test_row_anti_diagonal():
+    """Anti-diagonal: all rows are independent, 1 color suffices.
+
+    From SMC small.jl.
+    """
+    sparsity = _from_dense(
+        [
+            [0, 0, 0, 1],
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
+            [1, 0, 0, 0],
+        ]
+    )
+
+    colors, num_colors = color_rows(sparsity)
+
+    assert num_colors == 1
+    assert _is_valid_row_coloring(sparsity, colors)
+
+
+@pytest.mark.coloring
+def test_row_triangle():
+    """Triangle pattern: complete bipartite-like, needs 3 colors.
+
+    From SMC small.jl.
+    """
+    sparsity = _from_dense(
+        [
+            [1, 1, 0],
+            [0, 1, 1],
+            [1, 0, 1],
+        ]
+    )
+
+    colors, num_colors = color_rows(sparsity)
+
+    assert num_colors == 3
+    assert _is_valid_row_coloring(sparsity, colors)
+
+
+@pytest.mark.coloring
+def test_row_smc_small():
+    """SMC small.jl row coloring test matrix: [1 0 1; 0 1 0; 1 1 0].
+
+    SMC gets 2 colors with LargestFirst.
+    """
+    sparsity = _from_dense(
+        [
+            [1, 0, 1],
+            [0, 1, 0],
+            [1, 1, 0],
+        ]
+    )
+
+    colors, num_colors = color_rows(sparsity)
+
+    assert num_colors == 2
+    assert _is_valid_row_coloring(sparsity, colors)
+
+
+@pytest.mark.coloring
+def test_row_bidiagonal():
+    """Upper bidiagonal 6x6: needs 2 colors.
+
+    From SMC structured.jl.
+    """
+    sparsity = _from_dense(
+        [
+            [1, 1, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0, 0],
+            [0, 0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 1, 1],
+            [0, 0, 0, 0, 0, 1],
+        ]
+    )
+
+    colors, num_colors = color_rows(sparsity)
+
+    assert num_colors == 2
+    assert _is_valid_row_coloring(sparsity, colors)
 
 
 # =============================================================================
@@ -404,6 +470,90 @@ def test_col_tridiagonal():
     assert _is_valid_col_coloring(sparsity, colors)
 
 
+@pytest.mark.coloring
+def test_col_anti_diagonal():
+    """Anti-diagonal: all columns are independent, 1 color suffices.
+
+    From SMC small.jl.
+    """
+    sparsity = _from_dense(
+        [
+            [0, 0, 0, 1],
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
+            [1, 0, 0, 0],
+        ]
+    )
+
+    colors, num_colors = color_cols(sparsity)
+
+    assert num_colors == 1
+    assert _is_valid_col_coloring(sparsity, colors)
+
+
+@pytest.mark.coloring
+def test_col_triangle():
+    """Triangle pattern: needs 3 column colors.
+
+    From SMC small.jl.
+    """
+    sparsity = _from_dense(
+        [
+            [1, 1, 0],
+            [0, 1, 1],
+            [1, 0, 1],
+        ]
+    )
+
+    colors, num_colors = color_cols(sparsity)
+
+    assert num_colors == 3
+    assert _is_valid_col_coloring(sparsity, colors)
+
+
+@pytest.mark.coloring
+def test_col_smc_small():
+    """SMC small.jl column coloring test matrix: [1 0 1; 0 1 1; 1 0 0].
+
+    SMC gets 2 colors with LargestFirst.
+    """
+    sparsity = _from_dense(
+        [
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 0, 0],
+        ]
+    )
+
+    colors, num_colors = color_cols(sparsity)
+
+    assert num_colors == 2
+    assert _is_valid_col_coloring(sparsity, colors)
+
+
+@pytest.mark.coloring
+def test_col_bidiagonal():
+    """Upper bidiagonal 6x6: needs 2 column colors.
+
+    From SMC structured.jl.
+    """
+    sparsity = _from_dense(
+        [
+            [1, 1, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0, 0],
+            [0, 0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 1, 1],
+            [0, 0, 0, 0, 0, 1],
+        ]
+    )
+
+    colors, num_colors = color_cols(sparsity)
+
+    assert num_colors == 2
+    assert _is_valid_col_coloring(sparsity, colors)
+
+
 # =============================================================================
 # Star coloring tests
 # =============================================================================
@@ -439,9 +589,9 @@ def test_star_dense():
 
 @pytest.mark.coloring
 def test_star_tridiagonal():
-    """Tridiagonal Hessian: star coloring should use few colors.
+    """Tridiagonal Hessian: star chromatic number is 3.
 
-    A tridiagonal path graph has star chromatic number 3.
+    Verified against SMC with LargestFirst.
     """
     rows = [0, 0, 1, 1, 1, 2, 2, 2, 3, 3]
     cols = [0, 1, 0, 1, 2, 1, 2, 3, 2, 3]
@@ -450,40 +600,113 @@ def test_star_tridiagonal():
     colors, num_colors = star_color(sparsity)
 
     assert _is_valid_star_coloring(sparsity, colors)
-    assert num_colors <= 3
+    assert num_colors == 3
 
 
 @pytest.mark.coloring
 def test_star_arrow_matrix():
-    """Arrow matrix: star coloring wins over row coloring.
+    """Arrow matrix: star coloring needs only 2 colors.
 
-    Arrow pattern: row/column 0 is dense (connects to all),
-    rest is diagonal. Row coloring needs n colors (all rows conflict via col 0).
-    Star coloring needs only 3 for a star graph.
+    Row coloring needs n colors (all rows conflict via col 0),
+    but the star graph has star chromatic number 2.
+    Verified against SMC: star=2, row=10 for n=10.
     """
-    n = 6
-    rows = []
-    cols = []
-    # First row/col dense
-    for j in range(n):
-        rows.append(0)
-        cols.append(j)
-        if j > 0:
-            rows.append(j)
-            cols.append(0)
-    # Diagonal entries
-    for i in range(1, n):
-        rows.append(i)
-        cols.append(i)
-    sparsity = _make_pattern(rows, cols, (n, n))
+    sparsity = _make_arrow(10)
 
     star_colors, star_num = star_color(sparsity)
     row_colors, row_num = color_rows(sparsity)
 
     assert _is_valid_star_coloring(sparsity, star_colors)
     assert _is_valid_row_coloring(sparsity, row_colors)
-    # Star coloring should use fewer colors than row coloring
-    assert star_num < row_num
+    assert star_num == 2
+    assert row_num == 10
+
+
+@pytest.mark.coloring
+def test_star_what_fig_41():
+    """Figure 4.1 from Gebremedhin et al. (2005), "What Color Is Your Jacobian?"
+
+    6x6 symmetric matrix.
+    SMC gets 4 colors with LargestFirst + direct decompression.
+    """
+    sparsity = _from_dense(
+        [
+            [1, 1, 0, 0, 0, 0],
+            [1, 1, 1, 0, 1, 1],
+            [0, 1, 1, 1, 0, 0],
+            [0, 0, 1, 1, 0, 1],
+            [0, 1, 0, 0, 1, 0],
+            [0, 1, 0, 1, 0, 1],
+        ]
+    )
+
+    colors, num_colors = star_color(sparsity)
+
+    assert _is_valid_star_coloring(sparsity, colors)
+    assert num_colors <= 4
+
+
+@pytest.mark.coloring
+def test_star_what_fig_61():
+    """Figure 6.1 from Gebremedhin et al. (2005).
+
+    10x10 symmetric matrix.
+    SMC gets 4 colors with LargestFirst + direct decompression.
+    """
+    sparsity = _from_dense(
+        [
+            [1, 1, 0, 0, 0, 0, 1, 0, 0, 0],
+            [1, 1, 1, 0, 1, 0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0, 1, 0, 0, 0, 0],
+            [0, 0, 1, 1, 0, 0, 0, 0, 0, 1],
+            [0, 1, 0, 0, 1, 1, 0, 1, 0, 0],
+            [0, 0, 1, 0, 1, 1, 0, 0, 1, 0],
+            [1, 0, 0, 0, 0, 0, 1, 1, 0, 0],
+            [0, 0, 0, 0, 1, 0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0, 1, 0, 1, 1, 1],
+            [0, 0, 0, 1, 0, 0, 0, 0, 1, 1],
+        ]
+    )
+
+    colors, num_colors = star_color(sparsity)
+
+    assert _is_valid_star_coloring(sparsity, colors)
+    assert num_colors <= 4
+
+
+@pytest.mark.coloring
+@pytest.mark.parametrize(
+    ("half_bw", "expected_star"),
+    [(1, 3), (2, 5), (3, 7), (5, 11)],
+    ids=["tridiag", "pentadiag", "bw3", "bw5"],
+)
+def test_star_banded(half_bw: int, expected_star: int):
+    """Banded matrices have star chromatic number 2*half_bw + 1.
+
+    From SMC theory.jl.
+    Verified against SMC: the formula is ``2 * floor(rho/2) + 1``
+    where ``rho = 2 * half_bw``.
+    """
+    sparsity = _make_banded(20, half_bw)
+
+    colors, num_colors = star_color(sparsity)
+
+    assert _is_valid_star_coloring(sparsity, colors)
+    assert num_colors == expected_star
+
+
+@pytest.mark.coloring
+def test_star_pentadiagonal_8x8():
+    """Pentadiagonal 8x8: star coloring needs 5 colors.
+
+    Verified against SMC.
+    """
+    sparsity = _make_banded(8, 2)
+
+    colors, num_colors = star_color(sparsity)
+
+    assert _is_valid_star_coloring(sparsity, colors)
+    assert num_colors == 5
 
 
 @pytest.mark.coloring

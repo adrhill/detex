@@ -1,8 +1,3 @@
-# Algorithms adapted from SparseMatrixColorings.jl (MIT license)
-# Copyright (c) 2024 Guillaume Dalle, Alexis Montoison, and contributors
-# https://github.com/gdalle/SparseMatrixColorings.jl
-# See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
-
 """Graph coloring for sparse Jacobian and Hessian computation.
 
 Greedy coloring assigns colors to vertices such that conflicting vertices
@@ -10,6 +5,11 @@ get different colors.
 Row coloring enables computing multiple Jacobian rows in a single VJP.
 Column coloring enables computing multiple Jacobian columns in a single JVP.
 Star coloring exploits Hessian symmetry for fewer colors.
+
+Algorithms adapted from SparseMatrixColorings.jl (MIT license)
+Copyright (c) 2024 Guillaume Dalle, Alexis Montoison, and contributors
+https://github.com/gdalle/SparseMatrixColorings.jl
+See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
 """
 
 import numpy as np
