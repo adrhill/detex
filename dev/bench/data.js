@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770394107008,
+  "lastUpdate": 1770425267187,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -1260,6 +1260,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.03129882212142588",
             "extra": "mean: 2.475068802199999 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e6443d223df8fe6343fe597a27ebeb1a642186df",
+          "message": "Support gather, scatter, and custom JVP/VJP (#17)\n\n- Add prop_gather and prop_scatter with static index support\n- Add prop_custom_call to trace into custom_jvp_call/custom_vjp_call\n- Add const_vals tracking to propagate constant values through primitives\n- This enables precise sparsity patterns for static indexing operations\n  (e.g., x[[2,0,1]] produces permutation matrix, not all-ones)\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "timestamp": "2026-02-07T01:46:33+01:00",
+          "tree_id": "8983067a190da81e21583bf6658b1b368c74b0f1",
+          "url": "https://github.com/adrhill/asdex/commit/e6443d223df8fe6343fe597a27ebeb1a642186df"
+        },
+        "date": 1770425266154,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 694.1697879670656,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0034795646168398415",
+            "extra": "mean: 1.4405697530118444 msec\nrounds: 166"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3380.2252265282987,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00000717572099927998",
+            "extra": "mean: 295.83827496224626 usec\nrounds: 1993"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 32.66335202019078,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006772045378707155",
+            "extra": "mean: 30.615351399998758 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 30.091325574516297,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00938402662080791",
+            "extra": "mean: 33.23216843750076 msec\nrounds: 32"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 22.997422878895645,
+            "unit": "iter/sec",
+            "range": "stddev: 0.011445354025197571",
+            "extra": "mean: 43.483133099999804 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 238.67453114080476,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002841045992376862",
+            "extra": "mean: 4.18980607281493 msec\nrounds: 206"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 2.4775076237232847,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0029116580244819743",
+            "extra": "mean: 403.6314521999998 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 2.2149689441441436,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004243021060255774",
+            "extra": "mean: 451.4735986000005 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 43.53190475705649,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013760512826358403",
+            "extra": "mean: 22.97165735294183 msec\nrounds: 34"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 5.30469303159988,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001979586878893617",
+            "extra": "mean: 188.51232183333386 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 0.44794935019352644,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012377084831477118",
+            "extra": "mean: 2.2323952464000056 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 0.40845881396684586,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025552567374849934",
+            "extra": "mean: 2.448227252800007 sec\nrounds: 5"
           }
         ]
       }
