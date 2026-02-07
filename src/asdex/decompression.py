@@ -8,7 +8,6 @@ Star coloring + HVPs: exploits Hessian symmetry for fewer colors.
 """
 
 from collections.abc import Callable
-from typing import Literal
 
 import jax
 import jax.numpy as jnp
@@ -16,7 +15,7 @@ import numpy as np
 from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike, NDArray
 
-from asdex.coloring import color_cols, color_rows, star_color
+from asdex.coloring import ColoringResult, color, star_color
 from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_sparsity
 from asdex.pattern import SparsityPattern
@@ -209,8 +208,7 @@ def sparse_jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     x: ArrayLike,
     sparsity: SparsityPattern | None = None,
-    colors: NDArray[np.int32] | None = None,
-    partition: Literal["row", "column", "auto"] = "auto",
+    coloring: ColoringResult | None = None,
 ) -> BCOO:
     """Compute sparse Jacobian using coloring and AD.
 
@@ -223,13 +221,9 @@ def sparse_jacobian(
         x: Input point (any shape).
         sparsity: Optional pre-computed sparsity pattern.
             If None, detected automatically.
-        colors: Optional pre-computed coloring.
+        coloring: Optional pre-computed :class:`ColoringResult`
+            from :func:`color`.
             If None, computed automatically from sparsity.
-            When provided, ``partition`` must be ``"row"`` or ``"column"``.
-        partition: Which coloring to use.
-            ``"row"`` uses VJPs (color rows),
-            ``"column"`` uses JVPs (color columns),
-            ``"auto"`` picks whichever needs fewer colors.
 
     Returns:
         Sparse Jacobian matrix of shape (m, n) as BCOO,
@@ -252,29 +246,13 @@ def sparse_jacobian(
     if sparsity.nse == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
-    if colors is not None:
-        if partition == "auto":
-            msg = 'When colors is provided, partition must be "row" or "column"'
-            raise ValueError(msg)
-        if partition == "row":
-            return _sparse_jacobian_rows(f, x, sparsity, colors, out_shape)
-        else:
-            return _sparse_jacobian_cols(f, x, sparsity, colors)
+    if coloring is None:
+        coloring = color(sparsity)
 
-    if partition == "row":
-        row_colors, num_row = color_rows(sparsity)
-        return _sparse_jacobian_rows(f, x, sparsity, row_colors, out_shape)
-    elif partition == "column":
-        col_colors, num_col = color_cols(sparsity)
-        return _sparse_jacobian_cols(f, x, sparsity, col_colors)
+    if coloring.partition == "row":
+        return _sparse_jacobian_rows(f, x, sparsity, coloring.colors, out_shape)
     else:
-        # Auto: pick whichever coloring uses fewer colors
-        row_colors, num_row = color_rows(sparsity)
-        col_colors, num_col = color_cols(sparsity)
-        if num_col <= num_row:
-            return _sparse_jacobian_cols(f, x, sparsity, col_colors)
-        else:
-            return _sparse_jacobian_rows(f, x, sparsity, row_colors, out_shape)
+        return _sparse_jacobian_cols(f, x, sparsity, coloring.colors)
 
 
 def _sparse_jacobian_rows(

@@ -9,7 +9,14 @@ See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
 import numpy as np
 import pytest
 
-from asdex import SparsityPattern, color_cols, color_rows, star_color
+from asdex import (
+    ColoringResult,
+    SparsityPattern,
+    color,
+    color_cols,
+    color_rows,
+    star_color,
+)
 
 
 def _make_pattern(
@@ -727,3 +734,83 @@ def test_star_empty():
 
     assert num_colors == 0
     assert len(colors) == 0
+
+
+# =============================================================================
+# Unified color() tests
+# =============================================================================
+
+
+@pytest.mark.coloring
+def test_color_returns_coloring_result():
+    """color() returns a ColoringResult with correct fields."""
+    sparsity = _make_pattern([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
+
+    result = color(sparsity)
+
+    assert isinstance(result, ColoringResult)
+    assert isinstance(result.num_colors, int)
+    assert result.partition in ("row", "column")
+    assert len(result.colors) in (4, 4)  # m or n (both 4 here)
+
+
+@pytest.mark.coloring
+def test_color_auto_picks_column_for_tall():
+    """Auto picks column coloring for tall-skinny patterns.
+
+    With m=6 and n=2, column coloring needs at most 2 colors
+    while row coloring may need up to 6.
+    """
+    # 6 rows, 2 columns — each row has one entry in each column
+    rows = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]
+    cols = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
+    sparsity = _make_pattern(rows, cols, (6, 2))
+
+    result = color(sparsity)
+
+    assert result.partition == "column"
+    assert result.num_colors <= 2
+    assert len(result.colors) == 2  # n=2
+
+
+@pytest.mark.coloring
+def test_color_auto_picks_row_for_wide():
+    """Auto picks row coloring for wide patterns.
+
+    With m=2 and n=6, row coloring needs at most 2 colors
+    while column coloring may need up to 6.
+    """
+    # 2 rows, 6 columns — each column has entries in both rows
+    rows = [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+    cols = [0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5]
+    sparsity = _make_pattern(rows, cols, (2, 6))
+
+    result = color(sparsity)
+
+    assert result.partition == "row"
+    assert result.num_colors <= 2
+    assert len(result.colors) == 2  # m=2
+
+
+@pytest.mark.coloring
+def test_color_force_row():
+    """color(sparsity, "row") forces row partition."""
+    sparsity = _make_pattern([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
+
+    result = color(sparsity, "row")
+
+    assert result.partition == "row"
+    assert len(result.colors) == 4  # m=4
+    assert _is_valid_row_coloring(sparsity, result.colors)
+
+
+@pytest.mark.coloring
+def test_color_force_column():
+    """color(sparsity, "column") forces column partition."""
+    sparsity = _make_pattern([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
+
+    result = color(sparsity, "column")
+
+    assert result.partition == "column"
+    assert len(result.colors) == 4  # n=4
+    assert _is_valid_col_coloring(sparsity, result.colors)
