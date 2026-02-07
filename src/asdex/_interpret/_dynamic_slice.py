@@ -45,6 +45,8 @@ def prop_dynamic_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None
     Jaxpr:
         invars: [operand, *start_indices]
         params: slice_sizes
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.dynamic_slice.html
     """
     operand = eqn.invars[0]
     in_indices = index_sets(deps, operand)
@@ -82,6 +84,8 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
     Jaxpr:
         invars: [operand, update, *start_indices]
         params: (none relevant)
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.dynamic_update_slice.html
     """
     operand = eqn.invars[0]
     update = eqn.invars[1]

@@ -76,6 +76,35 @@ def index_sets(deps: Deps, atom: Atom) -> IndexSets:
     return deps.get(atom, [set()])
 
 
+def seed_const_vals(const_vals: ConstVals, constvars, consts) -> None:
+    """Populate const_vals for the captured constants of a ClosedJaxpr.
+
+    Without this, gather/scatter inside nested jaxprs (cond branches,
+    while bodies, jit-wrapped calls) cannot resolve closure-captured
+    index arrays and fall back to conservative.
+    """
+    for var, val in zip(constvars, consts, strict=True):
+        const_vals[var] = np.asarray(val)
+
+
+def forward_const_vals(
+    const_vals: ConstVals, outer_atoms: Sequence[Atom], inner_vars
+) -> None:
+    """Transfer known const_vals from outer-scope atoms to inner jaxpr variables.
+
+    When entering a nested jaxpr (cond branch, while body, jit call),
+    the outer equation's invars and the inner jaxpr's invars are different
+    ``Var`` objects representing the same values.
+    This copies any concrete values from the outer atoms
+    to the corresponding inner vars so that downstream handlers
+    (gather, scatter, dynamic_slice) can resolve indices precisely.
+    """
+    for outer, inner in zip(outer_atoms, inner_vars, strict=False):
+        val = atom_const_val(outer, const_vals)
+        if val is not None:
+            const_vals[inner] = val
+
+
 def row_strides(shape: Sequence[int]) -> tuple[int, ...]:
     """Compute row-major strides for multi-dimensional index tracking.
 

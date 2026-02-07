@@ -2,7 +2,14 @@
 
 from jax._src.core import JaxprEqn
 
-from ._commons import ConstVals, Deps, IndexSets, index_sets
+from ._commons import (
+    ConstVals,
+    Deps,
+    IndexSets,
+    forward_const_vals,
+    index_sets,
+    seed_const_vals,
+)
 
 
 def prop_while(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -20,10 +27,13 @@ def prop_while(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     Example: carry = carry + const (accumulation)
         Input deps:  carry=[{0}, {1}], const=[{}, {}]
         After 1 iter: carry=[{0}, {1}] (stable immediately since const deps are empty)
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.while_loop.html
     """
     from . import prop_jaxpr
 
-    body_jaxpr = eqn.params["body_jaxpr"].jaxpr
+    body_closed = eqn.params["body_jaxpr"]
+    body_jaxpr = body_closed.jaxpr
     body_nconsts = eqn.params["body_nconsts"]
     cond_nconsts = eqn.params["cond_nconsts"]
 
@@ -32,6 +42,10 @@ def prop_while(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     body_consts = eqn.invars[:body_nconsts]
     carry_init = eqn.invars[body_nconsts + cond_nconsts :]
     assert len(carry_init) == n_carry
+
+    seed_const_vals(const_vals, body_jaxpr.constvars, body_closed.consts)
+    # Only forward const_vals for body consts, not carry (carry changes each iteration)
+    forward_const_vals(const_vals, body_consts, body_jaxpr.invars[:body_nconsts])
 
     # Initialize carry deps from the initial values
     carry_deps: list[IndexSets] = [index_sets(deps, v) for v in carry_init]

@@ -20,7 +20,8 @@ tests/
     ├── test_internals.py       # Internal propagation functions
     ├── test_while.py           # while_loop propagation
     ├── test_cond.py            # cond (conditional branching)
-    └── test_dynamic_indexing.py # dynamic_slice, dynamic_update_slice
+    ├── test_dynamic_indexing.py # dynamic_slice, dynamic_update_slice
+    └── test_nested_jaxpr.py    # const_vals into jit, custom_jvp
 ```
 
 ## Running Tests

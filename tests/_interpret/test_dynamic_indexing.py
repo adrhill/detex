@@ -111,3 +111,46 @@ def test_dynamic_update_slice_dynamic_start():
     # Conservative: all outputs depend on all inputs
     expected = np.ones((4, 4), dtype=int)
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_dynamic_slice_2d():
+    """dynamic_slice on a 2D array with static starts.
+
+    Slicing mat[1:3, 1:3] from a 3x4 matrix
+    picks flat indices 5, 6, 9, 10.
+    """
+
+    def f(x):
+        mat = x.reshape(3, 4)
+        return lax.dynamic_slice(mat, (1, 1), (2, 2)).ravel()
+
+    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    expected = np.zeros((4, 12), dtype=int)
+    expected[0, 5] = 1
+    expected[1, 6] = 1
+    expected[2, 9] = 1
+    expected[3, 10] = 1
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_dynamic_update_slice_2d():
+    """dynamic_update_slice on a 2D array with static starts.
+
+    Inserting a 2x2 update at position (0, 1) in a 3x4 matrix
+    fills flat positions 1, 2, 5, 6.
+    """
+
+    def f(x):
+        mat = jnp.zeros((3, 4))
+        update = x[:4].reshape(2, 2)
+        return lax.dynamic_update_slice(mat, update, (0, 1)).ravel()
+
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    expected = np.zeros((12, 6), dtype=int)
+    expected[1, 0] = 1  # (0,1) ← x[0]
+    expected[2, 1] = 1  # (0,2) ← x[1]
+    expected[5, 2] = 1  # (1,1) ← x[2]
+    expected[6, 3] = 1  # (1,2) ← x[3]
+    np.testing.assert_array_equal(result, expected)

@@ -69,3 +69,112 @@ def test_while_immediate_convergence():
     result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
     expected = np.eye(4, dtype=int)
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_while_tuple_carry():
+    """while_loop with tuple carry: (array, scalar).
+
+    The body adds a constant to each carry element independently,
+    so array output depends only on the initial array (identity).
+    """
+
+    def f(x):
+        def body(carry):
+            arr, count = carry
+            return (arr + 1.0, count + 1.0)
+
+        def cond(carry):
+            _, count = carry
+            return count < 5.0
+
+        arr_out, _ = jax.lax.while_loop(cond, body, (x, 0.0))
+        return arr_out
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_while_carry_interaction():
+    """while_loop where one carry variable flows into another.
+
+    The body accumulates the sum of one array into a scalar,
+    so the scalar output depends on all elements of the array input.
+    """
+
+    def f(x):
+        def body(carry):
+            a, b = carry
+            return (a, b + jnp.sum(a))
+
+        def cond(carry):
+            _, b = carry
+            return b < 100.0
+
+        _, total = jax.lax.while_loop(cond, body, (x, 0.0))
+        return jnp.array([total])
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.ones((1, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_while_with_closure_const():
+    """while_loop where the body captures an external array via closure.
+
+    The closure constant doesn't add input dependencies,
+    so elementwise multiply with a constant preserves the diagonal pattern.
+    """
+
+    weights = jnp.array([1.0, 0.0, 1.0])
+
+    def f(x):
+        def body(carry):
+            return carry * weights
+
+        def cond(carry):
+            return jnp.sum(carry) < 100.0
+
+        return jax.lax.while_loop(cond, body, x)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_while_body_closure_captured_index():
+    """while body uses a closure-captured index array for gather.
+
+    The gather projects all carry elements onto carry[0].
+    Without forwarding const_vals into the body jaxpr,
+    the gather falls back to conservative and the result is dense.
+    With the fix, the fixed point is sparse.
+    """
+    indices = jnp.array([0, 0, 0])
+
+    def f(x):
+        def body(carry):
+            return carry[indices]
+
+        def cond(carry):
+            return jnp.sum(carry) < 100.0
+
+        return jax.lax.while_loop(cond, body, x)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # 0 iterations: identity -> out[i]<-{i}
+    # 1+ iterations: all read carry[0] -> out[i]<-{0}
+    # Union: out[0]<-{0}, out[1]<-{0,1}, out[2]<-{0,2}
+    expected = np.array(
+        [
+            [1, 0, 0],
+            [1, 1, 0],
+            [1, 0, 1],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)

@@ -33,11 +33,11 @@ def test_ifelse_one_branch_constant():
 
 
 @pytest.mark.control_flow
-@pytest.mark.fallback
 def test_where_mask():
-    """jnp.where with mask triggers conservative fallback.
+    """jnp.where with array mask is element-wise.
 
-    Precise: each output depends on mask condition + both branches.
+    Each output depends only on the corresponding input
+    since both branches are element-wise and the mask has zero derivative.
     """
 
     def f(x):
@@ -45,7 +45,21 @@ def test_where_mask():
         return jnp.where(mask, x, -x)
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # Global sparsity: each output could depend on corresponding input
-    # (mask has zero derivative, both branches are element-wise from x)
-    # Conservative: may be dense depending on how where is traced
-    assert result.shape == (3, 3)
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_select_n_mixed_deps():
+    """select_n where branches have different per-element dependencies."""
+
+    def f(x):
+        a = x[:3]
+        b = jnp.array([x[3], x[4], x[3]])
+        pred = jnp.array([True, False, True])
+        return jnp.where(pred, a, b)
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # out[0] ← {0} ∪ {3}, out[1] ← {1} ∪ {4}, out[2] ← {2} ∪ {3}
+    expected = np.array([[1, 0, 0, 1, 0], [0, 1, 0, 0, 1], [0, 0, 1, 1, 0]], dtype=int)
+    np.testing.assert_array_equal(result, expected)

@@ -2,11 +2,18 @@
 
 from jax._src.core import JaxprEqn
 
-from ._commons import ConstVals, Deps, IndexSets, index_sets
+from ._commons import (
+    ConstVals,
+    Deps,
+    IndexSets,
+    forward_const_vals,
+    index_sets,
+    seed_const_vals,
+)
 
 
 def prop_cond(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
-    """cond selects one of several branches based on an integer index.
+    """cond/switch selects one of several branches based on an integer index.
     Since we don't know which branch executes at trace time,
     output deps are the union across all branches.
 
@@ -19,20 +26,23 @@ def prop_cond(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         true_fn:  out = x[:2]  → deps [{0}, {1}]
         false_fn: out = x[1:]  → deps [{1}, {2}]
         union:    [{0, 1}, {1, 2}]
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.cond.html
     """
     from . import prop_jaxpr
 
     branches = eqn.params["branches"]
-    # First invar is the branch index (integer), rest are operands
-    operand_deps: list[IndexSets] = [index_sets(deps, v) for v in eqn.invars[1:]]
+    operands = eqn.invars[1:]
+    operand_deps: list[IndexSets] = [index_sets(deps, v) for v in operands]
 
     n_out = len(eqn.outvars)
 
     # Propagate each branch and collect per-branch output deps
     branch_outputs: list[list[IndexSets]] = []
     for branch in branches:
-        branch_jaxpr = branch.jaxpr
-        out = prop_jaxpr(branch_jaxpr, operand_deps, const_vals)
+        seed_const_vals(const_vals, branch.jaxpr.constvars, branch.consts)
+        forward_const_vals(const_vals, operands, branch.jaxpr.invars)
+        out = prop_jaxpr(branch.jaxpr, operand_deps, const_vals)
         branch_outputs.append(out)
 
     # Union across branches for each output variable
