@@ -1,4 +1,8 @@
-"""Tests for dynamic_slice and dynamic_update_slice propagation."""
+"""Tests for dynamic_slice and dynamic_update_slice propagation.
+
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.dynamic_slice.html
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.dynamic_update_slice.html
+"""
 
 import jax.lax as lax
 import jax.numpy as jnp

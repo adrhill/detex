@@ -15,34 +15,43 @@ from ._commons import (
 
 
 def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
-    """Scatter writes updates into operand at positions specified by indices.
+    """Scatter writes updates into operand at positions given by scatter_indices.
 
-    For static indices (Literal or tracked const), we can precisely track which
-    output positions come from the original operand vs which receive scattered
-    updates. For dynamic indices, we fall back to conservative.
+    For static scatter_indices (Literal or tracked const),
+    we can precisely track which output positions come from the original
+    operand vs which receive scattered updates.
+    For dynamic scatter_indices, we fall back to conservative.
 
-    For scatter (replace): out[indices[i]] = updates[i], else out[j] = operand[j]
-        Output positions NOT in indices: depend on corresponding operand element.
-        Output positions in indices: depend on corresponding updates element.
+    Precise path handles the simple 1D case
+    (update_window_dims=(), inserted_window_dims=(0,),
+    scatter_dims_to_operand_dims=(0,)).
+    This is the pattern JAX emits for ``arr.at[idx].set(val)``.
 
-    For scatter-add: out[indices[i]] = operand[indices[i]] + updates[i]
-        Output positions in indices: depend on BOTH operand AND updates.
+    For scatter (replace): out[idx[i]] = updates[i], else out[j] = operand[j]
+        Positions NOT in idx: depend on corresponding operand element.
+        Positions in idx: depend on corresponding updates element.
+
+    For scatter-add: out[idx[i]] = operand[idx[i]] + updates[i]
+        Positions in idx: depend on BOTH operand AND updates.
 
     Example: arr = [a, b, c], arr.at[1].set(x) = [a, x, c]
         operand deps:  [{0}, {1}, {2}]  (from arr)
         updates deps:  [{3}]             (from x, assuming x is input index 3)
         Output deps:   [{0}, {3}, {2}]   (index 1 replaced by x)
 
-    Example with dynamic indices: arr.at[traced_idx].set(x)
+    Example with dynamic scatter_indices: arr.at[traced_idx].set(x)
         Cannot determine which position receives the update.
         Conservative: all outputs depend on all inputs.
 
     Jaxpr:
-        invars[0]: operand array (base)
-        invars[1]: indices specifying scatter positions
-        invars[2]: updates to scatter
+        invars[0]: operand — base array
+        invars[1]: scatter_indices — positions to scatter into
+        invars[2]: updates — values to write
         dimension_numbers: ScatterDimensionNumbers specifying axis mapping
-        update_jaxpr: optional, defines combination function (e.g., add for scatter-add)
+        update_jaxpr: combination function (e.g., add for scatter-add),
+            absent for plain scatter (replace)
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.scatter.html
     """
     operand_indices = index_sets(deps, eqn.invars[0])
     indices_atom = eqn.invars[1]

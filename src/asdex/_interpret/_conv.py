@@ -12,6 +12,11 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     Each output element depends on a local spatial window of input elements
     across all input channels.
 
+    Assumes feature_group_count=1 and batch_group_count=1.
+    For grouped or depthwise convolutions this is conservative
+    (correct but imprecise, since each output channel group really
+    only depends on the corresponding input channel group).
+
     For 2D conv with kernel size (kH, kW), stride s, and C_in input channels:
         out[n, h, w, c_out] = Σ_{kh, kw, c_in} in[n, h·s + kh, w·s + kw, c_in] · W[...]
     So out[n, h, w, :] depends on in[n, h·s : h·s+kH, w·s : w·s+kW, :].
@@ -22,9 +27,13 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
         out[2] = c·w0 + d·w1  →  deps {2, 3}
 
     Jaxpr:
-        invars[0]: input (lhs), invars[1]: kernel (rhs)
-        dimension_numbers: specifies layout (batch, feature, spatial dims)
+        invars[0]: lhs — rank n+2 input array
+        invars[1]: rhs — rank n+2 kernel weights
+        dimension_numbers: ConvDimensionNumbers (batch, feature, spatial dims)
         window_strides, padding, lhs_dilation, rhs_dilation: conv parameters
+        feature_group_count, batch_group_count: grouping (assumed 1)
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.conv_general_dilated.html
     """
     lhs_indices = index_sets(deps, eqn.invars[0])  # Input image dependencies
 

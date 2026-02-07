@@ -3,6 +3,8 @@
 Verifies that seed_const_vals and forward_const_vals correctly transfer
 concrete index values into jit-wrapped and custom_jvp functions,
 enabling precise gather/scatter tracking instead of conservative fallback.
+
+https://docs.jax.dev/en/latest/jaxpr.html
 """
 
 import jax

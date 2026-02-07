@@ -1,4 +1,14 @@
-"""Tests for array manipulation operations."""
+"""Tests for array manipulation operations.
+
+Covers slice, squeeze, reshape, gather, scatter, broadcast_in_dim,
+concatenate, and conservative fallbacks for transpose, pad, sort, etc.
+
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.slice.html
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.gather.html
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.scatter.html
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.broadcast_in_dim.html
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.concatenate.html
+"""
 
 import jax
 import jax.lax as lax

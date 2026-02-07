@@ -9,6 +9,13 @@ def prop_reduce_sum(eqn: JaxprEqn, deps: Deps) -> None:
     """Sum reduction aggregates elements along specified axes.
     Each output depends on all input elements that were summed into it.
 
+    This handles the ``reduce_sum`` primitive
+    (emitted by ``jnp.sum``).
+    The general ``jax.lax.reduce`` takes a ``computation`` function
+    and a ``dimensions`` param;
+    the ``reduce_sum`` primitive specializes this to addition
+    and uses ``axes`` instead of ``dimensions``.
+
     Full reduction (no axes or all axes):
         out = Σᵢ x[i]  →  out depends on all inputs
     Partial reduction along axis k:
@@ -21,6 +28,8 @@ def prop_reduce_sum(eqn: JaxprEqn, deps: Deps) -> None:
     Jaxpr:
         invars[0]: input array
         axes: tuple of axes to reduce (empty = full reduction)
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.reduce.html
     """
     in_indices = index_sets(deps, eqn.invars[0])
     axes = eqn.params.get("axes", ())

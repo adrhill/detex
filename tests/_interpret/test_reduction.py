@@ -1,4 +1,7 @@
-"""Tests for reduction operations."""
+"""Tests for reduction operations.
+
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.reduce.html
+"""
 
 import jax.numpy as jnp
 import numpy as np

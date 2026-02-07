@@ -26,6 +26,8 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> N
         invars[0]: input array
         shape: target output shape
         broadcast_dimensions: maps input dim i to output dim
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.broadcast_in_dim.html
     """
 
     in_atom = eqn.invars[0]

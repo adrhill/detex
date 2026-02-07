@@ -1,4 +1,7 @@
-"""Unit tests for internal propagation functions."""
+"""Unit tests for internal propagation functions.
+
+https://docs.jax.dev/en/latest/jaxpr.html
+"""
 
 import jax
 import jax.numpy as jnp

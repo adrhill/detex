@@ -23,6 +23,8 @@ def prop_slice(eqn: JaxprEqn, deps: Deps) -> None:
         start_indices: tuple of start indices per dimension
         limit_indices: tuple of end indices per dimension
         strides: tuple of step sizes per dimension (default: all 1s)
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.slice.html
     """
     in_indices = index_sets(deps, eqn.invars[0])
     start = eqn.params["start_indices"]
@@ -74,6 +76,8 @@ def prop_squeeze(eqn: JaxprEqn, deps: Deps) -> None:
     Jaxpr:
         invars[0]: input array
         dimensions: axes to squeeze (must have size 1)
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.squeeze.html
     """
     deps[eqn.outvars[0]] = index_sets(deps, eqn.invars[0])
 
@@ -83,14 +87,22 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
     Dependencies pass through unchanged in row-major (C) order.
     The Jacobian is the identity matrix.
 
+    BUG: ignores the ``dimensions`` parameter.
+    When ``dimensions`` is not None, JAX transposes the input before
+    reshaping (e.g. ``ravel(order='F')`` emits ``dimensions=(1, 0)``).
+    The handler currently passes deps through in the original flat order,
+    which produces **incorrect** (not merely conservative) results.
+
     Example: reshape([a,b,c,d], (2,2)) → [[a,b],[c,d]]
         Input deps:  [{0}, {1}, {2}, {3}]
         Output deps: [{0}, {1}, {2}, {3}]
 
     Jaxpr:
-        invars[0]: input array
+        invars[0]: operand — array to reshape
         new_sizes: target shape
-        dimensions: optional axis permutation before reshape
+        dimensions: optional axis permutation applied before reshape
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.reshape.html
     """
     in_indices = index_sets(deps, eqn.invars[0])
     out_size = numel(tuple(getattr(eqn.outvars[0].aval, "shape", ())))

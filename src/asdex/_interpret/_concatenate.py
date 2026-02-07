@@ -21,6 +21,8 @@ def prop_concatenate(eqn: JaxprEqn, deps: Deps) -> None:
     Jaxpr:
         invars: list of input arrays to concatenate
         dimension: axis along which to concatenate
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.concatenate.html
     """
     dim = eqn.params["dimension"]
 
