@@ -713,6 +713,51 @@ def test_scatter_multiple():
     np.testing.assert_array_equal(result, expected)
 
 
+@pytest.mark.array_ops
+def test_scatter_dynamic_indices():
+    """Scatter with dynamic (traced) indices uses conservative fallback.
+
+    When scatter indices depend on input, we cannot determine targets at trace time.
+    The conservative path unions operand and updates deps across all outputs.
+    """
+
+    def f(x):
+        arr = x[:3]
+        idx = jnp.argmax(x[3:]).astype(int)
+        return arr.at[idx].set(x[3])
+
+    result = jacobian_sparsity(f, n=5).todense().astype(int)
+    # Conservative: unions operand deps ({0},{1},{2}) and update dep ({3})
+    # Index deps are empty (argmax has zero derivative)
+    expected = np.array(
+        [
+            [1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 0],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_scatter_2d():
+    """2D scatter falls back to conservative.
+
+    Multi-dimensional scatter patterns don't match the optimized 1D path.
+    """
+
+    def f(x):
+        mat = jnp.zeros((2, 3))
+        updates = x[:2].reshape(1, 2)
+        return mat.at[0, :2].set(updates.flatten()).flatten()
+
+    result = jacobian_sparsity(f, n=3).todense().astype(int)
+    # At minimum, updated positions depend on x[0] and x[1]
+    assert result[0, 0] == 1
+    assert result[1, 1] == 1
+
+
 # =============================================================================
 # Custom JVP/VJP tests
 # =============================================================================

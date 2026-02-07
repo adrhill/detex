@@ -12,7 +12,21 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 import sympy as sp
-from sympy import Abs, Symbol, cos, cosh, exp, log, sin, sinh, sqrt, tan, tanh
+from sympy import (
+    Abs,
+    Symbol,
+    asinh,
+    atan,
+    cos,
+    cosh,
+    exp,
+    log,
+    sin,
+    sinh,
+    sqrt,
+    tan,
+    tanh,
+)
 
 from asdex import hessian_sparsity, jacobian_sparsity
 
@@ -20,10 +34,10 @@ from asdex import hessian_sparsity, jacobian_sparsity
 JaxFn = Callable[[jnp.ndarray], jnp.ndarray]
 
 # Unary functions that preserve non-zero derivatives
-UNARY_OPS = [sin, cos, tan, exp, sqrt, sinh, cosh, tanh, Abs]
+UNARY_OPS = [sin, cos, tan, exp, sqrt, sinh, cosh, tanh, Abs, log, atan, asinh]
 
 # Unary ops for Hessian tests (excludes Abs due to SymPy's complex-analytic treatment)
-UNARY_OPS_HESSIAN = [sin, cos, tan, exp, sqrt, sinh, cosh, tanh]
+UNARY_OPS_HESSIAN = [sin, cos, tan, exp, sqrt, sinh, cosh, tanh, log, atan, asinh]
 
 # Binary operations
 BINARY_OPS = ["add", "sub", "mul", "div"]
@@ -46,6 +60,7 @@ class SympyToJax:
         sp.asin: jnp.arcsin,
         sp.acos: jnp.arccos,
         sp.atan: jnp.arctan,
+        sp.asinh: jnp.arcsinh,
     }
 
     def __init__(self, symbols: list[Symbol]):

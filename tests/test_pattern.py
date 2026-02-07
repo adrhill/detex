@@ -8,6 +8,15 @@ from jax.experimental.sparse import BCOO
 from asdex import SparsityPattern, jacobian_sparsity
 
 
+class TestValidation:
+    """Test input validation."""
+
+    def test_mismatched_rows_cols_raises(self):
+        """rows and cols with different lengths raise ValueError."""
+        with pytest.raises(ValueError, match="same length"):
+            SparsityPattern.from_coordinates([0, 1], [0], (2, 2))
+
+
 class TestConstruction:
     """Test SparsityPattern construction methods."""
 
@@ -116,6 +125,23 @@ class TestConversion:
         bcoo = pattern.to_bcoo()
 
         np.testing.assert_array_equal(bcoo.todense(), np.eye(2))
+
+    def test_to_bcoo_empty(self):
+        """to_bcoo with empty pattern produces zero matrix."""
+        pattern = SparsityPattern.from_coordinates([], [], (3, 4))
+        bcoo = pattern.to_bcoo()
+
+        assert bcoo.shape == (3, 4)
+        np.testing.assert_array_equal(bcoo.todense(), np.zeros((3, 4)))
+
+    def test_to_bcoo_empty_with_data(self):
+        """to_bcoo with empty pattern and custom data."""
+        pattern = SparsityPattern.from_coordinates([], [], (2, 2))
+        data = jnp.array([])
+        bcoo = pattern.to_bcoo(data=data)
+
+        assert bcoo.shape == (2, 2)
+        np.testing.assert_array_equal(bcoo.todense(), np.zeros((2, 2)))
 
 
 class TestProperties:
@@ -232,6 +258,20 @@ class TestVisualization:
         # Should be within limits
         assert len(lines) <= 10
         assert all(len(line) <= 20 for line in lines)
+
+    def test_large_zero_dim_matrix_str(self):
+        """Large matrix with zero dimension uses braille "(empty)" fallback in __str__.
+
+        When m or n is 0 but exceeds small-matrix thresholds,
+        braille returns "(empty)" and __str__ uses it directly.
+        """
+        # n=50 exceeds _SMALL_COLS=40, forcing braille path; m=0 triggers "(empty)"
+        pattern = SparsityPattern.from_coordinates([], [], (0, 50))
+        s = str(pattern)
+
+        assert "SparsityPattern" in s
+        assert "nnz=0" in s
+        assert "(empty)" in s
 
 
 class TestIntegration:
