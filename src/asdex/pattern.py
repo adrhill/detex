@@ -168,6 +168,13 @@ class SparsityPattern:
     # Conversion methods
     # -------------------------------------------------------------------------
 
+    @cached_property
+    def _bcoo_indices(self) -> jnp.ndarray:
+        """BCOO index array of shape ``(nse, 2)``, cached for reuse."""
+        if self.nse == 0:
+            return jnp.zeros((0, 2), dtype=jnp.int32)
+        return jnp.stack([self.rows, self.cols], axis=1)
+
     def to_bcoo(self, data: jnp.ndarray | None = None) -> BCOO:
         """Convert to JAX BCOO sparse matrix.
 
@@ -179,15 +186,12 @@ class SparsityPattern:
         """
         from jax.experimental.sparse import BCOO
 
-        if self.nse == 0:
-            indices = jnp.zeros((0, 2), dtype=jnp.int32)
-            if data is None:
-                data = jnp.array([])
-            return BCOO((data, indices), shape=self.shape)
-
-        indices = jnp.stack([self.rows, self.cols], axis=1)
+        indices = self._bcoo_indices
         if data is None:
-            data = jnp.ones(self.nse, dtype=jnp.int8)
+            if self.nse == 0:
+                data = jnp.array([])
+            else:
+                data = jnp.ones(self.nse, dtype=jnp.int8)
         return BCOO((data, indices), shape=self.shape)
 
     def todense(self) -> NDArray:
@@ -357,6 +361,95 @@ class ColoredPattern:
     def _compresses_columns(self) -> bool:
         """Whether coloring compresses columns (JVP/HVP) or rows (VJP)."""
         return self.mode in ("JVP", "HVP")
+
+    # -------------------------------------------------------------------------
+    # Cached arrays for fast decompression
+    # -------------------------------------------------------------------------
+
+    @cached_property
+    def _extraction_indices(
+        self,
+    ) -> tuple[NDArray[np.intp], NDArray[np.intp]]:
+        """Indices for extracting sparse entries from compressed gradient rows.
+
+        Returns ``(color_idx, elem_idx)`` such that for a compressed matrix
+        ``C`` of shape ``(num_colors, dim)``::
+
+            data = C[color_idx, elem_idx]
+
+        gives the nnz values in sparsity-pattern order.
+
+        For VJP: ``color_idx = colors[rows]``, ``elem_idx = cols``.
+        For JVP: ``color_idx = colors[cols]``, ``elem_idx = rows``.
+        For HVP: delegates to :meth:`_star_extraction_indices`.
+        """
+        if self.mode == "HVP":
+            return self._star_extraction_indices
+
+        rows = self.sparsity.rows
+        cols = self.sparsity.cols
+
+        if self.mode == "VJP":
+            color_idx = self.colors[rows].astype(np.intp)
+            elem_idx = cols.astype(np.intp)
+        else:  # JVP
+            color_idx = self.colors[cols].astype(np.intp)
+            elem_idx = rows.astype(np.intp)
+
+        return color_idx, elem_idx
+
+    @cached_property
+    def _star_extraction_indices(
+        self,
+    ) -> tuple[NDArray[np.intp], NDArray[np.intp]]:
+        """Pre-compute HVP extraction indices with star-coloring direction choice.
+
+        For each nonzero ``(i, j)``:
+        - diagonal (``i == j``): use ``compressed[colors[i]][i]``
+        - off-diagonal: use ``compressed[colors[i]][j]`` if ``colors[i]``
+          is unique among column ``j``'s neighbors;
+          otherwise ``compressed[colors[j]][i]``.
+        """
+        rows = self.sparsity.rows
+        cols = self.sparsity.cols
+        col_to_rows = self.sparsity.col_to_rows
+
+        color_idx = np.empty(len(rows), dtype=np.intp)
+        elem_idx = np.empty(len(rows), dtype=np.intp)
+
+        for k, (i, j) in enumerate(zip(rows, cols, strict=True)):
+            i, j = int(i), int(j)
+            if i == j:
+                color_idx[k] = self.colors[i]
+                elem_idx[k] = i
+            else:
+                color_i = self.colors[i]
+                unique = True
+                for r in col_to_rows.get(j, []):
+                    if r != i and self.colors[r] == color_i:
+                        unique = False
+                        break
+                if unique:
+                    color_idx[k] = color_i
+                    elem_idx[k] = j
+                else:
+                    color_idx[k] = self.colors[j]
+                    elem_idx[k] = i
+
+        return color_idx, elem_idx
+
+    @cached_property
+    def _seed_matrix(self) -> NDArray[np.bool_]:
+        """Boolean seed matrix of shape ``(num_colors, dim)``.
+
+        Row ``c`` is the mask ``colors == c``,
+        used as the seed/tangent vector for the ``c``-th AD evaluation.
+        """
+        dim = self.sparsity.m if self.mode == "VJP" else self.sparsity.n
+        seeds = np.zeros((self.num_colors, dim), dtype=np.bool_)
+        for c in range(self.num_colors):
+            seeds[c] = self.colors == c
+        return seeds
 
     def __repr__(self) -> str:
         """Return compact representation."""

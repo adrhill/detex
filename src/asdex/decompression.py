@@ -21,73 +21,24 @@ from asdex.detection import jacobian_sparsity as _detect_sparsity
 from asdex.pattern import ColoredPattern, SparsityPattern
 
 
-def _compute_vjp_for_color(
-    f: Callable[[ArrayLike], ArrayLike],
-    x: NDArray,
-    row_mask: NDArray[np.bool_],
-    out_shape: tuple[int, ...],
-) -> NDArray:
-    """Compute VJP with seed vector having 1s at masked positions.
+def _decompress(colored_pattern: ColoredPattern, compressed: list[NDArray]) -> BCOO:
+    """Extract sparse entries from compressed gradient rows.
+
+    Uses pre-computed extraction indices on the ``ColoredPattern``
+    to vectorize the decompression step
+    (no Python loop over nnz entries).
 
     Args:
-        f: Function to differentiate
-        x: Input point
-        row_mask: Boolean mask of shape (m,) indicating which rows to compute
-        out_shape: Shape of the function output, used to reshape the seed
+        colored_pattern: Colored sparsity pattern with cached indices.
+        compressed: List of gradient/JVP/HVP vectors, one per color.
 
     Returns:
-        Flattened gradient vector of shape (n,) - the VJP result
+        Sparse matrix as BCOO in sparsity-pattern order.
     """
-    _, vjp_fn = jax.vjp(f, x)
-    seed = row_mask.astype(x.dtype).reshape(out_shape)
-    (grad,) = vjp_fn(seed)
-    return np.asarray(grad).ravel()
-
-
-def _compute_jvp_for_color(
-    f: Callable[[ArrayLike], ArrayLike],
-    x: NDArray,
-    col_mask: NDArray[np.bool_],
-    in_shape: tuple[int, ...],
-) -> NDArray:
-    """Compute JVP with tangent vector having 1s at masked positions.
-
-    Args:
-        f: Function to differentiate
-        x: Input point
-        col_mask: Boolean mask of shape (n,) indicating which columns to compute
-        in_shape: Shape of the function input, used to reshape the tangent
-
-    Returns:
-        Flattened tangent-output vector of shape (m,) - the JVP result
-    """
-    tangent = col_mask.astype(x.dtype).reshape(in_shape)
-    _, jvp_out = jax.jvp(f, (x,), (tangent,))
-    return np.asarray(jvp_out).ravel()
-
-
-def _compute_hvp_for_color(
-    f: Callable[[ArrayLike], ArrayLike],
-    x: NDArray,
-    row_mask: NDArray[np.bool_],
-    in_shape: tuple[int, ...],
-) -> NDArray:
-    """Compute HVP with tangent vector having 1s at masked positions.
-
-    Uses forward-over-reverse AD which is more efficient than VJP-on-gradient.
-
-    Args:
-        f: Scalar-valued function to differentiate
-        x: Input point
-        row_mask: Boolean mask of shape (n,) indicating which rows to compute
-        in_shape: Shape of the function input, used to reshape the tangent
-
-    Returns:
-        Flattened HVP result vector of shape (n,)
-    """
-    tangent = row_mask.astype(x.dtype).reshape(in_shape)
-    _, hvp = jax.jvp(jax.grad(f), (x,), (tangent,))
-    return np.asarray(hvp).ravel()
+    color_idx, elem_idx = colored_pattern._extraction_indices
+    stacked = np.stack(compressed)
+    data = stacked[color_idx, elem_idx]
+    return colored_pattern.sparsity.to_bcoo(data=jnp.asarray(data))
 
 
 def _decompress_jacobian(
@@ -102,6 +53,9 @@ def _decompress_jacobian(
     property (same-colored rows don't share columns), each gradient entry
     uniquely corresponds to one Jacobian row.
 
+    Kept for the backward-compat ``hessian(f, x, sparsity=..., colors=...)`` path
+    which passes raw ``colors`` arrays instead of a ``ColoredPattern``.
+
     Args:
         sparsity: Sparsity pattern
         colors: Color assignment for each row
@@ -113,95 +67,12 @@ def _decompress_jacobian(
     rows = sparsity.rows
     cols = sparsity.cols
 
-    data = np.empty(len(rows), dtype=grads[0].dtype)
-    for k, (i, j) in enumerate(zip(rows, cols, strict=True)):
-        color = colors[i]
-        data[k] = grads[color][j]
+    stacked = np.stack(grads)
+    color_idx = colors[rows].astype(np.intp)
+    elem_idx = cols.astype(np.intp)
+    data = stacked[color_idx, elem_idx]
 
-    return sparsity.to_bcoo(data=jnp.array(data))
-
-
-def _decompress_jacobian_from_jvps(
-    sparsity: SparsityPattern,
-    colors: NDArray[np.int32],
-    jvps: list[NDArray],
-) -> BCOO:
-    """Extract Jacobian entries from JVP results (column coloring).
-
-    For each non-zero (i, j) in the sparsity pattern, the value is extracted
-    from the JVP corresponding to column j's color.
-    Due to the orthogonality property
-    (same-colored columns don't share rows),
-    each JVP output entry uniquely corresponds to one Jacobian column.
-
-    Args:
-        sparsity: Sparsity pattern
-        colors: Color assignment for each column
-        jvps: List of JVP output vectors, one per color
-
-    Returns:
-        Sparse Jacobian as BCOO matrix
-    """
-    rows = sparsity.rows
-    cols = sparsity.cols
-
-    data = np.empty(len(rows), dtype=jvps[0].dtype)
-    for k, (i, j) in enumerate(zip(rows, cols, strict=True)):
-        color = colors[j]
-        data[k] = jvps[color][i]
-
-    return sparsity.to_bcoo(data=jnp.array(data))
-
-
-def _decompress_hessian_star(
-    sparsity: SparsityPattern,
-    colors: NDArray[np.int32],
-    compressed: list[NDArray],
-) -> BCOO:
-    """Extract Hessian entries from HVP results using star coloring.
-
-    For diagonal entries (i, i): extract from compressed[colors[i]][i].
-    For off-diagonal entries (i, j): use compressed[colors[i]][j] if
-    colors[i] is unique among column j's neighbors;
-    otherwise use compressed[colors[j]][i].
-    Star coloring guarantees at least one direction is valid.
-
-    Args:
-        sparsity: Symmetric sparsity pattern
-        colors: Star coloring assignment
-        compressed: List of HVP result vectors, one per color
-
-    Returns:
-        Sparse Hessian as BCOO matrix
-    """
-    rows = sparsity.rows
-    cols = sparsity.cols
-
-    # Build col_to_rows for checking color uniqueness
-    col_to_rows = sparsity.col_to_rows
-
-    data = np.empty(len(rows), dtype=compressed[0].dtype)
-    for k, (i, j) in enumerate(zip(rows, cols, strict=True)):
-        i, j = int(i), int(j)
-        if i == j:
-            # Diagonal: always compressed[colors[i]][i]
-            data[k] = compressed[colors[i]][i]
-        else:
-            # Off-diagonal: try row i's color first.
-            # colors[i] is "unique" in column j if no other row in column j
-            # has the same color.
-            color_i = colors[i]
-            unique = True
-            for r in col_to_rows.get(j, []):
-                if r != i and colors[r] == color_i:
-                    unique = False
-                    break
-            if unique:
-                data[k] = compressed[color_i][j]
-            else:
-                data[k] = compressed[colors[j]][i]
-
-    return sparsity.to_bcoo(data=jnp.array(data))
+    return sparsity.to_bcoo(data=jnp.asarray(data))
 
 
 def jacobian(
@@ -246,46 +117,44 @@ def jacobian(
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
     if colored_pattern.mode == "VJP":
-        return _jacobian_rows(f, x, sparsity, colored_pattern.colors, out_shape)
+        return _jacobian_rows(f, x, colored_pattern, out_shape)
     else:
-        return _jacobian_cols(f, x, sparsity, colored_pattern.colors)
+        return _jacobian_cols(f, x, colored_pattern)
 
 
 def _jacobian_rows(
     f: Callable[[ArrayLike], ArrayLike],
     x: NDArray,
-    sparsity: SparsityPattern,
-    colors: NDArray[np.int32],
+    colored_pattern: ColoredPattern,
     out_shape: tuple[int, ...],
 ) -> BCOO:
     """Compute sparse Jacobian via row coloring + VJPs."""
-    num_colors = int(colors.max()) + 1 if len(colors) > 0 else 0
+    seeds = colored_pattern._seed_matrix
 
     grads: list[NDArray] = []
-    for c in range(num_colors):
-        row_mask = colors == c
-        grad = _compute_vjp_for_color(f, x, row_mask, out_shape)
-        grads.append(grad)
+    for seed in seeds:
+        _, vjp_fn = jax.vjp(f, x)
+        (grad,) = vjp_fn(seed.astype(x.dtype).reshape(out_shape))
+        grads.append(np.asarray(grad).ravel())
 
-    return _decompress_jacobian(sparsity, colors, grads)
+    return _decompress(colored_pattern, grads)
 
 
 def _jacobian_cols(
     f: Callable[[ArrayLike], ArrayLike],
     x: NDArray,
-    sparsity: SparsityPattern,
-    colors: NDArray[np.int32],
+    colored_pattern: ColoredPattern,
 ) -> BCOO:
     """Compute sparse Jacobian via column coloring + JVPs."""
-    num_colors = int(colors.max()) + 1 if len(colors) > 0 else 0
+    seeds = colored_pattern._seed_matrix
 
     jvps: list[NDArray] = []
-    for c in range(num_colors):
-        col_mask = colors == c
-        jvp_out = _compute_jvp_for_color(f, x, col_mask, x.shape)
-        jvps.append(jvp_out)
+    for seed in seeds:
+        tangent = seed.astype(x.dtype).reshape(x.shape)
+        _, jvp_out = jax.jvp(f, (x,), (tangent,))
+        jvps.append(np.asarray(jvp_out).ravel())
 
-    return _decompress_jacobian_from_jvps(sparsity, colors, jvps)
+    return _decompress(colored_pattern, jvps)
 
 
 def hessian(
@@ -328,14 +197,12 @@ def hessian(
 
     if colored_pattern is not None:
         sparsity = colored_pattern.sparsity
-        colors_arr = colored_pattern.colors
         if sparsity.nse == 0:
             return BCOO(
                 (jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n)
             )
-        num_colors = colored_pattern.num_colors
-        grads = _compute_hvps(f, x, colors_arr, num_colors)
-        return _decompress_hessian_star(sparsity, colors_arr, grads)
+        grads = _compute_hvps(f, x, colored_pattern)
+        return _decompress(colored_pattern, grads)
 
     if sparsity is None:
         sparsity = _detect_hessian_sparsity(f, x.shape)
@@ -345,27 +212,44 @@ def hessian(
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n))
 
     if colors is not None:
-        # Backward compat: pre-computed row coloring → row-based decompression
+        # Backward compat: pre-computed row coloring -> row-based decompression
         num_colors = int(colors.max()) + 1 if len(colors) > 0 else 0
-        grads = _compute_hvps(f, x, colors, num_colors)
+        grads = _compute_hvps_legacy(f, x, colors, num_colors)
         return _decompress_jacobian(sparsity, colors, grads)
 
     # Default: star coloring + symmetric decompression
     cp = color_hessian_pattern(sparsity)
-    grads = _compute_hvps(f, x, cp.colors, cp.num_colors)
-    return _decompress_hessian_star(sparsity, cp.colors, grads)
+    grads = _compute_hvps(f, x, cp)
+    return _decompress(cp, grads)
 
 
 def _compute_hvps(
     f: Callable[[ArrayLike], ArrayLike],
     x: NDArray,
+    colored_pattern: ColoredPattern,
+) -> list[NDArray]:
+    """Compute one HVP per color using pre-computed seed matrix."""
+    seeds = colored_pattern._seed_matrix
+
+    grads: list[NDArray] = []
+    for seed in seeds:
+        tangent = seed.astype(x.dtype).reshape(x.shape)
+        _, hvp = jax.jvp(jax.grad(f), (x,), (tangent,))
+        grads.append(np.asarray(hvp).ravel())
+    return grads
+
+
+def _compute_hvps_legacy(
+    f: Callable[[ArrayLike], ArrayLike],
+    x: NDArray,
     colors: NDArray[np.int32],
     num_colors: int,
 ) -> list[NDArray]:
-    """Compute one HVP per color."""
+    """Compute one HVP per color (backward-compat path with raw colors)."""
     grads: list[NDArray] = []
     for c in range(num_colors):
         row_mask = colors == c
-        hvp_result = _compute_hvp_for_color(f, x, row_mask, x.shape)
-        grads.append(hvp_result)
+        tangent = row_mask.astype(x.dtype).reshape(x.shape)
+        _, hvp = jax.jvp(jax.grad(f), (x,), (tangent,))
+        grads.append(np.asarray(hvp).ravel())
     return grads

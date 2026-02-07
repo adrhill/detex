@@ -164,3 +164,44 @@ def test_rosenbrock_end_to_end(benchmark):
     """Rosenbrock: full pipeline"""
     x = np.ones(N)
     benchmark(hessian, rosenbrock, x)
+
+
+# -----------------------------------------------------------------------------
+# Decompression-only benchmarks (isolate extraction from AD)
+# -----------------------------------------------------------------------------
+
+
+@pytest.mark.benchmark(group="decompression")
+def test_heat_decompression(benchmark):
+    """Heat equation: decompression only (VJP row coloring)"""
+    from asdex.decompression import _decompress
+
+    cp = color_jacobian_pattern(jacobian_sparsity(heat_equation_rhs, N), "row")
+    # Pre-compute fake gradient vectors matching what VJPs would produce
+    grads = [np.random.default_rng(c).standard_normal(N) for c in range(cp.num_colors)]
+    # Warm the cached properties
+    _ = cp._extraction_indices
+    benchmark(_decompress, cp, grads)
+
+
+@pytest.mark.benchmark(group="decompression")
+def test_convnet_decompression(benchmark):
+    """ConvNet: decompression only (VJP row coloring)"""
+    from asdex.decompression import _decompress
+
+    cp = color_jacobian_pattern(jacobian_sparsity(convnet, N), "row")
+    grads = [np.random.default_rng(c).standard_normal(N) for c in range(cp.num_colors)]
+    _ = cp._extraction_indices
+    benchmark(_decompress, cp, grads)
+
+
+@pytest.mark.benchmark(group="decompression")
+def test_rosenbrock_decompression(benchmark):
+    """Rosenbrock: decompression only (HVP star coloring)"""
+    from asdex.coloring import color_hessian_pattern
+    from asdex.decompression import _decompress
+
+    cp = color_hessian_pattern(hessian_sparsity(rosenbrock, N))
+    grads = [np.random.default_rng(c).standard_normal(N) for c in range(cp.num_colors)]
+    _ = cp._extraction_indices
+    benchmark(_decompress, cp, grads)
