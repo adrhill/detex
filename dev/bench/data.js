@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770479626235,
+  "lastUpdate": 1770493736053,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -756,6 +756,135 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.015609194218410213",
             "extra": "mean: 3.635493893199995 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c77d21d1b704401c27825740687ee31cdff8831d",
+          "message": "Pre-allocate decompression buffers (#22)\n\n* Pre-allocate decompression buffers and vectorize extraction\n\nCache BCOO indices, extraction index arrays, and seed matrices on\nColoredPattern so that repeated calls to jacobian/hessian with the\nsame colored pattern skip all redundant Python-side work.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add decompression benchmarks to dashboard\n\nAdd a `dashboard` marker for the 15 benchmarks tracked in the GitHub\nPages dashboard. Each group now covers detection, coloring,\ndecompression, materialization, and end-to-end.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-07T20:47:39+01:00",
+          "tree_id": "ee398ac68726784184f03a22b5a067241e7fff23",
+          "url": "https://github.com/adrhill/asdex/commit/c77d21d1b704401c27825740687ee31cdff8831d"
+        },
+        "date": 1770493735765,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 735.1467054168455,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002595760710259541",
+            "extra": "mean: 1.360272708333742 msec\nrounds: 168"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3267.362485235797,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000014058811323941864",
+            "extra": "mean: 306.0572570440811 usec\nrounds: 2023"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_decompression",
+            "value": 6971.952671046768,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004350945261481345",
+            "extra": "mean: 143.43183999983466 usec\nrounds: 25"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 33.48923308095324,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015061770290838248",
+            "extra": "mean: 29.860343400002876 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 67.04596805661262,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005076461986959546",
+            "extra": "mean: 14.915140000001413 msec\nrounds: 7"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.473529459304483,
+            "unit": "iter/sec",
+            "range": "stddev: 0.014990568318235932",
+            "extra": "mean: 46.56896305263408 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 243.11194672709567,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000052866711172762246",
+            "extra": "mean: 4.113331382774644 msec\nrounds: 209"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_decompression",
+            "value": 6480.901676642853,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002410616984129453",
+            "extra": "mean: 154.2995172421758 usec\nrounds: 29"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 2.5117968725381807,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000647641836416642",
+            "extra": "mean: 398.12136520000365 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 6.153978382959643,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011089291363504132",
+            "extra": "mean: 162.49650839999674 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 45.400830694339376,
+            "unit": "iter/sec",
+            "range": "stddev: 0.011794530961575608",
+            "extra": "mean: 22.02602870270127 msec\nrounds: 37"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 5.3010490774356,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0029035909641098585",
+            "extra": "mean: 188.64190566667105 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_decompression",
+            "value": 2468.50264676917,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000045012300688880196",
+            "extra": "mean: 405.10388000143394 usec\nrounds: 25"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 0.43892968070805605,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0184233671383794",
+            "extra": "mean: 2.2782692626000083 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 0.2678616005525004,
+            "unit": "iter/sec",
+            "range": "stddev: 0.009598598028524339",
+            "extra": "mean: 3.733271203999999 sec\nrounds: 5"
           }
         ]
       }
