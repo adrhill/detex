@@ -10,39 +10,47 @@ from ._commons import (
     atom_const_val,
     atom_numel,
     index_sets,
-    union_all,
 )
 
 
 def prop_select_n(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """select_n(pred, x, y) selects x where pred is False, y where pred is True.
 
-    For sparsity, this is conservative: each output depends on both alternatives
-    since we don't know at trace time which path will be taken.
+    This is element-wise: out[i] depends on pred[i], on_false[i], and on_true[i].
+    The predicate has zero derivative,
+    so only value-branch deps contribute to the sparsity pattern.
 
-    However, for const value tracking (used in gather/scatter), if all inputs
-    are tracked consts, we can compute the concrete output value.
+    For scalar predicate broadcast over array branches,
+    the predicate deps are empty (no input dependency from a boolean).
 
     Jaxpr:
-        invars[0]: boolean predicate array
-        invars[1]: values selected when pred is False (on_false)
-        invars[2]: values selected when pred is True (on_true)
+        invars[0]: predicate (boolean, scalar or array)
+        invars[1:]: value branches (on_false, on_true, ...)
     """
-    # We can't know at trace time which branch the predicate selects,
-    # so every output must conservatively depend on all inputs (pred + both branches).
-    all_inputs: IndexSets = []
-    for invar in eqn.invars:
-        all_inputs.extend(index_sets(deps, invar))
-    all_deps = union_all(all_inputs)
-    for outvar in eqn.outvars:
-        deps[outvar] = [all_deps.copy() for _ in range(atom_numel(outvar))]
+    out_var = eqn.outvars[0]
+    out_size = atom_numel(out_var)
+    branches = eqn.invars[1:]  # value branches (pred is invars[0])
 
-    # When all three inputs are statically known, compute the concrete result
+    # Element-wise union across value branches.
+    # Predicate is boolean with zero derivative, so we skip it.
+    branch_indices = [index_sets(deps, b) for b in branches]
+
+    out_indices: IndexSets = []
+    for i in range(out_size):
+        merged: set[int] = set()
+        for b_idx in branch_indices:
+            # Handle scalar broadcast: scalar has 1 element, reuse index 0
+            j = i if len(b_idx) > 1 else 0
+            merged |= b_idx[j]
+        out_indices.append(merged)
+
+    deps[out_var] = out_indices
+
+    # When all inputs are statically known, compute the concrete result
     # so const_vals tracking isn't broken by this op.
     pred = eqn.invars[0]
     on_false = eqn.invars[1]
     on_true = eqn.invars[2]
-    out_var = eqn.outvars[0]
 
     pred_val = atom_const_val(pred, const_vals)
     on_false_val = atom_const_val(on_false, const_vals)

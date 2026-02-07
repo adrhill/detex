@@ -1,34 +1,25 @@
-"""Brusselator reaction-diffusion: sparsity demo with asdex + diffrax.
-
-Detects the Jacobian sparsity pattern of the brusselator RHS,
-then traces through a diffrax Euler step.
-"""
+"""Integration tests for diffrax tracing."""
 
 import diffrax
 import jax.numpy as jnp
+import numpy as np
+import pytest
 
 import asdex
 
-# --- Brusselator parameters ---
-N = 8  # grid size: 2 species on N×N grid → 2*N*N state variables
+N = 4  # smaller grid for faster tests
 A = 1.0
 B = 1.0
-ALPHA = 1.0  # diffusion coefficient
+ALPHA = 1.0
 DX = 1.0
 
 
 def brusselator_rhs(y: jnp.ndarray) -> jnp.ndarray:
-    """Brusselator RHS with periodic BCs via 5-point Laplacian.
-
-    State vector ``y`` has size ``2*N*N``:
-    first ``N*N`` entries are species u,
-    last ``N*N`` entries are species v.
-    """
+    """Brusselator RHS with periodic BCs via 5-point Laplacian."""
     n2 = N * N
     u = y[:n2].reshape(N, N)
     v = y[n2:].reshape(N, N)
 
-    # 5-point finite difference Laplacian with periodic BCs
     lap_u = (
         jnp.roll(u, 1, axis=0)
         + jnp.roll(u, -1, axis=0)
@@ -45,14 +36,12 @@ def brusselator_rhs(y: jnp.ndarray) -> jnp.ndarray:
         - 4 * v
     ) / (DX * DX)
 
-    # Reaction-diffusion
     du = ALPHA * lap_u + B + u**2 * v - (A + 1) * u
     dv = ALPHA * lap_v + A * u - u**2 * v
 
     return jnp.concatenate([du.ravel(), dv.ravel()])
 
 
-# --- Diffrax Euler step wrapper ---
 solver = diffrax.Euler()
 term = diffrax.ODETerm(lambda t, y, args: brusselator_rhs(y))
 stepsize = diffrax.ConstantStepSize()
@@ -73,21 +62,24 @@ def euler_step(y0: jnp.ndarray) -> jnp.ndarray:
     return sol.ys[0]
 
 
-# --- Main ---
-if __name__ == "__main__":
-    n = 2 * N * N  # total state dimension
+@pytest.mark.control_flow
+def test_diffrax_euler_step_traces():
+    """Diffrax Euler step traces end-to-end without errors.
 
-    # 1. Brusselator RHS sparsity
-    print(f"Brusselator RHS: {n} → {n}")
-    pattern = asdex.jacobian_sparsity(brusselator_rhs, n)
-    print(pattern)
-    print()
+    The step pattern is a valid (conservative) superset of the RHS pattern.
+    It is overestimated because the while loop fixed-point analysis
+    iterates the body to convergence,
+    which spreads dependencies through the Laplacian stencil.
+    """
+    n = 2 * N * N
 
-    colored = asdex.color_jacobian_pattern(pattern)
-    print(colored)
-    print()
-
-    # 2. Diffrax Euler step sparsity
-    print(f"Diffrax Euler step: {n} → {n}")
+    rhs_pattern = asdex.jacobian_sparsity(brusselator_rhs, n)
     step_pattern = asdex.jacobian_sparsity(euler_step, n)
-    print(step_pattern)
+
+    rhs_dense = rhs_pattern.todense().astype(bool)
+    step_dense = step_pattern.todense().astype(bool)
+
+    # The step pattern must be a superset of the RHS pattern.
+    assert np.all(step_dense | ~rhs_dense)
+    # The diagonal must be present (identity from y + dt*f(y)).
+    assert np.all(np.diag(step_dense))

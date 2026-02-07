@@ -12,11 +12,15 @@ tests/
 ├── test_vmap.py                # Batched/vmapped operations
 ├── test_benchmarks.py          # Performance benchmarks
 ├── test_sympy.py               # SymPy-based randomized tests
+├── test_diffrax.py             # Integration tests for diffrax tracing
 └── _interpret/                 # Tests for _interpret submodules
     ├── test_indexing.py        # Slicing, concat, broadcast, reshape
     ├── test_reduction.py       # Reduction operations (sum, max, argmax)
     ├── test_conv.py            # Convolution tests
-    └── test_internals.py       # Internal propagation functions
+    ├── test_internals.py       # Internal propagation functions
+    ├── test_while.py           # while_loop propagation
+    ├── test_cond.py            # cond (conditional branching)
+    └── test_dynamic_indexing.py # dynamic_slice, dynamic_update_slice
 ```
 
 ## Running Tests

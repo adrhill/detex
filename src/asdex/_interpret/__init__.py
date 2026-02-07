@@ -13,7 +13,9 @@ from jax._src.core import Jaxpr, JaxprEqn
 
 from ._commons import ConstVals, Deps, IndexSets, atom_numel, index_sets, union_all
 from ._concatenate import prop_concatenate
+from ._cond import prop_cond
 from ._conv import prop_conv_general_dilated
+from ._dynamic_slice import prop_dynamic_slice, prop_dynamic_update_slice
 from ._elementwise import (
     prop_binary_elementwise,
     prop_convert_element_type,
@@ -27,6 +29,7 @@ from ._indexing import prop_broadcast_in_dim, prop_reshape, prop_slice, prop_squ
 from ._reduction import prop_reduce_sum
 from ._scatter import prop_scatter
 from ._select import prop_select_n
+from ._while import prop_while
 
 # Ufuncs for evaluating constant values during tracing.
 # Used to propagate static index values through arithmetic to gather/scatter.
@@ -243,10 +246,20 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_gather(eqn, deps, const_vals)
         case "scatter" | "scatter-add":
             prop_scatter(eqn, deps, const_vals)
-        case "select_n":
+        case "select_n" | "select_if_vmap":
             prop_select_n(eqn, deps, const_vals)
         case "iota":
             _prop_iota(eqn, deps, const_vals)
+        case "while":
+            prop_while(eqn, deps, const_vals)
+        case "cond":
+            prop_cond(eqn, deps, const_vals)
+        case "dynamic_slice":
+            prop_dynamic_slice(eqn, deps, const_vals)
+        case "dynamic_update_slice":
+            prop_dynamic_update_slice(eqn, deps, const_vals)
+        case "not":
+            prop_zero_derivative(eqn, deps)
         # Conservative fallback: all outputs depend on all inputs.
         # sort is correctly conservative since sorting is a global operation.
         case (
@@ -259,6 +272,10 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             | "split"
             | "tile"
             | "transpose"
+            | "nonbatchable"
+            | "unvmap_any"
+            | "unvmap_max"
+            | "pure_callback"
         ):
             prop_conservative_fallback(eqn, deps)
         case _:

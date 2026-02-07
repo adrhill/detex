@@ -356,9 +356,9 @@ def test_tile():
 @pytest.mark.array_ops
 @pytest.mark.fallback
 def test_split():
-    """jnp.split triggers conservative fallback.
+    """jnp.split triggers conservative fallback via the split primitive.
 
-    TODO(dynamic_slice): split uses dynamic_slice which needs precise handler.
+    TODO(split): Implement precise handler for split primitive.
     Precise: each output element depends only on corresponding input.
     """
 
