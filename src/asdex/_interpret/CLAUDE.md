@@ -35,14 +35,23 @@ This lets `gather`/`scatter` resolve static indices precisely instead of falling
 2. Add a `case` branch in `prop_dispatch`.
 3. Remove from the fallback `case` group if upgrading from conservative.
 
+## Writing Style
+
+Use **semantic line breaks** everywhere: one sentence or clause per line in docstrings, comments, and markdown.
+This applies to all prose, not just docstrings.
+
+## Comments
+
+Focus comments on **why**, not what.
+Explain why a branch exists, why a particular approach was chosen, or why a fallback is needed.
+Don't narrate what the code already says.
+
 ## Handler Docstring Style
 
 1. **Semantic summary**: What the operation does and how dependencies flow.
 2. **Math**: The Jacobian structure in concise mathematical notation.
 3. **Example**: A concrete input/output trace showing dependency sets before and after.
 4. **Jaxpr**: The `eqn.invars` and `eqn.params` layout the handler reads.
-
-Use **semantic line breaks** (new line per sentence/clause).
 
 ## References
 

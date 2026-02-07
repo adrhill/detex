@@ -1,9 +1,17 @@
 """Propagation rules for indexing and shape manipulation operations."""
 
 import numpy as np
-from jax._src.core import JaxprEqn, Literal, Var
+from jax._src.core import JaxprEqn
 
-from ._commons import ConstVals, Deps, IndexSets, index_sets, numel, row_strides
+from ._commons import (
+    ConstVals,
+    Deps,
+    IndexSets,
+    atom_const_val,
+    index_sets,
+    numel,
+    row_strides,
+)
 
 
 def prop_slice(eqn: JaxprEqn, deps: Deps) -> None:
@@ -100,62 +108,47 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> N
         shape: target output shape
         broadcast_dimensions: maps input dim i to output dim
     """
+
     in_atom = eqn.invars[0]
     in_indices = index_sets(deps, in_atom)
     out_shape = eqn.params["shape"]
     broadcast_dims = eqn.params["broadcast_dimensions"]
-    out_size = numel(out_shape)
-
-    # Track const values for static index tracking in gather/scatter
     out_var = eqn.outvars[0]
 
-    def broadcast_const(in_val: np.ndarray) -> np.ndarray:
-        """Broadcast a const value according to broadcast_in_dim semantics."""
-        # broadcast_dimensions tells us which output dims come from input dims
-        # Create an intermediate shape that can be broadcast to out_shape
-        in_shape = in_val.shape or (1,)
+    # Gather/scatter handlers need concrete index arrays to resolve which input elements are accessed.
+    # When the broadcast input is statically known (literal or traced from constants),
+    # propagate its value so downstream handlers can use it
+    # instead of falling back to conservative all-to-all dependencies.
+    in_val = atom_const_val(in_atom, const_vals)
+    if in_val is not None:
         intermediate_shape = [1] * len(out_shape)
         for i, out_dim in enumerate(broadcast_dims):
-            intermediate_shape[out_dim] = in_shape[i] if i < len(in_shape) else 1
-        reshaped = np.reshape(in_val, intermediate_shape)
-        return np.broadcast_to(reshaped, out_shape)
+            intermediate_shape[out_dim] = (in_val.shape or (1,))[i]
+        const_vals[out_var] = np.broadcast_to(
+            np.reshape(in_val, intermediate_shape), out_shape
+        )
 
-    if isinstance(in_atom, Literal):
-        in_val = np.asarray(in_atom.val)
-        const_vals[out_var] = broadcast_const(in_val)
-    elif isinstance(in_atom, Var) and in_atom in const_vals:
-        in_val = np.asarray(const_vals[in_atom])
-        const_vals[out_var] = broadcast_const(in_val)
-
-    # Scalar case: single input dependency applies to all outputs
+    # Scalars have a single dependency set shared by all output elements,
+    # so we can skip the coordinate mapping below and just replicate it.
+    # Early return avoids building the np.indices grid for this common case.
+    out_size = numel(out_shape)
     if len(in_indices) == 1:
         deps[out_var] = [in_indices[0].copy() for _ in range(out_size)]
         return
 
+    # General case: map each output element back to the input element it reads.
+    # np.indices gives all output coordinates.
+    # We select the output dim corresponding to each input dim via broadcast_dims.
+    # Size-1 input dims are broadcast (every output reads index 0), so we clamp to 0.
     in_shape = tuple(getattr(in_atom.aval, "shape", ()))
-    in_strides = row_strides(in_shape)
-    out_strides = row_strides(out_shape)
+    out_coords = np.indices(out_shape)
+    in_coords = tuple(
+        out_coords[broadcast_dims[i]] if in_shape[i] > 1 else 0
+        for i in range(len(in_shape))
+    )
+    flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    out_indices: IndexSets = []
-    for out_flat in range(out_size):
-        # Convert flat output index to output coordinates
-        out_coord = []
-        remaining = out_flat
-        for s in out_strides:
-            out_coord.append(remaining // s)
-            remaining %= s
-
-        # Map to input coordinates using broadcast_dimensions.
-        # broadcast_dims[i] = which output dim corresponds to input dim i.
-        # Size-1 input dims are replicated: input (3,1) -> output (3,2) means
-        # out[i,0] and out[i,1] both come from in[i,0], so we clamp to 0.
-        in_flat = sum(
-            (out_coord[broadcast_dims[i]] if in_shape[i] > 1 else 0) * in_strides[i]
-            for i in range(len(in_shape))
-        )
-        out_indices.append(in_indices[in_flat].copy())
-
-    deps[out_var] = out_indices
+    deps[out_var] = [in_indices[j].copy() for j in flat_map]
 
 
 def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:

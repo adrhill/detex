@@ -51,7 +51,7 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         # exactly one dimension (dim 0) and keeps all others intact.
         # This is the pattern JAX emits for x[indices] on any-rank operand.
         #
-        # Unsupported patterns (e.g. gathering along a non-leading dim, or taking partial slices) 
+        # Unsupported patterns (e.g. gathering along a non-leading dim, or taking partial slices)
         # fall through to the conservative fallback, which is always correct but imprecise.
         if (
             dim_nums.collapsed_slice_dims == (0,)
