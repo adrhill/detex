@@ -7,14 +7,14 @@ import pytest
 from jax.experimental.sparse import BCOO
 from numpy.testing import assert_allclose
 
-from asdex import color, color_rows, jacobian_sparsity, sparse_jacobian
+from asdex import color, color_rows, jacobian, jacobian_sparsity
 
 # =============================================================================
 # Reference tests against jax.jacobian (row coloring, default)
 # =============================================================================
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_diagonal():
     """Diagonal Jacobian: f(x) = x^2."""
 
@@ -22,13 +22,13 @@ def test_diagonal():
         return x**2
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_lower_triangular():
     """Lower triangular Jacobian."""
 
@@ -36,13 +36,13 @@ def test_lower_triangular():
         return jnp.array([x[0], x[0] + x[1], x[0] + x[1] + x[2]])
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_upper_triangular():
     """Upper triangular Jacobian."""
 
@@ -50,13 +50,13 @@ def test_upper_triangular():
         return jnp.array([x[0] + x[1] + x[2], x[1] + x[2], x[2]])
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_mixed_sparsity():
     """Mixed sparsity pattern from SCT README example."""
 
@@ -64,13 +64,13 @@ def test_mixed_sparsity():
         return jnp.array([x[0] ** 2, 2 * x[0] * x[1] ** 2, jnp.sin(x[2])])
 
     x = np.array([1.0, 2.0, 0.5])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_dense():
     """Dense Jacobian: all outputs depend on all inputs."""
 
@@ -79,13 +79,13 @@ def test_dense():
         return jnp.array([total, total * 2, total**2])
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_zero_jacobian():
     """Zero Jacobian: constant function."""
 
@@ -93,13 +93,13 @@ def test_zero_jacobian():
         return jnp.array([1.0, 2.0, 3.0])
 
     x = np.array([1.0, 2.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_precomputed_sparsity():
     """Using pre-computed sparsity pattern."""
 
@@ -109,32 +109,32 @@ def test_precomputed_sparsity():
     x = np.array([1.0, 2.0, 3.0])
     sparsity = jacobian_sparsity(f, input_shape=3)
 
-    result1 = sparse_jacobian(f, x, color(sparsity)).todense()
-    result2 = sparse_jacobian(f, x).todense()  # Auto-detect
+    result1 = jacobian(f, x, color(sparsity)).todense()
+    result2 = jacobian(f, x).todense()  # Auto-detect
 
     assert_allclose(result1, result2, rtol=1e-10)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_precomputed_colors():
-    """Using pre-computed sparsity and coloring."""
+    """Using pre-computed sparsity and colored pattern."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
     sparsity = jacobian_sparsity(f, input_shape=5)
-    coloring = color(sparsity, "row")
+    colored_pattern = color(sparsity, "row")
 
-    result1 = sparse_jacobian(f, x, coloring).todense()
-    result2 = sparse_jacobian(f, x).todense()  # Auto-detect
+    result1 = jacobian(f, x, colored_pattern).todense()
+    result2 = jacobian(f, x).todense()  # Auto-detect
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result1, result2, rtol=1e-10)
     assert_allclose(result1, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_different_input_points():
     """Same sparsity pattern, different input points."""
 
@@ -148,12 +148,12 @@ def test_different_input_points():
         np.array([0.0, 0.0, 0.0]),
         np.array([-1.0, 3.0, -0.5]),
     ]:
-        result = sparse_jacobian(f, x, color(sparsity)).todense()
+        result = jacobian(f, x, color(sparsity)).todense()
         expected = jax.jacobian(f)(x)
         assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_single_output():
     """Single output (scalar-valued function)."""
 
@@ -161,13 +161,13 @@ def test_single_output():
         return jnp.array([jnp.sum(x**2)])
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_single_input():
     """Single input dimension."""
 
@@ -175,13 +175,13 @@ def test_single_input():
         return jnp.array([x[0], x[0] ** 2, jnp.sin(x[0])])
 
     x = np.array([2.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_tridiagonal_pattern():
     """Tridiagonal-like pattern: each output depends on neighbors."""
 
@@ -198,13 +198,13 @@ def test_tridiagonal_pattern():
         return jnp.array(out)
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_block_diagonal():
     """Block diagonal structure."""
 
@@ -214,13 +214,13 @@ def test_block_diagonal():
         return jnp.array([x[0] + x[1], x[0] * x[1], x[2] + x[3], x[2] * x[3]])
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_nonlinear_functions():
     """Various nonlinear functions."""
 
@@ -234,7 +234,7 @@ def test_nonlinear_functions():
         )
 
     x = np.array([0.5, 1.0, 0.3])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -245,7 +245,7 @@ def test_nonlinear_functions():
 # =============================================================================
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_wide_jacobian():
     """More inputs than outputs."""
 
@@ -253,13 +253,13 @@ def test_wide_jacobian():
         return jnp.array([jnp.sum(x[:2]), jnp.sum(x[2:])])
 
     x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_tall_jacobian():
     """More outputs than inputs."""
 
@@ -267,13 +267,13 @@ def test_tall_jacobian():
         return jnp.array([x[0], x[1], x[0] + x[1], x[0] * x[1], x[0] - x[1]])
 
     x = np.array([2.0, 3.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_empty_output():
     """Function with no outputs."""
 
@@ -281,12 +281,12 @@ def test_empty_output():
         return jnp.array([])
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_jacobian(f, x)
+    result = jacobian(f, x)
 
     assert result.shape == (0, 3)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_bcoo_format():
     """Verify output is BCOO format."""
 
@@ -294,7 +294,7 @@ def test_bcoo_format():
         return x**2
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_jacobian(f, x)
+    result = jacobian(f, x)
 
     assert isinstance(result, BCOO)
 
@@ -304,7 +304,7 @@ def test_bcoo_format():
 # =============================================================================
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_column_partition_diagonal():
     """Column coloring on diagonal Jacobian."""
 
@@ -313,13 +313,13 @@ def test_column_partition_diagonal():
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = sparse_jacobian(f, x, color(sparsity, "column")).todense()
+    result = jacobian(f, x, color(sparsity, "column")).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_column_partition_mixed():
     """Column coloring on mixed sparsity."""
 
@@ -328,13 +328,13 @@ def test_column_partition_mixed():
 
     x = np.array([1.0, 2.0, 0.5])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = sparse_jacobian(f, x, color(sparsity, "column")).todense()
+    result = jacobian(f, x, color(sparsity, "column")).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_column_partition_tridiagonal():
     """Column coloring on tridiagonal pattern."""
 
@@ -352,29 +352,29 @@ def test_column_partition_tridiagonal():
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = sparse_jacobian(f, x, color(sparsity, "column")).todense()
+    result = jacobian(f, x, color(sparsity, "column")).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_precomputed_col_colors():
-    """Using pre-computed column coloring."""
+    """Using pre-computed column colored pattern."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
-    coloring = color(jacobian_sparsity(f, input_shape=5), "column")
+    colored_pattern = color(jacobian_sparsity(f, input_shape=5), "column")
 
-    result = sparse_jacobian(f, x, coloring).todense()
+    result = jacobian(f, x, colored_pattern).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_auto_picks_column_for_tall():
     """Auto mode picks column coloring for tall-skinny Jacobians.
 
@@ -390,15 +390,15 @@ def test_auto_picks_column_for_tall():
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
 
     # Auto should give same result as explicit column
-    result_auto = sparse_jacobian(f, x).todense()
-    result_col = sparse_jacobian(f, x, color(sparsity, "column")).todense()
+    result_auto = jacobian(f, x).todense()
+    result_col = jacobian(f, x, color(sparsity, "column")).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result_auto, expected, rtol=1e-5)
     assert_allclose(result_col, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_auto_picks_row_for_wide():
     """Auto mode picks row coloring for wide Jacobians.
 
@@ -414,15 +414,15 @@ def test_auto_picks_row_for_wide():
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
 
     # Auto and row should give same result
-    result_auto = sparse_jacobian(f, x).todense()
-    result_row = sparse_jacobian(f, x, color(sparsity, "row")).todense()
+    result_auto = jacobian(f, x).todense()
+    result_row = jacobian(f, x, color(sparsity, "row")).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result_auto, expected, rtol=1e-5)
     assert_allclose(result_row, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_precomputed_auto_coloring():
     """Passing color(sparsity) with auto partition."""
 
@@ -430,9 +430,9 @@ def test_precomputed_auto_coloring():
         return x**2
 
     x = np.array([1.0, 2.0, 3.0])
-    coloring = color(jacobian_sparsity(f, input_shape=3))
+    colored_pattern = color(jacobian_sparsity(f, input_shape=3))
 
-    result = sparse_jacobian(f, x, coloring).todense()
+    result = jacobian(f, x, colored_pattern).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -446,14 +446,14 @@ def test_precomputed_auto_coloring():
 @pytest.mark.hessian
 def test_hessian_quadratic():
     """Hessian of quadratic function: f(x) = x^T A x."""
-    from asdex import sparse_hessian
+    from asdex import hessian
 
     def f(x):
         # Simple quadratic: sum of squares
         return jnp.sum(x**2)
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_hessian(f, x).todense()
+    result = hessian(f, x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -462,13 +462,13 @@ def test_hessian_quadratic():
 @pytest.mark.hessian
 def test_hessian_rosenbrock():
     """Hessian of Rosenbrock function (sparse tridiagonal-like pattern)."""
-    from asdex import sparse_hessian
+    from asdex import hessian
 
     def f(x):
         return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
 
     x = np.array([1.0, 1.0, 1.0, 1.0])
-    result = sparse_hessian(f, x).todense()
+    result = hessian(f, x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -477,7 +477,7 @@ def test_hessian_rosenbrock():
 @pytest.mark.hessian
 def test_hessian_precomputed_sparsity():
     """Using pre-computed Hessian sparsity pattern."""
-    from asdex import hessian_sparsity, sparse_hessian
+    from asdex import hessian, hessian_sparsity
 
     def f(x):
         return jnp.sum(x**2)
@@ -485,8 +485,8 @@ def test_hessian_precomputed_sparsity():
     x = np.array([1.0, 2.0, 3.0])
     sparsity = hessian_sparsity(f, input_shape=3)
 
-    result1 = sparse_hessian(f, x, sparsity=sparsity).todense()
-    result2 = sparse_hessian(f, x).todense()
+    result1 = hessian(f, x, sparsity=sparsity).todense()
+    result2 = hessian(f, x).todense()
 
     assert_allclose(result1, result2, rtol=1e-10)
 
@@ -494,7 +494,7 @@ def test_hessian_precomputed_sparsity():
 @pytest.mark.hessian
 def test_hessian_precomputed_colors():
     """Using pre-computed Hessian sparsity and row colors (backward compat)."""
-    from asdex import hessian_sparsity, sparse_hessian
+    from asdex import hessian, hessian_sparsity
 
     def f(x):
         return jnp.sum((x[1:] - x[:-1]) ** 2)
@@ -503,7 +503,7 @@ def test_hessian_precomputed_colors():
     sparsity = hessian_sparsity(f, input_shape=4)
     colors, num_colors = color_rows(sparsity)
 
-    result1 = sparse_hessian(f, x, sparsity=sparsity, colors=colors).todense()
+    result1 = hessian(f, x, sparsity=sparsity, colors=colors).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result1, expected, rtol=1e-5)
@@ -512,13 +512,13 @@ def test_hessian_precomputed_colors():
 @pytest.mark.hessian
 def test_hessian_zero():
     """Zero Hessian: linear function."""
-    from asdex import sparse_hessian
+    from asdex import hessian
 
     def f(x):
         return jnp.sum(x)  # Linear, Hessian is zero
 
     x = np.array([1.0, 2.0, 3.0])
-    result = sparse_hessian(f, x)
+    result = hessian(f, x)
 
     assert result.shape == (3, 3)
     assert result.nse == 0  # All-zero Hessian
@@ -527,13 +527,13 @@ def test_hessian_zero():
 @pytest.mark.hessian
 def test_hessian_single_input():
     """Hessian with single input dimension."""
-    from asdex import sparse_hessian
+    from asdex import hessian
 
     def f(x):
         return x[0] ** 3
 
     x = np.array([2.0])
-    result = sparse_hessian(f, x).todense()
+    result = hessian(f, x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -545,13 +545,13 @@ def test_hessian_star_coloring_default():
 
     Verify that the result matches jax.hessian for a non-trivial pattern.
     """
-    from asdex import sparse_hessian
+    from asdex import hessian
 
     def f(x):
         return x[0] ** 2 * x[1] + jnp.sin(x[1]) * x[2] + x[2] ** 3
 
     x = np.array([1.0, 2.0, 0.5])
-    result = sparse_hessian(f, x).todense()
+    result = hessian(f, x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -564,13 +564,13 @@ def test_hessian_arrow_pattern():
     f(x) = x[0] * sum(x) + sum(x**2)
     This creates an arrow-like Hessian where row/col 0 is dense.
     """
-    from asdex import sparse_hessian
+    from asdex import hessian
 
     def f(x):
         return x[0] * jnp.sum(x) + jnp.sum(x**2)
 
     x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-    result = sparse_hessian(f, x).todense()
+    result = hessian(f, x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)

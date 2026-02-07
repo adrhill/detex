@@ -12,46 +12,15 @@ https://github.com/gdalle/SparseMatrixColorings.jl
 See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
 """
 
-from dataclasses import dataclass
+from collections.abc import Callable
 from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
 
-from asdex.pattern import SparsityPattern
-
-
-@dataclass(frozen=True, repr=False)
-class ColoredPattern:
-    """Result of a graph coloring for sparse differentiation.
-
-    Attributes:
-        sparsity: The sparsity pattern that was colored.
-        colors: Color assignment array.
-            Shape ``(m,)`` for row partition, ``(n,)`` for column partition.
-        num_colors: Total number of colors used.
-        partition: Whether rows or columns were colored.
-    """
-
-    sparsity: SparsityPattern
-    colors: NDArray[np.int32]
-    num_colors: int
-    partition: Literal["row", "column"]
-
-    def __repr__(self) -> str:
-        """Return compact representation."""
-        m, n = self.sparsity.shape
-        return f"ColoredPattern({self.partition}, {self.num_colors} colors, {m}×{n})"
-
-    def __str__(self) -> str:
-        """Return string with AD savings summary."""
-        m, n = self.sparsity.shape
-        ad_type = "JVPs" if self.partition == "column" else "VJPs"
-        return (
-            f"{repr(self)}\n"
-            f"  {self.num_colors} {ad_type} "
-            f"(instead of {m} VJPs or {n} JVPs)"
-        )
+from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
+from asdex.detection import jacobian_sparsity as _detect_jacobian_sparsity
+from asdex.pattern import ColoredPattern, SparsityPattern
 
 
 def _greedy_color(
@@ -347,3 +316,47 @@ def star_color(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
         num_colors = max(num_colors, color + 1)
 
     return colors, num_colors
+
+
+def jacobian_coloring(
+    f: Callable,
+    input_shape: tuple[int, ...],
+    partition: Literal["row", "column", "auto"] = "auto",
+) -> ColoredPattern:
+    """Detect Jacobian sparsity and color in one step.
+
+    Args:
+        f: Function taking an array and returning an array.
+        input_shape: Shape of the input array.
+        partition: Which partition to color
+            (``"row"``, ``"column"``, or ``"auto"``).
+
+    Returns:
+        A :class:`ColoredPattern` ready for :func:`jacobian`.
+    """
+    sparsity = _detect_jacobian_sparsity(f, input_shape)
+    return color(sparsity, partition)
+
+
+def hessian_coloring(
+    f: Callable,
+    input_shape: tuple[int, ...],
+) -> ColoredPattern:
+    """Detect Hessian sparsity and star-color in one step.
+
+    Uses star coloring,
+    which exploits Hessian symmetry for fewer colors.
+
+    Args:
+        f: Scalar-valued function.
+        input_shape: Shape of the input array.
+
+    Returns:
+        A :class:`ColoredPattern` with ``partition="column"``
+        ready for :func:`hessian`.
+    """
+    sparsity = _detect_hessian_sparsity(f, input_shape)
+    colors_arr, num = star_color(sparsity)
+    return ColoredPattern(
+        sparsity, colors=colors_arr, num_colors=num, partition="column"
+    )

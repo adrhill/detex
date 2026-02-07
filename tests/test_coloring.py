@@ -6,8 +6,11 @@ https://github.com/gdalle/SparseMatrixColorings.jl
 See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
 """
 
+import jax
+import jax.numpy as jnp
 import numpy as np
 import pytest
+from numpy.testing import assert_allclose
 
 from asdex import (
     ColoredPattern,
@@ -15,6 +18,9 @@ from asdex import (
     color,
     color_cols,
     color_rows,
+    hessian,
+    hessian_coloring,
+    jacobian_coloring,
     star_color,
 )
 
@@ -814,3 +820,177 @@ def test_color_force_column():
     assert result.partition == "column"
     assert len(result.colors) == 4  # n=4
     assert _is_valid_col_coloring(sparsity, result.colors)
+
+
+# =============================================================================
+# jacobian_coloring / hessian_coloring tests
+# =============================================================================
+
+
+@pytest.mark.coloring
+def test_jacobian_coloring_basic():
+    """jacobian_coloring returns a correct ColoredPattern."""
+
+    def f(x):
+        return x**2
+
+    result = jacobian_coloring(f, (4,))
+
+    assert isinstance(result, ColoredPattern)
+    assert result.sparsity.shape == (4, 4)
+    assert result.num_colors == 1  # diagonal → 1 color
+
+
+@pytest.mark.coloring
+def test_jacobian_coloring_partition():
+    """jacobian_coloring respects the partition argument."""
+
+    def f(x):
+        return x**2
+
+    result_row = jacobian_coloring(f, (3,), partition="row")
+    result_col = jacobian_coloring(f, (3,), partition="column")
+
+    assert result_row.partition == "row"
+    assert result_col.partition == "column"
+
+
+@pytest.mark.coloring
+def test_hessian_coloring_basic():
+    """hessian_coloring returns a ColoredPattern with star coloring."""
+
+    def f(x):
+        return jnp.sum(x**2)
+
+    result = hessian_coloring(f, (4,))
+
+    assert isinstance(result, ColoredPattern)
+    assert result.partition == "column"
+    assert result.sparsity.shape == (4, 4)
+    # Diagonal Hessian → 1 color
+    assert result.num_colors == 1
+
+
+@pytest.mark.coloring
+def test_hessian_coloring_coupled():
+    """hessian_coloring uses star coloring for a coupled function."""
+
+    def f(x):
+        return x[0] * x[1] + x[1] * x[2] + jnp.sum(x**2)
+
+    result = hessian_coloring(f, (3,))
+
+    assert isinstance(result, ColoredPattern)
+    assert result.partition == "column"
+    # Star coloring should use fewer colors than n for sparse Hessians
+    assert result.num_colors <= 3
+
+
+# =============================================================================
+# _compressed_pattern tests
+# =============================================================================
+
+
+@pytest.mark.coloring
+def test_compressed_pattern_column():
+    """Column compressed pattern has shape (m, num_colors)."""
+    sparsity = _from_dense(
+        [
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 0, 0],
+        ]
+    )
+    result = color(sparsity, partition="column")
+    compressed = result._compressed_pattern()
+
+    assert compressed.shape == (3, result.num_colors)
+    # Every original row with a nonzero should appear in compressed
+    dense_orig = sparsity.todense()
+    dense_comp = compressed.todense()
+    for i in range(3):
+        has_orig = np.any(dense_orig[i] != 0)
+        has_comp = np.any(dense_comp[i] != 0)
+        assert has_orig == has_comp
+
+
+@pytest.mark.coloring
+def test_compressed_pattern_row():
+    """Row compressed pattern has shape (num_colors, n)."""
+    sparsity = _from_dense(
+        [
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 0, 0],
+        ]
+    )
+    result = color(sparsity, partition="row")
+    compressed = result._compressed_pattern()
+
+    assert compressed.shape == (result.num_colors, 3)
+    # Every original column with a nonzero should appear in compressed
+    dense_orig = sparsity.todense()
+    dense_comp = compressed.todense()
+    for j in range(3):
+        has_orig = np.any(dense_orig[:, j] != 0)
+        has_comp = np.any(dense_comp[:, j] != 0)
+        assert has_orig == has_comp
+
+
+# =============================================================================
+# __str__ visualization tests
+# =============================================================================
+
+
+@pytest.mark.coloring
+def test_str_column_contains_arrow():
+    """Column partition __str__ contains → for side-by-side display."""
+    sparsity = _from_dense(
+        [
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 0, 0],
+        ]
+    )
+    result = color(sparsity, partition="column")
+    s = str(result)
+
+    assert "→" in s
+    assert "●" in s
+
+
+@pytest.mark.coloring
+def test_str_row_contains_downarrow():
+    """Row partition __str__ contains ↓ for stacked display."""
+    sparsity = _from_dense(
+        [
+            [1, 0, 1],
+            [0, 1, 1],
+            [1, 0, 0],
+        ]
+    )
+    result = color(sparsity, partition="row")
+    s = str(result)
+
+    assert "↓" in s
+    assert "●" in s
+
+
+# =============================================================================
+# hessian with colored_pattern tests
+# =============================================================================
+
+
+@pytest.mark.hessian
+def test_hessian_with_colored_pattern():
+    """hessian works with a pre-computed ColoredPattern."""
+
+    def f(x):
+        return jnp.sum(x**2) + x[0] * x[1]
+
+    x = np.array([1.0, 2.0, 3.0])
+    cp = hessian_coloring(f, x.shape)
+    result = hessian(f, x, colored_pattern=cp).todense()
+    expected = jax.hessian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)

@@ -9,10 +9,10 @@ import pytest
 from asdex import (
     color,
     color_rows,
+    hessian,
     hessian_sparsity,
+    jacobian,
     jacobian_sparsity,
-    sparse_hessian,
-    sparse_jacobian,
 )
 
 N = 200  # Problem size for benchmarks
@@ -86,15 +86,15 @@ def test_heat_coloring(benchmark):
 def test_heat_materialization(benchmark):
     """Heat equation: VJP computation (with known sparsity/colors)"""
     x = np.ones(N)
-    coloring = color(jacobian_sparsity(heat_equation_rhs, N), "row")
-    benchmark(sparse_jacobian, heat_equation_rhs, x, coloring)
+    colored_pattern = color(jacobian_sparsity(heat_equation_rhs, N), "row")
+    benchmark(jacobian, heat_equation_rhs, x, colored_pattern)
 
 
 @pytest.mark.benchmark(group="heat_equation")
 def test_heat_end_to_end(benchmark):
     """Heat equation: full pipeline"""
     x = np.ones(N)
-    benchmark(sparse_jacobian, heat_equation_rhs, x)
+    benchmark(jacobian, heat_equation_rhs, x)
 
 
 # -----------------------------------------------------------------------------
@@ -119,15 +119,15 @@ def test_convnet_coloring(benchmark):
 def test_convnet_materialization(benchmark):
     """ConvNet: VJP computation (with known sparsity/colors)"""
     x = np.ones(N)
-    coloring = color(jacobian_sparsity(convnet, N), "row")
-    benchmark(sparse_jacobian, convnet, x, coloring)
+    colored_pattern = color(jacobian_sparsity(convnet, N), "row")
+    benchmark(jacobian, convnet, x, colored_pattern)
 
 
 @pytest.mark.benchmark(group="convnet")
 def test_convnet_end_to_end(benchmark):
     """ConvNet: full pipeline"""
     x = np.ones(N)
-    benchmark(sparse_jacobian, convnet, x)
+    benchmark(jacobian, convnet, x)
 
 
 # -----------------------------------------------------------------------------
@@ -154,11 +154,11 @@ def test_rosenbrock_materialization(benchmark):
     x = np.ones(N)
     sparsity = hessian_sparsity(rosenbrock, N)
     colors, _ = color_rows(sparsity)
-    benchmark(sparse_hessian, rosenbrock, x, sparsity, colors)
+    benchmark(hessian, rosenbrock, x, sparsity=sparsity, colors=colors)
 
 
 @pytest.mark.benchmark(group="rosenbrock")
 def test_rosenbrock_end_to_end(benchmark):
     """Rosenbrock: full pipeline"""
     x = np.ones(N)
-    benchmark(sparse_hessian, rosenbrock, x)
+    benchmark(hessian, rosenbrock, x)

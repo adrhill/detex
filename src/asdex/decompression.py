@@ -15,10 +15,10 @@ import numpy as np
 from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike, NDArray
 
-from asdex.coloring import ColoredPattern, color, star_color
+from asdex.coloring import color, star_color
 from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_sparsity
-from asdex.pattern import SparsityPattern
+from asdex.pattern import ColoredPattern, SparsityPattern
 
 
 def _compute_vjp_for_color(
@@ -204,10 +204,10 @@ def _decompress_hessian_star(
     return sparsity.to_bcoo(data=jnp.array(data))
 
 
-def sparse_jacobian(
+def jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     x: ArrayLike,
-    coloring: ColoredPattern | None = None,
+    colored_pattern: ColoredPattern | None = None,
 ) -> BCOO:
     """Compute sparse Jacobian using coloring and AD.
 
@@ -218,7 +218,7 @@ def sparse_jacobian(
         f: Function taking an array and returning an array.
             Both may be multi-dimensional.
         x: Input point (any shape).
-        coloring: Optional pre-computed :class:`ColoredPattern`
+        colored_pattern: Optional pre-computed :class:`ColoredPattern`
             from :func:`color`.
             If None, sparsity is detected and colored automatically.
 
@@ -229,11 +229,11 @@ def sparse_jacobian(
     x = np.asarray(x)
     n = x.size
 
-    if coloring is None:
+    if colored_pattern is None:
         sparsity = _detect_sparsity(f, x.shape)
-        coloring = color(sparsity)
+        colored_pattern = color(sparsity)
 
-    sparsity = coloring.sparsity
+    sparsity = colored_pattern.sparsity
     m = sparsity.m
     out_shape = jax.eval_shape(f, jnp.zeros_like(x)).shape
 
@@ -245,13 +245,13 @@ def sparse_jacobian(
     if sparsity.nse == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
-    if coloring.partition == "row":
-        return _sparse_jacobian_rows(f, x, sparsity, coloring.colors, out_shape)
+    if colored_pattern.partition == "row":
+        return _jacobian_rows(f, x, sparsity, colored_pattern.colors, out_shape)
     else:
-        return _sparse_jacobian_cols(f, x, sparsity, coloring.colors)
+        return _jacobian_cols(f, x, sparsity, colored_pattern.colors)
 
 
-def _sparse_jacobian_rows(
+def _jacobian_rows(
     f: Callable[[ArrayLike], ArrayLike],
     x: NDArray,
     sparsity: SparsityPattern,
@@ -270,7 +270,7 @@ def _sparse_jacobian_rows(
     return _decompress_jacobian(sparsity, colors, grads)
 
 
-def _sparse_jacobian_cols(
+def _jacobian_cols(
     f: Callable[[ArrayLike], ArrayLike],
     x: NDArray,
     sparsity: SparsityPattern,
@@ -288,18 +288,22 @@ def _sparse_jacobian_cols(
     return _decompress_jacobian_from_jvps(sparsity, colors, jvps)
 
 
-def sparse_hessian(
+def hessian(
     f: Callable[[ArrayLike], ArrayLike],
     x: ArrayLike,
+    colored_pattern: ColoredPattern | None = None,
     sparsity: SparsityPattern | None = None,
     colors: NDArray[np.int32] | None = None,
 ) -> BCOO:
     """Compute sparse Hessian using coloring and HVPs.
 
-    When ``colors`` is None (default), uses star coloring for fewer colors
-    and symmetric decompression.
+    When ``colored_pattern`` is provided,
+    extracts sparsity and colors from it
+    and uses star decompression.
     When ``colors`` is provided (backward compatibility with pre-computed
     ``color_rows`` colors), uses the original row-coloring decompression.
+    When both are None, uses star coloring for fewer colors
+    and symmetric decompression.
 
     Uses forward-over-reverse Hessian-vector products for efficiency.
 
@@ -307,6 +311,9 @@ def sparse_hessian(
         f: Scalar-valued function returning a scalar.
             Input may be multi-dimensional.
         x: Input point (any shape).
+        colored_pattern: Optional pre-computed :class:`ColoredPattern`
+            from :func:`hessian_coloring`.
+            If provided, ``sparsity`` and ``colors`` are ignored.
         sparsity: Optional pre-computed Hessian sparsity pattern from
             hessian_sparsity(). If None, detected automatically.
         colors: Optional pre-computed row coloring from color_rows().
@@ -318,6 +325,17 @@ def sparse_hessian(
 
     x = np.asarray(x)
     n = x.size
+
+    if colored_pattern is not None:
+        sparsity = colored_pattern.sparsity
+        colors_arr = colored_pattern.colors
+        if sparsity.nse == 0:
+            return BCOO(
+                (jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n)
+            )
+        num_colors = colored_pattern.num_colors
+        grads = _compute_hvps(f, x, colors_arr, num_colors)
+        return _decompress_hessian_star(sparsity, colors_arr, grads)
 
     if sparsity is None:
         sparsity = _detect_hessian_sparsity(f, x.shape)

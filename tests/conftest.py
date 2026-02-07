@@ -19,9 +19,7 @@ def pytest_configure(config):
     )
     config.addinivalue_line("markers", "bug: documents known bugs")
     config.addinivalue_line("markers", "coloring: row coloring algorithm tests")
-    config.addinivalue_line(
-        "markers", "sparse_jacobian: sparse Jacobian computation tests"
-    )
+    config.addinivalue_line("markers", "jacobian: sparse Jacobian computation tests")
     config.addinivalue_line(
         "markers", "hessian: Hessian sparsity detection and computation"
     )

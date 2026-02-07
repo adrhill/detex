@@ -1,7 +1,7 @@
 """Tests for multi-dimensional input and output shapes.
 
-Verifies that jacobian_sparsity, hessian_sparsity, sparse_jacobian, and
-sparse_hessian work when the function takes or returns a multi-dimensional
+Verifies that jacobian_sparsity, hessian_sparsity, jacobian, and
+hessian work when the function takes or returns a multi-dimensional
 array (e.g. a matrix or an image) rather than a flat vector.
 """
 
@@ -13,10 +13,10 @@ import pytest
 from numpy.testing import assert_allclose
 
 from asdex import (
+    hessian,
     hessian_sparsity,
+    jacobian,
     jacobian_sparsity,
-    sparse_hessian,
-    sparse_jacobian,
 )
 
 # =============================================================================
@@ -161,71 +161,71 @@ def test_multidim_input_and_output_sparsity():
 # =============================================================================
 
 
-@pytest.mark.sparse_jacobian
-def test_sparse_jacobian_matrix_input():
-    """sparse_jacobian with a (3, 4) matrix input matches jax.jacobian."""
+@pytest.mark.jacobian
+def test_jacobian_matrix_input():
+    """jacobian with a (3, 4) matrix input matches jax.jacobian."""
 
     def f(x):
         return x.sum(axis=1)
 
     x = np.arange(12.0).reshape(3, 4)
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     # Reference: jax.jacobian gives (m, *input_shape), reshape to (m, n)
     expected = jax.jacobian(f)(x).reshape(3, 12)
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
-def test_sparse_jacobian_elementwise_matrix():
+@pytest.mark.jacobian
+def test_jacobian_elementwise_matrix():
     """Element-wise f(x) = x^2 on a (2, 3) matrix."""
 
     def f(x):
         return x**2
 
     x = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
 
     # Diagonal Jacobian: diag(2x) in flattened space
     expected = jax.jacobian(f)(x).reshape(6, 6)
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
-def test_sparse_jacobian_2d_output():
-    """sparse_jacobian where f returns a (2, 3) matrix."""
+@pytest.mark.jacobian
+def test_jacobian_2d_output():
+    """jacobian where f returns a (2, 3) matrix."""
 
     def f(x):
         return (x**2).reshape(2, 3)
 
     x = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x).reshape(6, 6)
     assert_allclose(result, expected, rtol=1e-5)
 
 
-@pytest.mark.sparse_jacobian
-def test_sparse_jacobian_2d_input_and_output():
-    """sparse_jacobian where both input and output are 2D."""
+@pytest.mark.jacobian
+def test_jacobian_2d_input_and_output():
+    """jacobian where both input and output are 2D."""
 
     def f(x):
         # (3, 4) -> (3, 1) with keepdims
         return x.sum(axis=1, keepdims=True)
 
     x = np.arange(12.0).reshape(3, 4)
-    result = sparse_jacobian(f, x).todense()
+    result = jacobian(f, x).todense()
     expected = jax.jacobian(f)(x).reshape(3, 12)
     assert_allclose(result, expected, rtol=1e-5)
 
 
 @pytest.mark.hessian
-def test_sparse_hessian_matrix_input():
-    """sparse_hessian with a (2, 3) matrix input matches jax.hessian."""
+def test_hessian_matrix_input():
+    """hessian with a (2, 3) matrix input matches jax.hessian."""
 
     def f(x):
         return jnp.sum(x**2)
 
     x = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-    result = sparse_hessian(f, x).todense()
+    result = hessian(f, x).todense()
     # Reference: jax.hessian gives (*in_shape, *in_shape), reshape to (n, n)
     expected = jax.hessian(f)(x).reshape(6, 6)
     assert_allclose(result, expected, rtol=1e-5)
@@ -262,7 +262,7 @@ def _lenet_fn(x):
     return _lenet.apply(_lenet_params, x)
 
 
-@pytest.mark.sparse_jacobian
+@pytest.mark.jacobian
 def test_lenet_sparsity_detection():
     """Sparsity detection on a LeNet with 2D image input."""
     sparsity = jacobian_sparsity(_lenet_fn, input_shape=(8, 8))
@@ -277,12 +277,12 @@ def test_lenet_sparsity_detection():
     assert np.all(dense.sum(axis=1) <= max_deps)
 
 
-@pytest.mark.sparse_jacobian
-def test_lenet_sparse_jacobian_values():
+@pytest.mark.jacobian
+def test_lenet_jacobian_values():
     """Sparse Jacobian of LeNet matches dense jax.jacobian."""
     x = jax.random.normal(jax.random.key(0), (8, 8))
 
-    result = sparse_jacobian(_lenet_fn, np.asarray(x)).todense()
+    result = jacobian(_lenet_fn, np.asarray(x)).todense()
     # Reference: jax.jacobian gives (m, H, W), reshape to (m, n)
     expected = jax.jacobian(_lenet_fn)(x).reshape(result.shape[0], 64)
 

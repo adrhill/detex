@@ -64,7 +64,7 @@ markers = [
     "reduction: reduction operations (sum, max, prod)",
     "vmap: batched/vmapped operations",
     "coloring: row coloring algorithm tests",
-    "sparse_jacobian: sparse Jacobian computation tests",
+    "jacobian: sparse Jacobian computation tests",
     "hessian: Hessian sparsity detection and computation",
     "fallback: documents conservative fallback behavior",
     "bug: documents known bugs",

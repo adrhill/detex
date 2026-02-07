@@ -47,56 +47,50 @@ Consider the squared differences function $f(x)\_i = (x\_{i+1} - x\_i)^2$, which
 
 ```python
 import numpy as np
-from asdex import jacobian_sparsity, color, sparse_jacobian
+from asdex import jacobian_coloring, jacobian
 
 def f(x):
     return (x[1:] - x[:-1]) ** 2
 
-# Detect sparsity pattern
-pattern = jacobian_sparsity(f, input_shape=50)
-print(pattern)
-# SparsityPattern(49×50, nnz=98, density=4.0%)
-# ⎡⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤
-# ⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⎥
-# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⎥
-# ⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⎦
-```
-
-Next, we color the sparsity pattern.
-`color()` automatically picks the best of row and column coloring.
-Only two colors are needed here:
-
-```python
-colored_pattern = color(pattern)
+# Detect sparsity and color in one step
+colored_pattern = jacobian_coloring(f, input_shape=50)
 print(colored_pattern)
-# ColoredPattern(column, 2 colors, 49×50)
+# ColoredPattern(49×50, nnz=98, density=4.0%, column, 2 colors)
 #   2 JVPs (instead of 49 VJPs or 50 JVPs)
-# That's an expected speedup of ~24.5×!
+# ⎡⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤   ⎡⣿⎤
+# ⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⎥
+# ⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥ → ⎢⣿⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⎥   ⎢⣿⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⎥   ⎢⣿⎥
+# ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⎥   ⎢⣿⎥
+# ⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⎦   ⎣⠉⎦
 ```
 
-Finally, we can compute the sparse Jacobian using the precomputed colored pattern:
-
-```python
-x = np.random.randn(50)
-J = sparse_jacobian(f, x, colored_pattern)  # returns BCOO
-```
-
+The visualization shows the original sparsity pattern (left) compressed into just 2 colors (right).
+Only 2 JVPs are needed instead of 49 VJPs or 50 JVPs — a ~25× speedup.
 The colored pattern depends only on the function structure, not the input values.
-Precompute it once and reuse for repeated evaluations:
+Precompute it once and reuse it for repeated evaluations:
 
 ```python
-colored_pattern = color(jacobian_sparsity(f, input_shape=1000))
+colored_pattern = jacobian_coloring(f, input_shape=1000)
+
 for x in inputs:
-    J = sparse_jacobian(f, x, colored_pattern)
+    J = jacobian(f, x, colored_pattern)
+```
+
+For more control, you can also call `jacobian_sparsity` and `color` separately:
+
+```python
+from asdex import jacobian_sparsity, color
+
+sparsity_pattern = jacobian_sparsity(f, input_shape=1000)
+colored_pattern = color(sparsity_pattern, partition="column")
 ```
 
 ### Hessians
@@ -106,27 +100,28 @@ For scalar-valued functions $f: \mathbb{R}^n \to \mathbb{R}$, `asdex` can detect
 ```python
 import jax.numpy as jnp
 import numpy as np
-from asdex import hessian_sparsity, sparse_hessian
+from asdex import hessian_coloring, hessian
 
 def g(x):
     return jnp.sum(x**2)
 
-# Detect sparsity pattern
-pattern = hessian_sparsity(g, input_shape=5)
-print(pattern)
-# SparsityPattern(5×5, nnz=5, density=20.0%)
-# ● ⋅ ⋅ ⋅ ⋅
-# ⋅ ● ⋅ ⋅ ⋅
-# ⋅ ⋅ ● ⋅ ⋅
-# ⋅ ⋅ ⋅ ● ⋅
-# ⋅ ⋅ ⋅ ⋅ ●
+# Detect sparsity and star-color in one step
+colored_pattern = hessian_coloring(g, input_shape=5)
+print(colored_pattern)
+# ColoredPattern(5×5, nnz=5, density=20.0%, column, 1 colors)
+#   1 JVPs (instead of 5 VJPs or 5 JVPs)
+# ● ⋅ ⋅ ⋅ ⋅   ●
+# ⋅ ● ⋅ ⋅ ⋅   ●
+# ⋅ ⋅ ● ⋅ ⋅ → ●
+# ⋅ ⋅ ⋅ ● ⋅   ●
+# ⋅ ⋅ ⋅ ⋅ ●   ●
 
-# Compute sparse Hessian (star coloring is used automatically)
+# Compute sparse Hessian using the precomputed coloring
 x = np.random.randn(5)
-H = sparse_hessian(g, x, sparsity=pattern)  # returns BCOO
+H = hessian(g, x, colored_pattern=colored_pattern)  # returns BCOO
 ```
 
-Just like for the Jacobian, precomputed sparsity patterns only need to be computed once
+Just like for the Jacobian, precomputed colored patterns only need to be computed once
 and can be reused for repeated evaluations.
 
 
@@ -143,7 +138,7 @@ The sparsity interpreter composes naturally with JAX's autodiff transforms.
 **Coloring**: Two rows can be computed together if they don't share any non-zero columns (row coloring, uses VJPs).
 Dually, two columns can be computed together if they don't share any non-zero rows (column coloring, uses JVPs).
 `asdex` builds a conflict graph and greedily assigns colors using a LargestFirst ordering.
-`color(pattern)` automatically picks whichever partition needs fewer colors.
+`color(sparsity_pattern)` automatically picks whichever partition needs fewer colors.
 
 **Sparse Jacobian**: For each color, `asdex` computes a single VJP (row coloring) or JVP (column coloring) with a seed vector that has 1s at the positions of all same-colored rows or columns.
 Due to the coloring constraint, each entry can be uniquely extracted from the compressed results.

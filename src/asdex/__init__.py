@@ -5,10 +5,17 @@ This is global sparsity detection - asdex analyzes the computation graph
 structure without evaluating derivatives, so results are valid for all inputs.
 """
 
-from asdex.coloring import ColoredPattern, color, color_cols, color_rows, star_color
-from asdex.decompression import sparse_hessian, sparse_jacobian
+from asdex.coloring import (
+    color,
+    color_cols,
+    color_rows,
+    hessian_coloring,
+    jacobian_coloring,
+    star_color,
+)
+from asdex.decompression import hessian, jacobian
 from asdex.detection import hessian_sparsity, jacobian_sparsity
-from asdex.pattern import SparsityPattern
+from asdex.pattern import ColoredPattern, SparsityPattern
 
 __all__ = [
     "jacobian_sparsity",
@@ -17,8 +24,10 @@ __all__ = [
     "color_rows",
     "color_cols",
     "star_color",
+    "jacobian_coloring",
+    "hessian_coloring",
     "ColoredPattern",
-    "sparse_jacobian",
-    "sparse_hessian",
+    "jacobian",
+    "hessian",
     "SparsityPattern",
 ]
