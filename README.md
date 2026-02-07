@@ -14,18 +14,19 @@ allowing you to quickly and efficiently materialize Jacobians and Hessians.
 
 ## Background
 
-For a function $f: \mathbb{R}^n \to \mathbb{R}^m$, the Jacobian $J \in \mathbb{R}^{m \times n}$ is defined as $J_{ij} = \frac{\partial f_i}{\partial x_j}$.
-Computing the full Jacobian requires $n$ forward-mode AD passes or $m$ reverse-mode passes.
-But many Jacobians are *sparse*: most entries are structurally zero for all inputs.
-The same applies to Hessians of scalar-valued functions.
+For a function $f: \mathbb{R}^n \to \mathbb{R}^m$, computing the full Jacobian $J \in \mathbb{R}^{m \times n}$ requires $n$ forward-mode or $m$ reverse-mode AD passes.
+In practice, for example in scientific machine learning, 
+many Jacobians are *sparse* (i.e., most entries are structurally zero, regardless of the input).
 
-`asdex` exploits this sparsity:
-1. **Detect sparsity** by tracing the function into a Jaxpr and propagating index sets through the graph
-2. **Color the sparsity pattern** to find orthogonal rows or columns
-3. **Compute the sparse Jacobian** with one VJP per color (row coloring) or one JVP per color (column coloring)
+`asdex` exploits this sparsity in three steps:
+1. **Detect** the sparsity pattern by tracing the computation graph
+2. **Color** the pattern so that structurally orthogonal rows (or columns) share a color
+3. **Decompress** one AD pass per color into the sparse Jacobian or Hessian
 
-This reduces the number of AD passes from $m$ (or $n$) to the number of colors.
-For large sparse problems, this can yield significant speedups when the cost of sparsity detection and coloring is amortized over multiple evaluations.
+This reduces the computational cost from $m$ (or $n$) AD passes to just the number of colors,
+yielding significant speedups on large sparse problems,
+especially when the cost of detection and coloring can be amortized over repeated evaluations.
+The same approach applies to sparse Hessians via forward-over-reverse AD.
 
 ## Installation
 
@@ -52,10 +53,10 @@ from asdex import jacobian_coloring, jacobian
 def f(x):
     return (x[1:] - x[:-1]) ** 2
 
-# Detect sparsity and color in one step
+# Detect sparsity pattern and color it in one step:
 colored_pattern = jacobian_coloring(f, input_shape=50)
 print(colored_pattern)
-# ColoredPattern(49×50, nnz=98, density=4.0%, column, 2 colors)
+# ColoredPattern(49×50, nnz=98, sparsity=96.0%, JVP, 2 colors)
 #   2 JVPs (instead of 49 VJPs or 50 JVPs)
 # ⎡⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤   ⎡⣿⎤
 # ⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⎥
@@ -72,8 +73,13 @@ print(colored_pattern)
 # ⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⎦   ⎣⠉⎦
 ```
 
-The visualization shows the original sparsity pattern (left) compressed into just 2 colors (right).
-Only 2 JVPs are needed instead of 49 VJPs or 50 JVPs — a ~25× speedup.
+The print-out shows the original sparsity pattern (left) compressed into just two colors (right).
+`asdex` automatically ran multiple coloring algorithms,
+selected column coloring (2 JVPs) over row coloring (2 VJPs) since JVPs are cheaper,
+reducing the cost from 49 VJPs or 50 JVPs without coloring to just 2 JVPs.
+Note that on small problems, this doesn't directly translate into a speedup of factor 25x,
+as the decompression overhead dominates.
+
 The colored pattern depends only on the function structure, not the input values.
 Precompute it once and reuse it for repeated evaluations:
 
@@ -105,25 +111,14 @@ from asdex import hessian_coloring, hessian
 def g(x):
     return jnp.sum(x**2)
 
-# Detect sparsity and star-color in one step
-colored_pattern = hessian_coloring(g, input_shape=5)
+# Detect symmetric sparsity pattern and color it in one step:
+colored_pattern = hessian_coloring(g, input_shape=100)
 print(colored_pattern)
-# ColoredPattern(5×5, nnz=5, density=20.0%, column, 1 colors)
-#   1 JVPs (instead of 5 VJPs or 5 JVPs)
-# ● ⋅ ⋅ ⋅ ⋅   ●
-# ⋅ ● ⋅ ⋅ ⋅   ●
-# ⋅ ⋅ ● ⋅ ⋅ → ●
-# ⋅ ⋅ ⋅ ● ⋅   ●
-# ⋅ ⋅ ⋅ ⋅ ●   ●
 
-# Compute sparse Hessian using the precomputed coloring
-x = np.random.randn(5)
-H = hessian(g, x, colored_pattern=colored_pattern)  # returns BCOO
+# Compute sparse Hessian using the precomputed coloring:
+for x in inputs:
+    H = hessian(g, x, colored_pattern=colored_pattern)
 ```
-
-Just like for the Jacobian, precomputed colored patterns only need to be computed once
-and can be reused for repeated evaluations.
-
 
 ## How it works
 
@@ -136,11 +131,14 @@ The result is a global sparsity pattern, valid for all input values.
 The sparsity interpreter composes naturally with JAX's autodiff transforms.
 
 **Coloring**: Two rows can be computed together if they don't share any non-zero columns (row coloring, uses VJPs).
-Dually, two columns can be computed together if they don't share any non-zero rows (column coloring, uses JVPs).
+Analogously, two columns can be computed together if they don't share any non-zero rows (column coloring, uses JVPs).
 `asdex` builds a conflict graph and greedily assigns colors using a LargestFirst ordering.
-`color(sparsity_pattern)` automatically picks whichever partition needs fewer colors.
+By default, `color(sparsity_pattern)` runs both row and column coloring
+and automatically selects whichever partition needs fewer colors,
+choosing the corresponding AD mode (VJPs for row coloring, JVPs for column coloring).
 
-**Sparse Jacobian**: For each color, `asdex` computes a single VJP (row coloring) or JVP (column coloring) with a seed vector that has 1s at the positions of all same-colored rows or columns.
+**Sparse Jacobian**: Based on the coloring result, `asdex` automatically uses either reverse mode (VJPs for row coloring) or forward mode (JVPs for column coloring).
+For each color, it computes a single VJP or JVP with a seed vector that has 1s at the positions of all same-colored rows or columns.
 Due to the coloring constraint, each entry can be uniquely extracted from the compressed results.
 
 **Sparse Hessian**: For each color, `asdex` computes a Hessian-vector product (HVP) using forward-over-reverse AD: `jax.jvp(jax.grad(f), (x,), (v,))`.
