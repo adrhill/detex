@@ -178,20 +178,14 @@ def test_transpose_2d():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_reverse():
-    """jnp.flip triggers conservative fallback.
-
-    TODO(rev): Implement precise handler for rev (reverse) primitive.
-    Precise: output[i] depends on input[n-1-i] (anti-diagonal permutation).
-    """
+    """jnp.flip reverses the array; output[i] depends on input[n-1-i]."""
 
     def f(x):
         return jnp.flip(x)
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # TODO: Should be anti-diagonal [[0,0,1], [0,1,0], [1,0,0]]
-    expected = np.ones((3, 3), dtype=int)
+    expected = np.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]])
     np.testing.assert_array_equal(result, expected)
 
 

@@ -38,6 +38,7 @@ from ._gather import prop_gather
 from ._pad import prop_pad
 from ._reduction import prop_reduce_sum
 from ._reshape import prop_reshape
+from ._rev import prop_rev
 from ._scatter import prop_scatter
 from ._select import prop_select_n
 from ._slice import prop_slice
@@ -205,6 +206,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_reshape(eqn, deps)
         case "transpose":
             prop_transpose(eqn, deps)
+        case "rev":
+            prop_rev(eqn, deps)
         case "integer_pow":
             prop_integer_pow(eqn, deps)
         case (
@@ -292,7 +295,6 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             "dot_general"
             | "reduce_max"
             | "reduce_prod"
-            | "rev"
             | "sort"
             | "split"
             | "tile"
