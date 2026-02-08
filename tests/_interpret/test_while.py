@@ -1,4 +1,7 @@
-"""Tests for while_loop propagation."""
+"""Tests for while_loop propagation.
+
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.while_loop.html
+"""
 
 import jax
 import jax.numpy as jnp

@@ -60,6 +60,8 @@ def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
     Jaxpr:
         invars[0]: input array
         y: the integer exponent
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.integer_pow.html
     """
     in_indices = index_sets(deps, eqn.invars[0])
     if eqn.params.get("y", 1) == 0:
@@ -129,5 +131,7 @@ def prop_convert_element_type(eqn: JaxprEqn, deps: Deps) -> None:
     Jaxpr:
         invars[0]: input array
         new_dtype: target dtype
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.convert_element_type.html
     """
     deps[eqn.outvars[0]] = [s.copy() for s in index_sets(deps, eqn.invars[0])]

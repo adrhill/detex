@@ -17,10 +17,10 @@ from ._commons import (
     Deps,
     IndexSets,
     atom_numel,
+    conservative_deps,
     forward_const_vals,
     index_sets,
     seed_const_vals,
-    union_all,
 )
 from ._concatenate import prop_concatenate
 from ._cond import prop_cond
@@ -35,10 +35,12 @@ from ._elementwise import (
     propagate_const_binary,
 )
 from ._gather import prop_gather
-from ._indexing import prop_reshape, prop_slice, prop_squeeze
 from ._reduction import prop_reduce_sum
+from ._reshape import prop_reshape
 from ._scatter import prop_scatter
 from ._select import prop_select_n
+from ._slice import prop_slice
+from ._squeeze import prop_squeeze
 from ._while import prop_while
 
 # Ufuncs for evaluating constant values during tracing.
@@ -339,9 +341,8 @@ def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
     all_inputs: IndexSets = []
     for invar in eqn.invars:
         all_inputs.extend(index_sets(deps, invar))
-    all_deps = union_all(all_inputs)
     for outvar in eqn.outvars:
-        deps[outvar] = [all_deps.copy() for _ in range(atom_numel(outvar))]
+        deps[outvar] = conservative_deps(all_inputs, atom_numel(outvar))
 
 
 def prop_throw_error(eqn: JaxprEqn, deps: Deps) -> None:

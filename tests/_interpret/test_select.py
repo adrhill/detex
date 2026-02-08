@@ -1,4 +1,7 @@
-"""Tests for control flow operations (conditionals)."""
+"""Tests for select_n propagation (jnp.where, lax.select).
+
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.select_n.html
+"""
 
 import jax.numpy as jnp
 import numpy as np

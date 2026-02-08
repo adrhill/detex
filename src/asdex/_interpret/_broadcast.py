@@ -3,7 +3,7 @@
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import ConstVals, Deps, atom_const_val, index_sets, numel
+from ._commons import ConstVals, Deps, atom_const_val, atom_shape, index_sets, numel
 
 
 def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -26,6 +26,8 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> N
         invars[0]: input array
         shape: target output shape
         broadcast_dimensions: maps input dim i to output dim
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.broadcast_in_dim.html
     """
 
     in_atom = eqn.invars[0]
@@ -59,7 +61,7 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> N
     # np.indices gives all output coordinates.
     # We select the output dim corresponding to each input dim via broadcast_dims.
     # Size-1 input dims are broadcast (every output reads index 0), so we clamp to 0.
-    in_shape = tuple(getattr(in_atom.aval, "shape", ()))
+    in_shape = atom_shape(in_atom)
     out_coords = np.indices(out_shape)
     in_coords = tuple(
         out_coords[broadcast_dims[i]] if in_shape[i] > 1 else 0

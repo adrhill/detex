@@ -4,13 +4,26 @@ from itertools import product
 
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, IndexSets, index_sets, numel, row_strides
+from ._commons import (
+    Deps,
+    IndexSets,
+    atom_shape,
+    flat_to_coords,
+    index_sets,
+    numel,
+    row_strides,
+)
 
 
 def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     """Convolution slides a kernel over the input, computing weighted sums.
     Each output element depends on a local spatial window of input elements
     across all input channels.
+
+    Assumes feature_group_count=1 and batch_group_count=1.
+    For grouped or depthwise convolutions this is conservative
+    (correct but imprecise, since each output channel group really
+    only depends on the corresponding input channel group).
 
     For 2D conv with kernel size (kH, kW), stride s, and C_in input channels:
         out[n, h, w, c_out] = Σ_{kh, kw, c_in} in[n, h·s + kh, w·s + kw, c_in] · W[...]
@@ -22,16 +35,20 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
         out[2] = c·w0 + d·w1  →  deps {2, 3}
 
     Jaxpr:
-        invars[0]: input (lhs), invars[1]: kernel (rhs)
-        dimension_numbers: specifies layout (batch, feature, spatial dims)
+        invars[0]: lhs — rank n+2 input array
+        invars[1]: rhs — rank n+2 kernel weights
+        dimension_numbers: ConvDimensionNumbers (batch, feature, spatial dims)
         window_strides, padding, lhs_dilation, rhs_dilation: conv parameters
+        feature_group_count, batch_group_count: grouping (assumed 1)
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.conv_general_dilated.html
     """
     lhs_indices = index_sets(deps, eqn.invars[0])  # Input image dependencies
 
     # Get shapes from avals
-    lhs_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
-    rhs_shape = tuple(getattr(eqn.invars[1].aval, "shape", ()))
-    out_shape = tuple(getattr(eqn.outvars[0].aval, "shape", ()))
+    lhs_shape = atom_shape(eqn.invars[0])
+    rhs_shape = atom_shape(eqn.invars[1])
+    out_shape = atom_shape(eqn.outvars[0])
 
     # Parse dimension numbers
     dim_nums = eqn.params["dimension_numbers"]
@@ -66,12 +83,7 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     out_indices: IndexSets = []
 
     for out_flat in range(numel(out_shape)):
-        # Convert flat output index to coordinates
-        out_coord = []
-        remaining = out_flat
-        for s in out_strides:
-            out_coord.append(remaining // s)
-            remaining %= s
+        out_coord = flat_to_coords(out_flat, out_strides)
 
         batch_idx = out_coord[out_batch_dim]
         out_spatial_coord = [out_coord[d] for d in out_spatial_dims]

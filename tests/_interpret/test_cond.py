@@ -1,4 +1,7 @@
-"""Tests for cond propagation."""
+"""Tests for cond and switch propagation.
+
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.cond.html
+"""
 
 import jax
 import jax.numpy as jnp

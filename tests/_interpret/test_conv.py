@@ -1,6 +1,8 @@
 """Test asdex on convolutional layers, similar to SCT's performance example.
 
-Reference: https://github.com/adrhill/SparseConnectivityTracer.jl/blob/main/docs/src/user/performance.md
+References:
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.conv_general_dilated.html
+    https://github.com/adrhill/SparseConnectivityTracer.jl/blob/main/docs/src/user/performance.md
 """
 
 import jax

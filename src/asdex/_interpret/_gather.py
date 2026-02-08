@@ -8,36 +8,44 @@ from ._commons import (
     Deps,
     atom_const_val,
     atom_numel,
+    atom_shape,
+    conservative_deps,
     index_sets,
     numel,
-    union_all,
 )
 
 
 def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
-    """Gather extracts slices from operand at positions specified by indices.
+    """Gather extracts slices from operand at positions given by start_indices.
 
-    For static indices (Literal or tracked const), each output element depends
-    on specific input elements determined by the index values. For dynamic
-    (traced) indices, we fall back to conservative.
+    For static start_indices (Literal or tracked const),
+    each output element depends on specific input elements.
+    For dynamic (traced) start_indices, we fall back to conservative.
 
-    For simple 1D gather: out[i] = operand[indices[i]]
+    Precise path handles the common pattern where the gather selects
+    along dim 0 and keeps all other dims intact
+    (collapsed_slice_dims=(0,), start_index_map=(0,), slice_sizes[0]=1).
+    This is the pattern JAX emits for ``x[indices]`` on any-rank operand.
+
+    For simple 1D gather: out[i] = operand[start_indices[i]]
         Each output depends on exactly one input.
     The Jacobian is a selection/permutation matrix.
 
-    Example: x = [a, b, c], indices = [2, 0, 1], y = x[indices] = [c, a, b]
+    Example: x = [a, b, c], idx = [2, 0, 1], y = x[idx] = [c, a, b]
         Input deps:  [{0}, {1}, {2}]
         Output deps: [{2}, {0}, {1}]  (permuted by index array)
 
-    Example with dynamic indices: x[traced_indices]
+    Example with dynamic start_indices: x[traced_idx]
         Cannot determine which inputs each output depends on.
         Conservative: all outputs depend on all inputs.
 
     Jaxpr:
-        invars[0]: operand array to gather from
-        invars[1]: indices specifying gather positions
+        invars[0]: operand — array to gather from
+        invars[1]: start_indices — positions at which slices begin
         dimension_numbers: GatherDimensionNumbers specifying axis mapping
-        slice_sizes: size of slice to extract at each index
+        slice_sizes: shape of each extracted slice (length = ndim(operand))
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.gather.html
     """
     operand_indices = index_sets(deps, eqn.invars[0])
     concrete_indices = atom_const_val(eqn.invars[1], const_vals)
@@ -45,7 +53,7 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     if concrete_indices is not None:
         dim_nums = eqn.params["dimension_numbers"]
         slice_sizes = eqn.params["slice_sizes"]
-        operand_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+        operand_shape = atom_shape(eqn.invars[0])
 
         # We can compute a precise mapping when the gather selects along
         # exactly one dimension (dim 0) and keeps all others intact.
@@ -70,6 +78,6 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     # Conservative fallback: every output depends on every input.
     # Always correct (never misses a dependency), but marks the full Jacobian as dense.
     # Used when indices are dynamic or the gather pattern isn't one we handle precisely.
-    all_deps = union_all(operand_indices)
-    out_size = atom_numel(eqn.outvars[0])
-    deps[eqn.outvars[0]] = [all_deps.copy() for _ in range(out_size)]
+    deps[eqn.outvars[0]] = conservative_deps(
+        operand_indices, atom_numel(eqn.outvars[0])
+    )

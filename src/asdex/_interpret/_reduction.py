@@ -2,12 +2,28 @@
 
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, IndexSets, index_sets, numel, row_strides, union_all
+from ._commons import (
+    Deps,
+    IndexSets,
+    atom_shape,
+    flat_to_coords,
+    index_sets,
+    numel,
+    row_strides,
+    union_all,
+)
 
 
 def prop_reduce_sum(eqn: JaxprEqn, deps: Deps) -> None:
     """Sum reduction aggregates elements along specified axes.
     Each output depends on all input elements that were summed into it.
+
+    This handles the ``reduce_sum`` primitive
+    (emitted by ``jnp.sum``).
+    The general ``jax.lax.reduce`` takes a ``computation`` function
+    and a ``dimensions`` param;
+    the ``reduce_sum`` primitive specializes this to addition
+    and uses ``axes`` instead of ``dimensions``.
 
     Full reduction (no axes or all axes):
         out = Σᵢ x[i]  →  out depends on all inputs
@@ -21,10 +37,12 @@ def prop_reduce_sum(eqn: JaxprEqn, deps: Deps) -> None:
     Jaxpr:
         invars[0]: input array
         axes: tuple of axes to reduce (empty = full reduction)
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.reduce.html
     """
     in_indices = index_sets(deps, eqn.invars[0])
     axes = eqn.params.get("axes", ())
-    in_shape = tuple(getattr(eqn.invars[0].aval, "shape", ()))
+    in_shape = atom_shape(eqn.invars[0])
 
     # Full reduction: single output depends on all inputs
     if not axes or len(axes) == len(in_shape):
@@ -40,12 +58,7 @@ def prop_reduce_sum(eqn: JaxprEqn, deps: Deps) -> None:
     out_indices: IndexSets = [set() for _ in range(out_size)]
 
     for in_flat, elem_deps in enumerate(in_indices):
-        # Convert to input coordinates
-        in_coord = []
-        remaining = in_flat
-        for s in in_strides:
-            in_coord.append(remaining // s)
-            remaining %= s
+        in_coord = flat_to_coords(in_flat, in_strides)
 
         # Project to output coordinates (drop reduced dimensions)
         out_coord = [c for i, c in enumerate(in_coord) if i not in axes]
