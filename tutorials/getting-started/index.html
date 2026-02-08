@@ -1193,9 +1193,9 @@ Let's benchmark on a 5000-dimensional input
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">t_asdex</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">jacobian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="p">)</span><span class="o">.</span><span class="n">block_until_ready</span><span class="p">(),</span> <span class="n">number</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">t_jax</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">f</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">block_until_ready</span><span class="p">(),</span> <span class="n">number</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>asdex.jacobian:      5.85 ms
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>jax.jacobian:      117.72 ms
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>speedup:             20.1x
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>asdex.jacobian:      5.93 ms
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>jax.jacobian:      130.25 ms
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>speedup:             21.9x
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Precompute for Repeated Evaluations</p>
