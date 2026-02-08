@@ -38,12 +38,12 @@ nav:
       - Sparsity Detection: explanation/sparsity-detection.md
       - Graph Coloring: explanation/coloring.md
   - Reference:
+      - Full API: reference/index.md
       - Jacobian: reference/jacobian.md
       - Hessian: reference/hessian.md
       - Sparsity Detection: reference/sparsity.md
       - Coloring: reference/coloring.md
       - Data Structures: reference/data-structures.md
-      - Full API: reference/api.md
   - Benchmarks: https://adrianhill.de/asdex/dev/bench/
 
 not_in_nav: |
@@ -74,7 +74,6 @@ extra_css:
 extra_javascript:
   - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
-  - https://unpkg.com/mermaid@11/dist/mermaid.min.js
 
 plugins:
   - search
