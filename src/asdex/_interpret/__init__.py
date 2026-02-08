@@ -42,6 +42,7 @@ from ._scatter import prop_scatter
 from ._select import prop_select_n
 from ._slice import prop_slice
 from ._squeeze import prop_squeeze
+from ._transpose import prop_transpose
 from ._while import prop_while
 
 # Ufuncs for evaluating constant values during tracing.
@@ -202,6 +203,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_concatenate(eqn, deps)
         case "reshape":
             prop_reshape(eqn, deps)
+        case "transpose":
+            prop_transpose(eqn, deps)
         case "integer_pow":
             prop_integer_pow(eqn, deps)
         case (
@@ -293,7 +296,6 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             | "sort"
             | "split"
             | "tile"
-            | "transpose"
             | "select_if_vmap"
             | "nonbatchable"
             | "unvmap_any"
@@ -338,7 +340,7 @@ def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
     Assumes worst-case: every output element may depend on every input element.
     This is correct but may overestimate sparsity (more nonzeros than necessary).
 
-    Used for: dot_general, transpose, sort, etc.
+    Used for: dot_general, sort, etc.
     """
     all_inputs: IndexSets = []
     for invar in eqn.invars:
