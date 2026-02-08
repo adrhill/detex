@@ -38,6 +38,7 @@ from ._elementwise import (
 from ._gather import prop_gather
 from ._pad import prop_pad
 from ._reduce_max import prop_reduce_max
+from ._reduce_prod import prop_reduce_prod
 from ._reduction import prop_reduce_sum
 from ._reshape import prop_reshape
 from ._rev import prop_rev
@@ -263,6 +264,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_reduce_sum(eqn, deps)
         case "reduce_max":
             prop_reduce_max(eqn, deps)
+        case "reduce_prod":
+            prop_reduce_prod(eqn, deps)
         case "convert_element_type" | "bitcast_convert_type" | "reduce_precision":
             prop_convert_element_type(eqn, deps)
         case "stop_gradient":
@@ -298,8 +301,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         # Conservative fallback: all outputs depend on all inputs.
         # sort is correctly conservative since sorting is a global operation.
         case (
-            "reduce_prod"
-            | "sort"
+            "sort"
             | "split"
             | "tile"
             | "select_if_vmap"

@@ -23,6 +23,7 @@ tests/
     ├── test_elementwise.py     # Elementwise operations
     ├── test_dynamic_slice.py   # dynamic_slice, dynamic_update_slice
     ├── test_reduce_max.py      # reduce_max (max reduction)
+    ├── test_reduce_prod.py     # reduce_prod (product reduction)
     ├── test_reduction.py       # Reduction operations (sum, max, argmax)
     ├── test_rev.py             # Rev (reverse/flip) operations
     ├── test_conv.py            # Convolution tests
