@@ -6,14 +6,15 @@
 [![Benchmarks](https://img.shields.io/badge/benchmarks-view-blue)](https://adrianhill.de/asdex/dev/bench/)
 
 [Automatic Sparse Differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) in JAX.
+
 `asdex` (rumored to be pronounced like _Aztecs_) exploits sparsity structure to efficiently compute sparse Jacobians and Hessians.
 It implements a custom [Jaxpr](https://docs.jax.dev/en/latest/jaxpr.html) interpreter
 that detects sparsity patterns from the computation graph,
 then uses graph coloring to minimize the number of AD passes needed.
 
 > [!WARNING]
-> The original purpose of this package was to evaluate the capabilities of coding agents [on a familiar task](https://github.com/adrhill/SparseConnectivityTracer.jl) I consider to be out-of-distribution.
-> Surprisingly, it seems to work. Use at your own risk.
+> The original purpose of this package was to evaluate the capabilities of coding agents on a task [that is familiar to me](https://openreview.net/pdf?id=GtXSN52nIW).
+> Surprisingly, it seems to work.
 
 ## Installation
 
