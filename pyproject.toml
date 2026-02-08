@@ -1,7 +1,7 @@
 [project]
 name = "asdex"
 version = "0.1.0"
-description = "Jacobian sparsity detection for JAX"
+description = "Automatic Sparse Differentiation in JAX"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -10,9 +10,15 @@ authors = [
 ]
 keywords = [
     "jax",
+    "jaxpr",
     "automatic-differentiation",
+    "automatic-sparse-differentiation",
+    "sparse-automatic-differentiation",
+    "sparsity-detection",
     "sparsity",
     "jacobian",
+    "hessian",
+    "graph-coloring",
     "scientific-computing",
 ]
 classifiers = [
@@ -34,6 +40,8 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/adrhill/asdex"
+Documentation = "https://adrianhill.de/asdex"
+Benchmarks = "https://adrianhill.de/asdex/benchmarks"
 Repository = "https://github.com/adrhill/asdex"
 Issues = "https://github.com/adrhill/asdex/issues"
 
