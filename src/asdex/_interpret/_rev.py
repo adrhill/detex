@@ -1,15 +1,13 @@
 """Propagation rule for rev (reverse) operations."""
 
+import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
     Deps,
     IndexSets,
     atom_shape,
-    flat_to_coords,
     index_sets,
-    numel,
-    row_strides,
 )
 
 
@@ -36,22 +34,10 @@ def prop_rev(eqn: JaxprEqn, deps: Deps) -> None:
     in_indices = index_sets(deps, eqn.invars[0])
     in_shape = atom_shape(eqn.invars[0])
     dimensions = eqn.params["dimensions"]
-    ndim = len(in_shape)
 
-    in_strides = row_strides(in_shape)
-    out_size = numel(in_shape)
+    out_size = int(np.prod(in_shape))
+    perm = np.flip(np.arange(out_size).reshape(in_shape), axis=dimensions).ravel()
 
-    out_indices: IndexSets = []
-    for out_flat in range(out_size):
-        out_coord = flat_to_coords(out_flat, in_strides)
-
-        # Flip coordinates along reversed dimensions.
-        in_flat = sum(
-            (in_shape[d] - 1 - out_coord[d] if d in dimensions else out_coord[d])
-            * in_strides[d]
-            for d in range(ndim)
-        )
-
-        out_indices.append(in_indices[in_flat].copy())
+    out_indices: IndexSets = [in_indices[perm[i]].copy() for i in range(out_size)]
 
     deps[eqn.outvars[0]] = out_indices

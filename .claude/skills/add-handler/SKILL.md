@@ -14,6 +14,7 @@ replacing the conservative fallback.
 
 ### 1. Research
 
+Do all research in this step using extended thinking.
 Before writing code:
 
 - Read the JAX docs for the primitive: fetch `https://docs.jax.dev/en/latest/_autosummary/jax.lax.$ARGUMENTS.html`
@@ -73,7 +74,29 @@ uv run pytest tests/ -x
 
 ### 7. Adversarial tests
 
-- Reread the JAX docs for the primitive: fetch `https://docs.jax.dev/en/latest/_autosummary/jax.lax.$ARGUMENTS.html`
-- Did we test on 1-, 2-, and N-dimensional inputs (in case they are supported)? If not, add such tests.
-- Add tests for edge-cases, try to break our implementation and uncover wrong assumptions.
-- Update and verify the handler if needed. 
+Reread the JAX docs for the primitive: fetch `https://docs.jax.dev/en/latest/_autosummary/jax.lax.$ARGUMENTS.html`
+
+Try to break the implementation by testing inputs the handler might not expect:
+
+- **Dimensionality**: 1D, 2D, 3D, and higher — if any are missing, add them.
+- **Degenerate shapes**: size-0 dimensions, size-1 dimensions, scalar inputs (where the primitive supports them).
+- **Boundary parameters**: empty parameter lists, all-dimensions, single-dimension, negative indices (if applicable).
+- **Compositions**: the primitive chained with itself (e.g. double-reverse, transpose-of-transpose) or with related ops.
+- **Non-contiguous patterns**: inputs where dependencies are not simply `{i}` per element (e.g. from a prior broadcast or reduction) to verify `.copy()` and set merging behave correctly.
+
+For each new test, verify the expected output by hand or against `jax.jacobian`.
+Update and re-verify the handler if any test reveals a bug.
+
+### 8. Simplify
+
+Review the implementation with fresh eyes and look for opportunities to reduce complexity:
+
+- **Vectorize loops**: can per-element Python loops be replaced with numpy operations?
+  Pattern: build a flat permutation or index array with `np.arange`, `np.flip`, `np.transpose`, `np.indices`, or `np.ravel_multi_index`,
+  then index into `in_indices` in a single list comprehension.
+  See `_rev.py`, `_reshape.py`, `_concatenate.py`, and `_broadcast.py` for examples.
+- **Remove unused imports**: after vectorizing, utilities like `flat_to_coords`, `row_strides`, and `numel` may no longer be needed.
+- **Eliminate intermediate variables**: if a value is computed and used only once, inline it.
+- **Simplify special cases**: can a special-case branch be absorbed into the general case?
+
+After any change, re-run verification (step 6).
