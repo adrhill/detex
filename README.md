@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/adrhill/asdex/actions/workflows/ci.yml/badge.svg)](https://github.com/adrhill/asdex/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/adrhill/asdex/graph/badge.svg)](https://codecov.io/gh/adrhill/asdex)
+[![Docs](https://img.shields.io/badge/docs-online-blue)](https://adrianhill.de/asdex/)
 [![Benchmarks](https://img.shields.io/badge/benchmarks-view-blue)](https://adrianhill.de/asdex/dev/bench/)
 
 [Automatic Sparse Differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) in JAX.
@@ -15,7 +16,7 @@ allowing you to quickly and efficiently materialize Jacobians and Hessians.
 ## Background
 
 For a function $f: \mathbb{R}^n \to \mathbb{R}^m$, computing the full Jacobian $J \in \mathbb{R}^{m \times n}$ requires $n$ forward-mode or $m$ reverse-mode AD passes.
-In practice, for example in scientific machine learning, 
+In practice, for example in scientific machine learning,
 many Jacobians are *sparse* (i.e., most entries are structurally zero, regardless of the input).
 
 `asdex` exploits this sparsity in three steps:
@@ -148,4 +149,3 @@ This is more efficient than reverse-over-reverse (VJP on gradient) because forwa
 
 - [SparseConnectivityTracer.jl](https://github.com/adrhill/SparseConnectivityTracer.jl): `asdex` started as a primitive port of this Julia package, which provides global and local Jacobian and Hessian sparsity detection via operator overloading.
 - [SparseMatrixColorings.jl](https://github.com/gdalle/SparseMatrixColorings.jl): Julia package for coloring algorithms on sparse matrices.
-

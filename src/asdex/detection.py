@@ -1,6 +1,7 @@
 """Jacobian and Hessian sparsity detection via jaxpr graph analysis."""
 
 import math
+from collections.abc import Callable
 
 import jax
 import jax.numpy as jnp
@@ -10,7 +11,9 @@ from asdex._interpret import prop_jaxpr
 from asdex.pattern import SparsityPattern
 
 
-def jacobian_sparsity(f, input_shape: int | tuple[int, ...]) -> SparsityPattern:
+def jacobian_sparsity(
+    f: Callable, input_shape: int | tuple[int, ...]
+) -> SparsityPattern:
     """Detect global Jacobian sparsity pattern for f: R^n -> R^m.
 
     Analyzes the computation graph structure directly,
@@ -59,7 +62,9 @@ def jacobian_sparsity(f, input_shape: int | tuple[int, ...]) -> SparsityPattern:
     return SparsityPattern.from_coordinates(rows, cols, (m, n))
 
 
-def hessian_sparsity(f, input_shape: int | tuple[int, ...]) -> SparsityPattern:
+def hessian_sparsity(
+    f: Callable, input_shape: int | tuple[int, ...]
+) -> SparsityPattern:
     """Detect global Hessian sparsity pattern for f: R^n -> R.
 
     Analyzes the Jacobian sparsity of the gradient function,

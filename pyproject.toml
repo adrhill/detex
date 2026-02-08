@@ -48,6 +48,11 @@ dev = [
     "sympy>=1.13.0",
     "ty>=0.0.1a6",
 ]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.27.0",
+]
 
 [build-system]
 requires = ["hatchling"]

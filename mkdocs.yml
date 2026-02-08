@@ -1,0 +1,79 @@
+site_name: asdex
+site_url: https://adrianhill.de/asdex/
+site_description: Automatic Sparse Differentiation in JAX
+repo_url: https://github.com/adrhill/asdex
+repo_name: adrhill/asdex
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+nav:
+  - Home:
+      - Overview: index.md
+      - Getting Started: getting-started.md
+  - How-To Guides:
+      - how-to/index.md
+      - Sparse Jacobians: how-to/jacobians.md
+      - Sparse Hessians: how-to/hessians.md
+  - Explanation:
+      - explanation/index.md
+      - The 3-Stage Pipeline: explanation/pipeline.md
+      - Graph Coloring: explanation/coloring.md
+  - Reference:
+      - API Reference: reference/api.md
+  - Contributing: contributing.md
+  - Benchmarks: https://adrianhill.de/asdex/dev/bench/
+
+not_in_nav: |
+  /CLAUDE.md
+exclude_docs: |
+  CLAUDE.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.arithmatex:
+      generic: true
+  - toc:
+      permalink: true
+  - attr_list
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_root_heading: true
+            show_source: false
+            members_order: source
