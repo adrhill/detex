@@ -37,10 +37,7 @@ from ._elementwise import (
 )
 from ._gather import prop_gather
 from ._pad import prop_pad
-from ._reduce_max import prop_reduce_max
-from ._reduce_min import prop_reduce_min
-from ._reduce_prod import prop_reduce_prod
-from ._reduction import prop_reduce_sum
+from ._reduce import prop_reduce
 from ._reshape import prop_reshape
 from ._rev import prop_rev
 from ._scatter import prop_scatter
@@ -264,14 +261,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             | "square"
         ):
             prop_unary_elementwise(eqn, deps)
-        case "reduce_sum":
-            prop_reduce_sum(eqn, deps)
-        case "reduce_max":
-            prop_reduce_max(eqn, deps)
-        case "reduce_prod":
-            prop_reduce_prod(eqn, deps)
-        case "reduce_min":
-            prop_reduce_min(eqn, deps)
+        case "reduce_sum" | "reduce_max" | "reduce_min" | "reduce_prod":
+            prop_reduce(eqn, deps)
         case "convert_element_type" | "bitcast_convert_type" | "reduce_precision":
             prop_convert_element_type(eqn, deps)
         case "stop_gradient":

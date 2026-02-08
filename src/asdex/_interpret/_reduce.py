@@ -1,4 +1,8 @@
-"""Propagation rule for reduce_prod operations."""
+"""Propagation rule for reduce_sum, reduce_max, reduce_min, and reduce_prod.
+
+All four share the same sparsity structure:
+each output depends on all inputs along the reduced axes.
+"""
 
 import numpy as np
 from jax._src.core import JaxprEqn
@@ -13,26 +17,30 @@ from ._commons import (
 )
 
 
-def prop_reduce_prod(eqn: JaxprEqn, deps: Deps) -> None:
-    """Product reduction multiplies elements along specified axes.
+def prop_reduce(eqn: JaxprEqn, deps: Deps) -> None:
+    """Reduction aggregates elements along specified axes.
 
-    Each output depends on all inputs that are multiplied into it,
-    since changing any factor changes the product.
-    Sparsity-wise, identical to reduce_sum and reduce_max.
+    Each output depends on all input elements that reduce into it.
+    This applies uniformly to reduce_sum, reduce_max, reduce_min, and reduce_prod:
+    in all cases, changing any input in a reduction group
+    can change the output.
 
-    Full reduction (all axes):
-        out = Πᵢ x[i]  →  out depends on all inputs
+    Full reduction (no axes or all axes):
+        out = reduce(x)  →  out depends on all inputs
     Partial reduction along axis k:
-        out[i] = Πⱼ x[i, j]  →  out[i] depends on all x[i, :]
+        out[i] = reduce_j x[i, j]  →  out[i] depends on all x[i, :]
 
-    Example: y = prod(x, axis=1) where x.shape = (2, 3)
+    Example: y = sum(x, axis=1) where x.shape = (2, 3)
         Input deps:  [{0}, {1}, {2}, {3}, {4}, {5}]
         Output deps: [{0, 1, 2}, {3, 4, 5}]  (one set per row)
 
     Jaxpr:
         invars[0]: input array
-        axes: tuple of axes to reduce
+        axes: tuple of axes to reduce (empty = full reduction)
 
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.reduce_sum.html
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.reduce_max.html
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.reduce_min.html
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.reduce_prod.html
     """
     in_indices = index_sets(deps, eqn.invars[0])
