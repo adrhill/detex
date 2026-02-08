@@ -1,16 +1,39 @@
 # Documentation Guide for AI Agents
 
+## Structure
+
+```
+docs/
+├── index.md                  # Landing page
+├── tutorials/
+│   └── getting-started.md    # Tutorial: first steps with asdex
+├── how-to/
+│   ├── jacobians.md          # How-To: sparse Jacobians
+│   └── hessians.md           # How-To: sparse Hessians
+├── explanation/
+│   ├── pipeline.md           # Explanation: the ASD pipeline
+│   └── coloring.md           # Explanation: graph coloring
+├── reference/
+│   └── api.md                # Auto-generated API reference
+└── javascripts/
+    └── mathjax.js            # MathJax configuration
+```
+
 ## Diataxis Framework
 
 The docs follow the [Diataxis](https://diataxis.fr/) framework.
 Each page belongs to one of four categories:
 
-- **Tutorials** (`getting-started.md`): Learning-oriented.
-  Walk the reader through steps to complete a task.
-  Don't explain concepts — just guide them.
+- **Tutorials** (`tutorials/`): Learning-oriented.
+  Guide a beginner through a complete experience to build skills.
+  Show the goal upfront, deliver visible results early and often.
+  Minimize explanation — let the reader learn by doing.
+  Don't offer choices or alternatives; keep the path narrow and reliable.
 - **How-To Guides** (`how-to/`): Task-oriented.
-  Show how to solve specific problems.
-  Assume the reader knows the basics.
+  Give directions to solve a specific real-world problem.
+  Assume the reader already has basic knowledge and knows what they want to achieve.
+  Don't teach or explain — just show the steps.
+  Write from the user's perspective, not the tool's.
 - **Explanation** (`explanation/`): Understanding-oriented.
   Explain concepts, design decisions, and theory.
   No step-by-step instructions.
@@ -70,12 +93,8 @@ Use `markdown-exec` to run Python code during build and show output.
 Add `exec="true"` to a fenced code block:
 
 ````markdown
-```python exec="true"
-from asdex import jacobian_coloring
-
-colored_pattern = jacobian_coloring(lambda x: (x[1:] - x[:-1]) ** 2, input_shape=50)
-print(colored_pattern)
-```
+```python exec="true" source="above"
+print("Hello from asdex!")
 ````
 
 The code runs at build time and its stdout replaces the block in the rendered page.
@@ -83,7 +102,11 @@ To show both the source code and the output, add `source="above"` or `source="be
 
 ````markdown
 ```python exec="true" source="above"
-print("Hello from asdex!")
+from asdex import jacobian_coloring
+
+colored_pattern = jacobian_coloring(lambda x: (x[1:] - x[:-1]) ** 2, input_shape=50)
+print(colored_pattern)
+```
 ```
 ````
 
@@ -111,11 +134,16 @@ uv run mkdocs serve
 This starts a live-reloading server at `http://127.0.0.1:8000`.
 Use `uv run mkdocs build --strict` to catch broken links and warnings.
 
+Live reload handles content changes well,
+but changes to `mkdocs.yml` (nav, theme features, plugins) often require
+stopping and restarting `mkdocs serve` to take effect.
+
 ## Navigation Structure
 
 The nav in `mkdocs.yml` maps to Diataxis categories:
 
-- **Home** tab → tutorials (index, getting-started)
+- **Home** tab → landing page (index)
+- **Tutorials** tab → learning-oriented walkthroughs (getting-started)
 - **How-To Guides** tab → task-oriented guides
 - **Explanation** tab → concept explanations
 - **Reference** tab → auto-generated API docs

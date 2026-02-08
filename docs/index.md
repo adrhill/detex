@@ -51,7 +51,7 @@ Instead of 999 VJPs or 1000 JVPs,
 
 ## Next Steps
 
-- [Getting Started](getting-started.md) — step-by-step tutorial
-- [How-To Guides](how-to/index.md) — task-oriented recipes
-- [Explanation](explanation/index.md) — how and why it works
+- [Getting Started](tutorials/getting-started.md) — step-by-step tutorial
+- [How-To Guides](how-to/jacobians.md) — task-oriented recipes
+- [Explanation](explanation/pipeline.md) — how and why it works
 - [API Reference](reference/api.md) — full API documentation

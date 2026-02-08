@@ -29,13 +29,12 @@ theme:
 nav:
   - Home:
       - Overview: index.md
-      - Getting Started: getting-started.md
+  - Tutorials:
+      - Getting Started: tutorials/getting-started.md
   - How-To Guides:
-      - Overview: how-to/index.md
       - Sparse Jacobians: how-to/jacobians.md
       - Sparse Hessians: how-to/hessians.md
   - Explanation:
-      - Overview: explanation/index.md
       - The ASD Pipeline: explanation/pipeline.md
       - Graph Coloring: explanation/coloring.md
   - Reference:

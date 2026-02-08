@@ -138,6 +138,6 @@ H = hessian(g, x, colored_pattern)
 
 ## Next Steps
 
-- [Computing Sparse Jacobians](how-to/jacobians.md) — more Jacobian recipes
-- [Computing Sparse Hessians](how-to/hessians.md) — Hessian computation guide
-- [The ASD Pipeline](explanation/pipeline.md) — deeper explanation of the architecture
+- [Computing Sparse Jacobians](../how-to/jacobians.md) — more Jacobian recipes
+- [Computing Sparse Hessians](../how-to/hessians.md) — Hessian computation guide
+- [The ASD Pipeline](../explanation/pipeline.md) — deeper explanation of the architecture
