@@ -186,6 +186,9 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             | "clz"
             | "clamp"
             | "population_count"
+            | "reduce_and"
+            | "reduce_or"
+            | "reduce_xor"
         ):
             prop_zero_derivative(eqn, deps)
         case "eq" | "ne" | "lt" | "le" | "gt" | "ge":

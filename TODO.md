@@ -12,7 +12,7 @@ Missing precise handlers for:
 - [x] `reduce_max` - reduction with axes
 - [x] `reduce_min` - reduction with axes
 - [x] `reduce_prod` - reduction with axes
-- [ ] `reduce_and`, `reduce_or`, `reduce_xor` - same structure as `reduce_sum`
+- [x] `reduce_and`, `reduce_or`, `reduce_xor` - zero derivative (bitwise reductions)
 - [ ] `top_k` - conservative is correct (or close to it)
 - [ ] `scatter_sub`, `scatter_mul`, `scatter_max`, `scatter_min` - extend existing `prop_scatter`
 - [ ] `platform_index` - used by `jnp.diag` and other platform-dispatched ops
