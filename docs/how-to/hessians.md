@@ -51,16 +51,20 @@ and `asdex` exploits this with *star coloring*
 Symmetric coloring typically needs fewer colors than row or column coloring,
 since both \(H_{ij}\) and \(H_{ji}\) can be recovered from a single coloring.
 
-The convenience functions `hessian_coloring` and `hessian` use symmetric coloring automatically:
+The convenience functions `hessian_coloring` and `hessian` use symmetric coloring automatically.
+Here we use the [Rosenbrock function](https://en.wikipedia.org/wiki/Rosenbrock_function),
+a classic optimization benchmark whose Hessian is tridiagonal:
+
+\[f(x) = \sum_{i=1}^{n-1} \left[(1 - x_i)^2 + 100\,(x_{i+1} - x_i^2)^2\right]\]
 
 ```python exec="true" session="hess" source="above"
 import jax.numpy as jnp
 from asdex import hessian_coloring
 
-def g(x):
-    return jnp.sum(x ** 2)
+def rosenbrock(x):
+    return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
 
-colored_pattern = hessian_coloring(g, input_shape=100)
+colored_pattern = hessian_coloring(rosenbrock, input_shape=100)
 ```
 
 ```python exec="true" session="hess"
