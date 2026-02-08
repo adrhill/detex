@@ -253,7 +253,7 @@ def generate_random_function(
 
 
 class TestSympyComparison:
-    """Test suite comparing detex against SymPy symbolic derivatives."""
+    """Test suite comparing asdex against SymPy symbolic derivatives."""
 
     def _run_comparison(
         self, n_inputs: int, n_outputs: int, max_depth: int, seed: int
@@ -271,11 +271,11 @@ class TestSympyComparison:
         # Compute ground truth sparsity from SymPy
         expected = compute_symbolic_sparsity(exprs, symbols)
 
-        # Convert to JAX and compute sparsity with detex
+        # Convert to JAX and compute sparsity with asdex
         jax_fn = sympy_to_jax_fn(exprs, symbols)
         result = jacobian_sparsity(jax_fn, n_inputs).todense().astype(bool)
 
-        # detex sparsity should exactly match symbolic sparsity
+        # asdex sparsity should exactly match symbolic sparsity
         if not np.array_equal(expected, result):
             expr_strs = [str(e) for e in exprs]
             missed = expected & ~result

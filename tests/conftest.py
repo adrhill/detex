@@ -1,4 +1,4 @@
-"""Pytest configuration and fixtures for detex tests."""
+"""Pytest configuration and fixtures for asdex tests."""
 
 
 def pytest_configure(config):
