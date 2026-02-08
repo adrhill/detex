@@ -10,7 +10,7 @@
 
 Missing precise handlers for:
 - [x] `reduce_max` - reduction with axes
-- [ ] `reduce_min` - reduction with axes
+- [x] `reduce_min` - reduction with axes
 - [x] `reduce_prod` - reduction with axes
 - [ ] `reduce_and`, `reduce_or`, `reduce_xor` - same structure as `reduce_sum`
 - [ ] `top_k` - conservative is correct (or close to it)

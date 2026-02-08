@@ -38,6 +38,7 @@ from ._elementwise import (
 from ._gather import prop_gather
 from ._pad import prop_pad
 from ._reduce_max import prop_reduce_max
+from ._reduce_min import prop_reduce_min
 from ._reduce_prod import prop_reduce_prod
 from ._reduction import prop_reduce_sum
 from ._reshape import prop_reshape
@@ -266,6 +267,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_reduce_max(eqn, deps)
         case "reduce_prod":
             prop_reduce_prod(eqn, deps)
+        case "reduce_min":
+            prop_reduce_min(eqn, deps)
         case "convert_element_type" | "bitcast_convert_type" | "reduce_precision":
             prop_convert_element_type(eqn, deps)
         case "stop_gradient":
