@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770588895231,
+  "lastUpdate": 1770589474014,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -2418,6 +2418,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.01666804526993325",
             "extra": "mean: 55.81672155000135 msec\nrounds: 20"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "faef7a288b68572f0fd1c95936b834140967e993",
+          "message": "Add precise handlers for all reduction primitives (#33)\n\n* Add precise `reduce_max` primitive handler\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add precise `reduce_prod` primitive handler\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add precise `reduce_min` primitive handler\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add zero-derivative handlers for `reduce_and`, `reduce_or`, `reduce_xor`\n\nBitwise reductions have zero Jacobian, so they use the existing\n`prop_zero_derivative` — no separate handler files needed.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Consolidate reduction handlers into single `_reduce.py` module\n\nThe four reduction primitives (reduce_sum, reduce_max, reduce_min,\nreduce_prod) share identical sparsity structure, so they now share\na single `prop_reduce` handler. Tests are parametrized over the\nreduce function and shape/axes combinations.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Parametrize bitwise reduction tests over reduce_and/or/xor\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Update SKILL and TODOs\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-08T23:23:59+01:00",
+          "tree_id": "984e3a6736257a3c4644e001b388e6e3c720fbd6",
+          "url": "https://github.com/adrhill/asdex/commit/faef7a288b68572f0fd1c95936b834140967e993"
+        },
+        "date": 1770589473351,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 663.8023996695964,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00405260089833369",
+            "extra": "mean: 1.5064724088038004 msec\nrounds: 159"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3239.075439673935,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000065504970684697765",
+            "extra": "mean: 308.73007394377515 usec\nrounds: 1988"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 57.2030569862779,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007613997673490583",
+            "extra": "mean: 17.481583200000728 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 77.37671038705516,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00026495798700692825",
+            "extra": "mean: 12.923785399996746 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 20.776023151863665,
+            "unit": "iter/sec",
+            "range": "stddev: 0.019496801653107812",
+            "extra": "mean: 48.13240689473805 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 242.95915897840848,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000035858621969400084",
+            "extra": "mean: 4.115918099999963 msec\nrounds: 210"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 28.72498049889885,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007768260677243277",
+            "extra": "mean: 34.812904399998956 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 11.085312804569499,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009905455258238083",
+            "extra": "mean: 90.20945260000133 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 123.79472041720724,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00018826480371296914",
+            "extra": "mean: 8.077888916666609 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3102.2420231733677,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000534793497042519",
+            "extra": "mean: 322.34751271181375 usec\nrounds: 2124"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 24.786655063206233,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0017211592353249784",
+            "extra": "mean: 40.34429000000159 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 19.42817061122612,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001038009636240581",
+            "extra": "mean: 51.47165011111099 msec\nrounds: 9"
           }
         ]
       }
