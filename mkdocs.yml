@@ -78,6 +78,8 @@ extra_javascript:
 plugins:
   - search
   - markdown-exec
+  - autorefs:
+      resolve_closest: true
   - mkdocstrings:
       handlers:
         python:

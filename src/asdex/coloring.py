@@ -41,7 +41,7 @@ def jacobian_coloring(
             (``"row"``, ``"column"``, or ``"auto"``).
 
     Returns:
-        A :class:`ColoredPattern` ready for :func:`~asdex.jacobian`.
+        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian`][asdex.jacobian].
     """
     sparsity = _detect_jacobian_sparsity(f, input_shape)
     return color_jacobian_pattern(sparsity, partition)
@@ -61,7 +61,7 @@ def hessian_coloring(
         input_shape: Shape of the input array.
 
     Returns:
-        A :class:`ColoredPattern` ready for :func:`~asdex.hessian`.
+        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian`][asdex.hessian].
     """
     sparsity = _detect_hessian_sparsity(f, input_shape)
     return color_hessian_pattern(sparsity)
@@ -90,7 +90,7 @@ def color_jacobian_pattern(
             (ties go to column coloring since JVPs are cheaper).
 
     Returns:
-        A :class:`ColoredPattern` ready for :func:`~asdex.jacobian`.
+        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian`][asdex.jacobian].
     """
     # Nothing to compute when there are no nonzeros.
     if sparsity.nnz == 0:
@@ -133,7 +133,7 @@ def color_hessian_pattern(sparsity: SparsityPattern) -> ColoredPattern:
         sparsity: Symmetric sparsity pattern of shape (n, n).
 
     Returns:
-        A :class:`ColoredPattern` ready for :func:`~asdex.hessian`.
+        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian`][asdex.hessian].
     """
     if sparsity.nnz == 0:
         return ColoredPattern(

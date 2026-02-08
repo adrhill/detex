@@ -1,3 +1,11 @@
+/* Card-like border around each API entry */
+div.doc.doc-object {
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 0.3rem;
+  padding: 0 1.25rem;
+  margin-top: 1.5rem;
+}
+
 /* Make sidebar section headers more prominent than page links */
 .md-nav--primary > .md-nav__list > .md-nav__item--section > .md-nav__link {
   font-weight: 700;

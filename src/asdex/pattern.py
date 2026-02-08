@@ -231,7 +231,7 @@ class ColoredPattern:
 
         For VJP: ``color_idx = colors[rows]``, ``elem_idx = cols``.
         For JVP: ``color_idx = colors[cols]``, ``elem_idx = rows``.
-        For HVP: delegates to :meth:`_star_extraction_indices`.
+        For HVP: delegates to `_star_extraction_indices`.
         """
         if self.mode == "HVP":
             return self._star_extraction_indices

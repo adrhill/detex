@@ -32,8 +32,8 @@ def jacobian(
         f: Function taking an array and returning an array.
             Input and output may be multi-dimensional.
         x: Input point (any shape).
-        colored_pattern: Optional pre-computed :class:`ColoredPattern`
-            from :func:`~asdex.jacobian_coloring`.
+        colored_pattern: Optional pre-computed [`ColoredPattern`][asdex.ColoredPattern]
+            from [`jacobian_coloring`][asdex.jacobian_coloring].
             If None, sparsity is detected and colored automatically.
 
     Returns:
@@ -86,14 +86,14 @@ def hessian(
         f: Scalar-valued function taking an array.
             Input may be multi-dimensional.
         x: Input point (any shape).
-        colored_pattern: Optional pre-computed :class:`ColoredPattern`
-            from :func:`~asdex.hessian_coloring`.
+        colored_pattern: Optional pre-computed [`ColoredPattern`][asdex.ColoredPattern]
+            from [`hessian_coloring`][asdex.hessian_coloring].
             If provided, ``sparsity`` and ``colors`` are ignored.
         sparsity: Optional pre-computed Hessian sparsity pattern from
-            :func:`~asdex.hessian_sparsity`.
+            [`hessian_sparsity`][asdex.hessian_sparsity].
             If None, detected automatically.
         colors: Optional pre-computed row coloring from
-            :func:`~asdex.color_rows`.
+            [`color_rows`][asdex.color_rows].
             If None, symmetric coloring is computed and used automatically.
 
     Returns:
