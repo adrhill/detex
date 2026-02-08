@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770509918733,
+  "lastUpdate": 1770513888271,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -1338,6 +1338,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.008256847120334209",
             "extra": "mean: 1.5407647305999945 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6aadc3646bb475b13be22acad0a2816c4ed1ab28",
+          "message": "Clean up public API and expand linting (#26)\n\n* Reorder modules for readability, rename `star_color` to `color_symmetric`\n\nPut public API functions at the top of coloring.py and decompression.py,\nwith private helpers below. Rename `star_color` to `color_symmetric` for\na consistent naming convention with `color_rows` and `color_cols`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Make docstrings consistent across jacobian/hessian function pairs\n\nStandardize f parameter descriptions, return value formatting,\nand cross-references across detection, coloring, and decompression.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Update Claude settings\n\n* Simplify pattern.py: extract display, drop `nse` alias and `astype`\n\n- Move ~190 lines of visualization code (dots, braille, compressed\n  pattern rendering) from pattern.py to new _display.py module.\n  pattern.py goes from 561 to 321 lines.\n- Unify on `nnz` as the single property name, drop `nse` alias.\n- Remove `astype()` compatibility shim on SparsityPattern.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Expand ruff lint rules and fix all violations\n\nAdd PT, PIE, ICN, RSE, RET, D, PERF, T20, PLC0415 rules with Google\npydocstyle convention. Fix all violations: docstring formatting (D205,\nD403, D415), list comprehensions (PERF401), top-level imports\n(PLC0415), unnecessary else after return (RET505), pytest style (PT006,\nPT011), and ClassVar annotation (RUF012). Break circular import between\n_cond/_while and __init__ by passing prop_jaxpr as a callback.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-08T02:23:57+01:00",
+          "tree_id": "1db64e11b9895efabdb7cc5203904e6ac38c04e2",
+          "url": "https://github.com/adrhill/asdex/commit/6aadc3646bb475b13be22acad0a2816c4ed1ab28"
+        },
+        "date": 1770513887267,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 612.6945735212505,
+            "unit": "iter/sec",
+            "range": "stddev: 0.005448398002919871",
+            "extra": "mean: 1.6321345793106103 msec\nrounds: 145"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3241.7554418963855,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000009602478330656638",
+            "extra": "mean: 308.4748426966511 usec\nrounds: 1958"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 54.8423190096478,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005226781676528589",
+            "extra": "mean: 18.234094000001733 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 66.13110698290158,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005849134963231956",
+            "extra": "mean: 15.121476799996003 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 22.131987030739772,
+            "unit": "iter/sec",
+            "range": "stddev: 0.016345125512621825",
+            "extra": "mean: 45.18347126315728 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 237.3843966652847,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000039951660908164063",
+            "extra": "mean: 4.212576791262376 msec\nrounds: 206"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 19.25129184831375,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03501476786651012",
+            "extra": "mean: 51.944566000000236 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 10.815498025498261,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003944519437488283",
+            "extra": "mean: 92.45991240000535 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 39.98685011264547,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01887389307953793",
+            "extra": "mean: 25.00822138235288 msec\nrounds: 34"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 5.23865329894252,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0019959349301302237",
+            "extra": "mean: 190.88875383332984 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 21.769659827120982,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003420712859297489",
+            "extra": "mean: 45.935490400000845 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 0.6408715336879672,
+            "unit": "iter/sec",
+            "range": "stddev: 0.028526118680394126",
+            "extra": "mean: 1.560375125799999 sec\nrounds: 5"
           }
         ]
       }
