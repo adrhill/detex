@@ -14,9 +14,9 @@ replacing the conservative fallback.
 
 ### 1. Research
 
-Do all research in this step using extended thinking.
-Before writing code:
+Do all research in this step using extended **planning mode**.
 
+Before writing code:
 - Read the JAX docs for the primitive: fetch `https://docs.jax.dev/en/latest/_autosummary/jax.lax.$ARGUMENTS.html`
 - Read `src/asdex/_interpret/CLAUDE.md` for conventions (docstring style, semantic line breaks, handler structure)
 - Read `src/asdex/_interpret/_commons.py` to understand available utilities
@@ -30,14 +30,8 @@ What is the Jacobian structure (permutation, selection, block-diagonal, etc.)?
 
 ### 2. Implement handler
 
-Create `src/asdex/_interpret/_$ARGUMENTS.py` with `prop_$ARGUMENTS(eqn, deps)`.
-
-Follow the handler docstring style from `_interpret/CLAUDE.md`:
-1. **Semantic summary**: What the operation does and how dependencies flow.
-2. **Math**: The Jacobian structure in concise mathematical notation.
-3. **Example**: A concrete input/output trace showing dependency sets before and after.
-4. **Jaxpr**: The `eqn.invars` and `eqn.params` layout the handler reads.
-5. **URL**: Link to the JAX docs for the primitive, as a bare URL on the last line.
+- Create `src/asdex/_interpret/_$ARGUMENTS.py` with `prop_$ARGUMENTS(eqn, deps)`.
+- Follow the handler docstring style from `_interpret/CLAUDE.md`.
 
 ### 3. Wire up dispatch
 
@@ -57,12 +51,7 @@ Create `tests/_interpret/test_$ARGUMENTS.py` with thorough tests:
 - Edge cases (size-1 dimensions, identity/trivial parameters)
 - Real-world usage patterns (e.g. `jnp` functions that lower to this primitive)
 
-### 5. Update docs
-
-- `TODO.md`: check off the primitive and its test items
-- `src/asdex/_interpret/CLAUDE.md`: add the new module to the file listing
-
-### 6. Verify
+### 5. Verify
 
 Run in order:
 ```bash
@@ -72,7 +61,7 @@ uv run pytest tests/_interpret/test_internals.py -v
 uv run pytest tests/ -x
 ```
 
-### 7. Adversarial tests
+### 6. Adversarial tests
 
 Reread the JAX docs for the primitive: fetch `https://docs.jax.dev/en/latest/_autosummary/jax.lax.$ARGUMENTS.html`
 
@@ -87,7 +76,7 @@ Try to break the implementation by testing inputs the handler might not expect:
 For each new test, verify the expected output by hand or against `jax.jacobian`.
 Update and re-verify the handler if any test reveals a bug.
 
-### 8. Simplify
+### 7. Simplify
 
 Review the implementation with fresh eyes and look for opportunities to reduce complexity:
 
@@ -100,3 +89,8 @@ Review the implementation with fresh eyes and look for opportunities to reduce c
 - **Simplify special cases**: can a special-case branch be absorbed into the general case?
 
 After any change, re-run verification (step 6).
+
+### 8. Update docs
+
+- `TODO.md`: check off the primitive and its test items
+- `src/asdex/_interpret/CLAUDE.md`: add the new module to the file listing
