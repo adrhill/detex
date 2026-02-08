@@ -48,7 +48,7 @@ def check_conv_sparsity(
     expected_out_size = out_h * out_w * C_out
 
     assert sparsity.shape == (expected_out_size, input_size)
-    assert sparsity.nse > 0
+    assert sparsity.nnz > 0
 
     if verify_exact:
         x_test = jax.random.normal(jax.random.key(42), (input_size,))
@@ -102,7 +102,7 @@ def test_conv_with_padding():
     # With SAME padding, output size equals input size
     expected_out_size = H * W * C_out
     assert sparsity.shape == (expected_out_size, input_size)
-    assert sparsity.nse > 0
+    assert sparsity.nnz > 0
 
     # Verify against actual Jacobian
     x_test = jax.random.normal(jax.random.key(42), (input_size,))
@@ -138,7 +138,7 @@ def test_conv_with_strides():
     expected_out_size = out_h * out_w * C_out
 
     assert sparsity.shape == (expected_out_size, input_size)
-    assert sparsity.nse > 0
+    assert sparsity.nnz > 0
 
     # Verify against actual Jacobian
     x_test = jax.random.normal(jax.random.key(42), (input_size,))
@@ -169,7 +169,7 @@ def test_conv_transpose():
 
     sparsity = jacobian_sparsity(f, input_shape=input_size)
 
-    assert sparsity.nse > 0
+    assert sparsity.nnz > 0
 
     # Verify against actual Jacobian
     x_test = jax.random.normal(jax.random.key(42), (input_size,))

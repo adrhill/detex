@@ -58,7 +58,7 @@ def test_zero_size_input():
 
     result = jacobian_sparsity(f, input_shape=0)
     assert result.shape == (1, 0)
-    assert result.nse == 0
+    assert result.nnz == 0
 
 
 @pytest.mark.reduction

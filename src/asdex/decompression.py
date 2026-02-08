@@ -56,7 +56,7 @@ def jacobian(
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(0, n))
 
     # Handle edge case: all-zero Jacobian
-    if sparsity.nse == 0:
+    if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
     if colored_pattern.mode == "VJP":
@@ -107,7 +107,7 @@ def hessian(
 
     if colored_pattern is not None:
         sparsity = colored_pattern.sparsity
-        if sparsity.nse == 0:
+        if sparsity.nnz == 0:
             return BCOO(
                 (jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n)
             )
@@ -118,7 +118,7 @@ def hessian(
         sparsity = _detect_hessian_sparsity(f, x.shape)
 
     # Handle edge case: all-zero Hessian
-    if sparsity.nse == 0:
+    if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n))
 
     if colors is not None:

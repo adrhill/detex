@@ -81,7 +81,7 @@ def test_3d_input_sparsity():
 
     result = jacobian_sparsity(f, input_shape=(2, 3, 4))
     assert result.shape == (6, 24)
-    assert result.nse == 24  # each of 24 inputs appears in exactly one output
+    assert result.nnz == 24  # each of 24 inputs appears in exactly one output
 
 
 @pytest.mark.hessian
@@ -269,7 +269,7 @@ def test_lenet_sparsity_detection():
 
     n = 64  # 8 * 8
     assert sparsity.n == n
-    assert sparsity.nse > 0
+    assert sparsity.nnz > 0
     # Two 3x3 VALID convs: receptive field is 5x5,
     # so each output depends on at most 25 inputs
     max_deps = 25

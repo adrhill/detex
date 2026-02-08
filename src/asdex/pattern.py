@@ -1,9 +1,4 @@
-"""Pattern data structures for the detection->coloring->decompression pipeline.
-
-Pretty-printing adapted from SparseArrays.jl (MIT license)
-Copyright (c) 2018-2024 SparseArrays.jl contributors: https://github.com/JuliaSparse/SparseArrays.jl/contributors
-https://github.com/JuliaSparse/SparseArrays.jl/
-"""
+"""Pattern data structures for the detection->coloring->decompression pipeline."""
 
 from __future__ import annotations
 
@@ -16,6 +11,8 @@ import jax.numpy as jnp
 import numpy as np
 from numpy.typing import NDArray
 
+from asdex._display import colored_repr, colored_str, sparsity_repr, sparsity_str
+
 if TYPE_CHECKING:
     from jax.experimental.sparse import BCOO
 
@@ -24,13 +21,13 @@ if TYPE_CHECKING:
 class SparsityPattern:
     """Sparse matrix pattern storing only structural information (no values).
 
-    Optimized for the sparsity detection -> coloring -> decompression pipeline.
-    Stores row and column indices separately for efficient access.
+    Stores row and column indices separately for efficient access
+    by the coloring and decompression stages.
 
     Attributes:
-        rows: Row indices of non-zero entries, shape (nnz,)
-        cols: Column indices of non-zero entries, shape (nnz,)
-        shape: Matrix dimensions (m, n)
+        rows: Row indices of non-zero entries, shape ``(nnz,)``
+        cols: Column indices of non-zero entries, shape ``(nnz,)``
+        shape: Matrix dimensions ``(m, n)``
     """
 
     rows: NDArray[np.int32]
@@ -48,14 +45,9 @@ class SparsityPattern:
     # -------------------------------------------------------------------------
 
     @property
-    def nse(self) -> int:
-        """Number of stored elements."""
-        return len(self.rows)
-
-    @property
     def nnz(self) -> int:
-        """Number of non-zero elements (alias for nse)."""
-        return self.nse
+        """Number of non-zero elements."""
+        return len(self.rows)
 
     @property
     def m(self) -> int:
@@ -71,11 +63,11 @@ class SparsityPattern:
     def density(self) -> float:
         """Fraction of non-zero entries."""
         total = self.m * self.n
-        return self.nse / total if total > 0 else 0.0
+        return self.nnz / total if total > 0 else 0.0
 
     @cached_property
     def col_to_rows(self) -> dict[int, list[int]]:
-        """Mapping from column index to list of row indices with non-zeros in that column.
+        """Mapping from column index to list of row indices with non-zeros.
 
         Used by the coloring algorithm to build the row conflict graph.
         """
@@ -86,7 +78,7 @@ class SparsityPattern:
 
     @cached_property
     def row_to_cols(self) -> dict[int, list[int]]:
-        """Mapping from row index to list of column indices with non-zeros in that row.
+        """Mapping from row index to list of column indices with non-zeros.
 
         Used by the coloring algorithm to build the column conflict graph.
         """
@@ -109,12 +101,9 @@ class SparsityPattern:
         """Create pattern from row and column index arrays.
 
         Args:
-            rows: Row indices of non-zero entries
-            cols: Column indices of non-zero entries
-            shape: Matrix dimensions (m, n)
-
-        Returns:
-            SparsityPattern instance
+            rows: Row indices of non-zero entries.
+            cols: Column indices of non-zero entries.
+            shape: Matrix dimensions ``(m, n)``.
         """
         return cls(
             rows=np.asarray(rows, dtype=np.int32),
@@ -124,14 +113,7 @@ class SparsityPattern:
 
     @classmethod
     def from_bcoo(cls, bcoo: BCOO) -> SparsityPattern:
-        """Create pattern from JAX BCOO sparse matrix.
-
-        Args:
-            bcoo: JAX BCOO sparse matrix
-
-        Returns:
-            SparsityPattern instance
-        """
+        """Create pattern from JAX BCOO sparse matrix."""
         indices = np.asarray(bcoo.indices)
         shape = (bcoo.shape[0], bcoo.shape[1])
         if indices.size == 0:
@@ -150,11 +132,7 @@ class SparsityPattern:
     def from_dense(cls, dense: NDArray) -> SparsityPattern:
         """Create pattern from dense boolean/numeric matrix.
 
-        Args:
-            dense: 2D array where non-zero entries indicate pattern positions
-
-        Returns:
-            SparsityPattern instance
+        Non-zero entries indicate pattern positions.
         """
         dense = np.asarray(dense)
         rows, cols = np.nonzero(dense)
@@ -170,8 +148,8 @@ class SparsityPattern:
 
     @cached_property
     def _bcoo_indices(self) -> jnp.ndarray:
-        """BCOO index array of shape ``(nse, 2)``, cached for reuse."""
-        if self.nse == 0:
+        """BCOO index array of shape ``(nnz, 2)``, cached for reuse."""
+        if self.nnz == 0:
             return jnp.zeros((0, 2), dtype=jnp.int32)
         return jnp.stack([self.rows, self.cols], axis=1)
 
@@ -179,161 +157,35 @@ class SparsityPattern:
         """Convert to JAX BCOO sparse matrix.
 
         Args:
-            data: Optional data values. If None, uses all 1s.
-
-        Returns:
-            JAX BCOO sparse matrix
+            data: Optional data values.
+                If None, uses all 1s.
         """
         from jax.experimental.sparse import BCOO
 
         indices = self._bcoo_indices
         if data is None:
-            if self.nse == 0:
+            if self.nnz == 0:
                 data = jnp.array([])
             else:
-                data = jnp.ones(self.nse, dtype=jnp.int8)
+                data = jnp.ones(self.nnz, dtype=jnp.int8)
         return BCOO((data, indices), shape=self.shape)
 
     def todense(self) -> NDArray:
-        """Convert to dense numpy array (1s at pattern positions).
-
-        Returns:
-            Dense boolean array of shape (m, n)
-        """
+        """Convert to dense numpy array with 1s at pattern positions."""
         result = np.zeros(self.shape, dtype=np.int8)
-        if self.nse > 0:
+        if self.nnz > 0:
             result[self.rows, self.cols] = 1
         return result
 
-    def astype(self, dtype: type) -> NDArray:
-        """Return dense array with specified dtype.
-
-        For compatibility with existing test patterns like `.todense().astype(int)`.
-
-        Args:
-            dtype: Target numpy dtype
-
-        Returns:
-            Dense array of specified dtype
-        """
-        return self.todense().astype(dtype)
-
     # -------------------------------------------------------------------------
-    # Visualization
+    # Display
     # -------------------------------------------------------------------------
-
-    # Thresholds for switching from dot display to braille (Julia-style heuristics)
-    _SMALL_ROWS = 16  # Max rows to show with dot display
-    _SMALL_COLS = 40  # Max cols to show with dot display
-
-    def _render_dots(self) -> str:
-        """Render small matrix using dots and bullets (Julia-style).
-
-        Uses '⋅' for zeros and '●' for non-zeros.
-
-        Returns:
-            String containing dot visualization
-        """
-        if self.m == 0 or self.n == 0:
-            return "(empty)"
-
-        dense = self.todense()
-        lines = []
-        for i in range(self.m):
-            row_chars = []
-            for j in range(self.n):
-                row_chars.append("●" if dense[i, j] else "⋅")
-            lines.append(" ".join(row_chars))
-        return "\n".join(lines)
-
-    def _render_braille(self, max_height: int = 20, max_width: int = 40) -> str:
-        """Render sparsity pattern using Unicode braille characters.
-
-        Each braille character represents a 4x2 block of the matrix.
-        Dots are lit where the pattern has non-zero entries.
-        Large matrices are downsampled by linearly interpolating each
-        non-zero position to the output grid,
-        following Julia's SparseArrays approach.
-
-        Braille dot bits indexed by ``(col_offset % 2) * 4 + (row_offset % 4)``::
-
-            [0,0]=0x01  [0,1]=0x08
-            [1,0]=0x02  [1,1]=0x10
-            [2,0]=0x04  [2,1]=0x20
-            [3,0]=0x40  [3,1]=0x80
-
-        Args:
-            max_height: Maximum number of braille characters vertically
-            max_width: Maximum number of braille characters horizontally
-
-        Returns:
-            String containing braille visualization
-        """
-        if self.m == 0 or self.n == 0:
-            return "(empty)"
-
-        # Target size in dot space (each braille char is 4 rows × 2 cols)
-        scale_height = min(self.m, max_height * 4)
-        scale_width = min(self.n, max_width * 2)
-
-        # Output braille grid dimensions
-        out_rows = (scale_height - 1) // 4 + 1
-        out_cols = (scale_width - 1) // 2 + 1
-
-        # Braille dot bits: index = (col_offset % 2) * 4 + (row_offset % 4)
-        braille_bits = [0x01, 0x02, 0x04, 0x40, 0x08, 0x10, 0x20, 0x80]
-
-        grid = [[0] * out_cols for _ in range(out_rows)]
-
-        # Scale each non-zero to the output grid via linear interpolation
-        row_denom = max(self.m - 1, 1)
-        col_denom = max(self.n - 1, 1)
-        for i, j in zip(self.rows, self.cols, strict=True):
-            si = round(int(i) * (scale_height - 1) / row_denom)
-            sj = round(int(j) * (scale_width - 1) / col_denom)
-            grid[si // 4][sj // 2] |= braille_bits[(sj % 2) * 4 + (si % 4)]
-
-        lines = []
-        for row in grid:
-            lines.append("".join(chr(0x2800 + bits) for bits in row))
-        return "\n".join(lines)
-
-    def _render(self) -> str:
-        """Return visualization string without header.
-
-        Uses dot display (●/⋅) for small matrices, braille for large ones.
-        Follows Julia's SparseArrays display heuristics.
-        """
-        if self.m <= self._SMALL_ROWS and self.n <= self._SMALL_COLS:
-            return self._render_dots()
-
-        braille = self._render_braille()
-        braille_lines = braille.split("\n")
-        if braille_lines and braille_lines[0] != "(empty)":
-            n_lines = len(braille_lines)
-            bordered = []
-            for i, line in enumerate(braille_lines):
-                if i == 0:
-                    bordered.append("⎡" + line + "⎤")
-                elif i == n_lines - 1:
-                    bordered.append("⎣" + line + "⎦")
-                else:
-                    bordered.append("⎢" + line + "⎥")
-            return "\n".join(bordered)
-        return braille
 
     def __str__(self) -> str:
-        """Return string representation with visualization.
-
-        Uses dot display (●/⋅) for small matrices, braille for large ones.
-        Follows Julia's SparseArrays display heuristics.
-        """
-        header = f"SparsityPattern({self.m}×{self.n}, nnz={self.nse}, sparsity={1 - self.density:.1%})"
-        return f"{header}\n{self._render()}"
+        return sparsity_str(self)
 
     def __repr__(self) -> str:
-        """Return compact representation."""
-        return f"SparsityPattern(shape={self.shape}, nnz={self.nse})"
+        return sparsity_repr(self)
 
 
 @dataclass(frozen=True, repr=False)
@@ -451,110 +303,12 @@ class ColoredPattern:
             seeds[c] = self.colors == c
         return seeds
 
+    # -------------------------------------------------------------------------
+    # Display
+    # -------------------------------------------------------------------------
+
     def __repr__(self) -> str:
-        """Return compact representation."""
-        sp = self.sparsity
-        m, n = sp.shape
-        c = self.num_colors
-        return (
-            f"ColoredPattern({m}×{n}, nnz={sp.nse}, sparsity={1 - sp.density:.1%}, "
-            f"{self.mode}, {c} {'color' if c == 1 else 'colors'})"
-        )
-
-    def _compressed_pattern(self) -> SparsityPattern:
-        """Build the compressed sparsity pattern after coloring.
-
-        For column compression (JVP/HVP, shape ``(m, num_colors)``):
-        entry ``(i, c)`` is present iff any column ``j``
-        with ``colors[j] == c`` has a nonzero at ``(i, j)``.
-
-        For row compression (VJP, shape ``(num_colors, n)``):
-        entry ``(c, j)`` is present iff any row ``i``
-        with ``colors[i] == c`` has a nonzero at ``(i, j)``.
-        """
-        comp_rows: list[int] = []
-        comp_cols: list[int] = []
-
-        if self._compresses_columns:
-            # Compress columns: (m, n) → (m, num_colors)
-            seen: set[tuple[int, int]] = set()
-            for i, j in zip(self.sparsity.rows, self.sparsity.cols, strict=True):
-                c = int(self.colors[j])
-                entry = (int(i), c)
-                if entry not in seen:
-                    seen.add(entry)
-                    comp_rows.append(entry[0])
-                    comp_cols.append(entry[1])
-            shape = (self.sparsity.m, self.num_colors)
-        else:
-            # Compress rows: (m, n) → (num_colors, n)
-            seen = set()
-            for i, j in zip(self.sparsity.rows, self.sparsity.cols, strict=True):
-                c = int(self.colors[i])
-                entry = (c, int(j))
-                if entry not in seen:
-                    seen.add(entry)
-                    comp_rows.append(entry[0])
-                    comp_cols.append(entry[1])
-            shape = (self.num_colors, self.sparsity.n)
-
-        return SparsityPattern.from_coordinates(comp_rows, comp_cols, shape)
+        return colored_repr(self)
 
     def __str__(self) -> str:
-        """Return string with AD savings summary and visualization.
-
-        Column compression (JVP/HVP) shows side-by-side with ``→``.
-        Row compression (VJP) shows stacked with ``↓``.
-        """
-        m, n = self.sparsity.shape
-        c = self.num_colors
-        s = "" if c == 1 else "s"
-
-        def _plural(count: int, word: str) -> str:
-            return f"{count} {word}" if count == 1 else f"{count} {word}s"
-
-        if self.mode == "HVP":
-            instead = f"instead of {_plural(n, 'HVP')}"
-        else:
-            instead = f"instead of {_plural(m, 'VJP')} or {_plural(n, 'JVP')}"
-        header = f"{repr(self)}\n  {c} {self.mode}{s} ({instead})"
-
-        compressed = self._compressed_pattern()
-        left_lines = self.sparsity._render().split("\n")
-        right_lines = compressed._render().split("\n")
-
-        if self._compresses_columns:
-            viz = _render_side_by_side(left_lines, right_lines)
-        else:
-            viz = _render_stacked(left_lines, right_lines)
-
-        return f"{header}\n{viz}"
-
-
-def _render_side_by_side(left_lines: list[str], right_lines: list[str]) -> str:
-    """Join two visualizations side-by-side with ``→`` on the middle line."""
-    max_left = max((len(line) for line in left_lines), default=0)
-    n_lines = max(len(left_lines), len(right_lines))
-    mid = n_lines // 2
-
-    result = []
-    for i in range(n_lines):
-        left = left_lines[i] if i < len(left_lines) else ""
-        right = right_lines[i] if i < len(right_lines) else ""
-        sep = " → " if i == mid else "   "
-        result.append(f"{left:<{max_left}}{sep}{right}")
-    return "\n".join(result)
-
-
-def _render_stacked(top_lines: list[str], bottom_lines: list[str]) -> str:
-    """Join two visualizations stacked with centered ``↓`` between them."""
-    top_width = max((len(line) for line in top_lines), default=0)
-    bottom_width = max((len(line) for line in bottom_lines), default=0)
-    full_width = max(top_width, bottom_width)
-
-    result = list(top_lines)
-    arrow = "↓"
-    pad = full_width // 2
-    result.append(" " * pad + arrow)
-    result.extend(bottom_lines)
-    return "\n".join(result)
+        return colored_str(self)

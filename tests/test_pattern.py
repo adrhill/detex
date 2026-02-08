@@ -6,6 +6,7 @@ import pytest
 from jax.experimental.sparse import BCOO
 
 from asdex import SparsityPattern, jacobian_sparsity
+from asdex._display import _render_braille, _render_dots
 
 
 class TestValidation:
@@ -27,7 +28,6 @@ class TestConstruction:
         sparsity_pattern = SparsityPattern.from_coordinates(rows, cols, (3, 3))
 
         assert sparsity_pattern.shape == (3, 3)
-        assert sparsity_pattern.nse == 4
         assert sparsity_pattern.nnz == 4
         assert sparsity_pattern.m == 3
         assert sparsity_pattern.n == 3
@@ -39,7 +39,7 @@ class TestConstruction:
         sparsity_pattern = SparsityPattern.from_coordinates([], [], (3, 4))
 
         assert sparsity_pattern.shape == (3, 4)
-        assert sparsity_pattern.nse == 0
+        assert sparsity_pattern.nnz == 0
         assert sparsity_pattern.m == 3
         assert sparsity_pattern.n == 4
 
@@ -53,7 +53,7 @@ class TestConstruction:
         # Convert to SparsityPattern
         sparsity_pattern = SparsityPattern.from_bcoo(bcoo)
         assert sparsity_pattern.shape == (3, 3)
-        assert sparsity_pattern.nse == 3
+        assert sparsity_pattern.nnz == 3
 
         # Convert back to BCOO
         bcoo2 = sparsity_pattern.to_bcoo()
@@ -68,7 +68,7 @@ class TestConstruction:
 
         sparsity_pattern = SparsityPattern.from_bcoo(bcoo)
         assert sparsity_pattern.shape == (3, 4)
-        assert sparsity_pattern.nse == 0
+        assert sparsity_pattern.nnz == 0
 
     def test_from_dense(self):
         """Construction from dense matrix."""
@@ -76,7 +76,7 @@ class TestConstruction:
         sparsity_pattern = SparsityPattern.from_dense(dense)
 
         assert sparsity_pattern.shape == (3, 3)
-        assert sparsity_pattern.nse == 5
+        assert sparsity_pattern.nnz == 5
         np.testing.assert_array_equal(
             sparsity_pattern.todense(), (dense != 0).astype(np.int8)
         )
@@ -102,17 +102,6 @@ class TestConversion:
 
         expected = np.zeros((2, 3), dtype=np.int8)
         np.testing.assert_array_equal(dense, expected)
-
-    def test_astype(self):
-        """astype for test compatibility."""
-        sparsity_pattern = SparsityPattern.from_coordinates([0, 1], [0, 1], (2, 2))
-
-        int_arr = sparsity_pattern.astype(int)
-        assert int_arr.dtype == int
-        np.testing.assert_array_equal(int_arr, np.eye(2, dtype=int))
-
-        float_arr = sparsity_pattern.astype(np.float32)
-        assert float_arr.dtype == np.float32
 
     def test_to_bcoo_with_data(self):
         """to_bcoo with custom data values."""
@@ -235,15 +224,14 @@ class TestVisualization:
     def test_render_dots_empty_matrix(self):
         """Dot rendering of empty matrix."""
         sparsity_pattern = SparsityPattern.from_coordinates([], [], (0, 0))
-        dots = sparsity_pattern._render_dots()
-        assert dots == "(empty)"
+        assert _render_dots(sparsity_pattern) == "(empty)"
 
     def test_render_dots_small_diagonal(self):
         """Dot rendering of small diagonal pattern."""
         sparsity_pattern = SparsityPattern.from_coordinates(
             [0, 1, 2], [0, 1, 2], (3, 3)
         )
-        dots = sparsity_pattern._render_dots()
+        dots = _render_dots(sparsity_pattern)
 
         # Should show diagonal pattern
         lines = dots.split("\n")
@@ -254,8 +242,7 @@ class TestVisualization:
     def test_braille_empty_matrix(self):
         """Braille rendering of empty matrix."""
         sparsity_pattern = SparsityPattern.from_coordinates([], [], (0, 0))
-        braille = sparsity_pattern._render_braille()
-        assert braille == "(empty)"
+        assert _render_braille(sparsity_pattern) == "(empty)"
 
     def test_braille_large_matrix_downsamples(self):
         """Large matrices are downsampled in braille."""
@@ -264,7 +251,7 @@ class TestVisualization:
         cols = list(range(100))
         sparsity_pattern = SparsityPattern.from_coordinates(rows, cols, (100, 100))
 
-        braille = sparsity_pattern._render_braille(max_height=10, max_width=20)
+        braille = _render_braille(sparsity_pattern, max_height=10, max_width=20)
         lines = braille.split("\n")
 
         # Should be within limits

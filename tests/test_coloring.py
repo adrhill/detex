@@ -23,6 +23,7 @@ from asdex import (
     hessian_coloring,
     jacobian_coloring,
 )
+from asdex._display import _compressed_pattern
 
 
 def _make_pattern(
@@ -902,7 +903,7 @@ def test_compressed_pattern_column():
         ]
     )
     result = color_jacobian_pattern(sparsity, partition="column")
-    compressed = result._compressed_pattern()
+    compressed = _compressed_pattern(result)
 
     assert compressed.shape == (3, result.num_colors)
     # Every original row with a nonzero should appear in compressed
@@ -925,7 +926,7 @@ def test_compressed_pattern_row():
         ]
     )
     result = color_jacobian_pattern(sparsity, partition="row")
-    compressed = result._compressed_pattern()
+    compressed = _compressed_pattern(result)
 
     assert compressed.shape == (result.num_colors, 3)
     # Every original column with a nonzero should appear in compressed
@@ -998,7 +999,7 @@ def test_hessian_with_colored_pattern():
 
 @pytest.mark.hessian
 def test_hessian_colored_pattern_zero_hessian():
-    """hessian with colored_pattern handles all-zero Hessian (nse=0)."""
+    """hessian with colored_pattern handles all-zero Hessian (nnz=0)."""
 
     def f(x):
         return jnp.sum(x)
