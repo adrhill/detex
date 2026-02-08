@@ -195,21 +195,14 @@ def test_reverse():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_pad():
-    """jnp.pad triggers conservative fallback.
-
-    TODO(pad): Implement precise handler for pad primitive.
-    Precise: padded elements have no dependency,
-    original elements preserve structure.
-    """
+    """Pad inserts constant elements; original elements preserve dependencies."""
 
     def f(x):
         return jnp.pad(x, (1, 1), constant_values=0)
 
     result = jacobian_sparsity(f, input_shape=2).todense().astype(int)
-    # TODO: Should be [[0,0], [1,0], [0,1], [0,0]] (pad values have no deps)
-    expected = np.ones((4, 2), dtype=int)
+    expected = np.array([[0, 0], [1, 0], [0, 1], [0, 0]])
     np.testing.assert_array_equal(result, expected)
 
 

@@ -41,39 +41,47 @@ def test_hessian_linear():
 
 
 @pytest.mark.hessian
-@pytest.mark.fallback
 def test_hessian_product():
-    """f(x) = x[0] * x[1] has H[0,1] = H[1,0] != 0.
-
-    TODO(pad): Precise behavior would be [[0,1,0], [1,0,0], [0,0,0]].
-    Currently conservative due to pad primitive in gradient jaxpr.
-    """
+    """f(x) = x[0] * x[1] has H[0,1] = H[1,0] != 0."""
 
     def f(x):
         return x[0] * x[1]
 
     H = hessian_sparsity(f, input_shape=3).todense().astype(int)
-    # Conservative: all rows depending on x[0], x[1] are dense
-    expected = jnp.array([[1, 1, 0], [1, 1, 0], [1, 1, 0]])
+    expected = jnp.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]])
     assert jnp.array_equal(H, expected)
 
 
 @pytest.mark.hessian
-@pytest.mark.fallback
 def test_hessian_quadratic():
-    """f(x) = x[0]^2 + x[1]^2 has diagonal Hessian.
-
-    TODO(pad): Precise behavior would be [[1,0,0], [0,1,0], [0,0,0]].
-    Currently conservative due to pad primitive in gradient jaxpr.
-    """
+    """f(x) = x[0]^2 + x[1]^2 has diagonal Hessian."""
 
     def f(x):
         return x[0] ** 2 + x[1] ** 2
 
     H = hessian_sparsity(f, input_shape=3).todense().astype(int)
-    # Conservative: all rows depending on x[0], x[1] are dense
-    expected = jnp.array([[1, 1, 0], [1, 1, 0], [1, 1, 0]])
+    expected = jnp.array([[1, 0, 0], [0, 1, 0], [0, 0, 0]])
     assert jnp.array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_finite_difference():
+    """f(x) = sum((x[1:] - x[:-1])^2) has tridiagonal Hessian."""
+
+    def f(x):
+        return ((x[1:] - x[:-1]) ** 2).sum()
+
+    H = hessian_sparsity(f, input_shape=5).todense().astype(int)
+    expected = np.array(
+        [
+            [1, 1, 0, 0, 0],
+            [1, 1, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1],
+            [0, 0, 0, 1, 1],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
 
 
 @pytest.mark.elementwise

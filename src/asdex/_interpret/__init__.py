@@ -35,6 +35,7 @@ from ._elementwise import (
     propagate_const_binary,
 )
 from ._gather import prop_gather
+from ._pad import prop_pad
 from ._reduction import prop_reduce_sum
 from ._reshape import prop_reshape
 from ._scatter import prop_scatter
@@ -191,6 +192,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_nested_jaxpr(eqn, deps, const_vals)
         case "slice":
             prop_slice(eqn, deps)
+        case "pad":
+            prop_pad(eqn, deps)
         case "squeeze":
             prop_squeeze(eqn, deps)
         case "broadcast_in_dim":
@@ -284,7 +287,6 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         # sort is correctly conservative since sorting is a global operation.
         case (
             "dot_general"
-            | "pad"
             | "reduce_max"
             | "reduce_prod"
             | "rev"
