@@ -22,7 +22,6 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
-    - navigation.tabs
     - navigation.sections
     - navigation.top
     - content.code.copy
@@ -32,16 +31,15 @@ nav:
       - Overview: index.md
       - Getting Started: getting-started.md
   - How-To Guides:
-      - how-to/index.md
+      - Overview: how-to/index.md
       - Sparse Jacobians: how-to/jacobians.md
       - Sparse Hessians: how-to/hessians.md
   - Explanation:
-      - explanation/index.md
-      - The 3-Stage Pipeline: explanation/pipeline.md
+      - Overview: explanation/index.md
+      - The ASD Pipeline: explanation/pipeline.md
       - Graph Coloring: explanation/coloring.md
   - Reference:
       - API Reference: reference/api.md
-  - Contributing: contributing.md
   - Benchmarks: https://adrianhill.de/asdex/dev/bench/
 
 not_in_nav: |
@@ -52,7 +50,11 @@ exclude_docs: |
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_div_format
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
@@ -65,9 +67,11 @@ markdown_extensions:
 extra_javascript:
   - javascripts/mathjax.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+  - https://unpkg.com/mermaid@11/dist/mermaid.min.js
 
 plugins:
   - search
+  - markdown-exec
   - mkdocstrings:
       handlers:
         python:

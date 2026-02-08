@@ -64,6 +64,33 @@ Use admonitions for callouts:
     Content here.
 ```
 
+### Executable Code Blocks
+
+Use `markdown-exec` to run Python code during build and show output.
+Add `exec="true"` to a fenced code block:
+
+````markdown
+```python exec="true"
+from asdex import jacobian_coloring
+
+colored_pattern = jacobian_coloring(lambda x: (x[1:] - x[:-1]) ** 2, input_shape=50)
+print(colored_pattern)
+```
+````
+
+The code runs at build time and its stdout replaces the block in the rendered page.
+To show both the source code and the output, add `source="above"` or `source="below"`:
+
+````markdown
+```python exec="true" source="above"
+print("Hello from asdex!")
+```
+````
+
+Use this for tutorials and how-to guides
+where showing real output is more convincing than hardcoded comments.
+Avoid it in explanation pages where the focus is on concepts, not code.
+
 ### Math
 
 Use MathJax for LaTeX:
@@ -92,5 +119,4 @@ The nav in `mkdocs.yml` maps to Diataxis categories:
 - **How-To Guides** tab → task-oriented guides
 - **Explanation** tab → concept explanations
 - **Reference** tab → auto-generated API docs
-- **Contributing** → development guide
 - **Benchmarks** → external link to benchmark dashboard

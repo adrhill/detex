@@ -1,34 +1,66 @@
-# The 3-Stage Pipeline
+# The ASD Pipeline
 
 `asdex` computes sparse Jacobians and Hessians through a three-stage pipeline:
 **detection**, **coloring**, and **decompression**.
 
 ## Architecture Overview
 
-```
-jacobian(f, x)                           hessian(f, x)
-  │                                        │
-  ├─ 1. DETECTION                          ├─ 1. DETECTION
-  │     jacobian_sparsity(f, input_shape)   │     hessian_sparsity(f, input_shape)
-  │     ├─ make_jaxpr(f) → jaxpr           │     └─ jacobian_sparsity(grad(f), input_shape)
-  │     ├─ prop_jaxpr() → index sets       │
-  │     └─ SparsityPattern                 │
-  │                                        │
-  ├─ 2. COLORING                           ├─ 2. COLORING
-  │     color_jacobian_pattern(sparsity)    │     color_hessian_pattern(sparsity)
-  │                                        │
-  └─ 3. DECOMPRESSION                      └─ 3. DECOMPRESSION
-        One VJP or JVP per color                 One HVP per color (fwd-over-rev)
+### Jacobian Pipeline
 
-Convenience: jacobian_coloring(f, shape)   Convenience: hessian_coloring(f, shape)
-             = detect + color                            = detect + color_symmetric
+```mermaid
+flowchart LR
+    F["f, input_shape"] --> D["1. Detection<br/>jacobian_sparsity()"]
+    D --> SP[SparsityPattern]
+    SP --> C["2. Coloring<br/>color_jacobian_pattern()"]
+    C --> CP[ColoredPattern]
+    CP --> DC["3. Decompression<br/>jacobian()"]
+    X["x"] --> DC
+    DC --> J["Sparse Jacobian<br/>(BCOO)"]
+
+    style D fill:#7c4dff,color:#fff
+    style C fill:#7c4dff,color:#fff
+    style DC fill:#7c4dff,color:#fff
 ```
+
+The convenience function `jacobian_coloring(f, shape)` combines stages 1 and 2.
+
+### Hessian Pipeline
+
+```mermaid
+flowchart LR
+    F["f, input_shape"] --> D["1. Detection<br/>hessian_sparsity()"]
+    D --> SP[SparsityPattern]
+    SP --> C["2. Coloring<br/>color_hessian_pattern()"]
+    C --> CP[ColoredPattern]
+    CP --> DC["3. Decompression<br/>hessian()"]
+    X["x"] --> DC
+    DC --> H["Sparse Hessian<br/>(BCOO)"]
+
+    style D fill:#7c4dff,color:#fff
+    style C fill:#7c4dff,color:#fff
+    style DC fill:#7c4dff,color:#fff
+```
+
+Hessian detection reuses the Jacobian detector:
+`hessian_sparsity(f, shape)` calls `jacobian_sparsity(jax.grad(f), shape)`.
+The convenience function `hessian_coloring(f, shape)` combines stages 1 and 2.
 
 ## Stage 1: Detection
 
 The detection stage determines *which* entries of the Jacobian (or Hessian)
 may be nonzero,
 without evaluating any derivatives.
+
+```mermaid
+flowchart LR
+    F["f"] --> MJ["jax.make_jaxpr(f)"]
+    MJ --> JP[jaxpr]
+    JP --> PP["prop_jaxpr()"]
+    PP --> IS["Index sets<br/>per output"]
+    IS --> SP[SparsityPattern]
+
+    style PP fill:#7c4dff,color:#fff
+```
 
 `asdex` uses `jax.make_jaxpr` to trace the function
 into a [jaxpr](https://docs.jax.dev/en/latest/jaxpr.html)
@@ -43,10 +75,6 @@ producing nonzero entries at positions \((3, 1)\) and \((3, 5)\) in the Jacobian
 
 The result is a `SparsityPattern` — a global sparsity pattern
 valid for all input values.
-
-**Hessian detection** reuses the Jacobian detector:
-since the Hessian is the Jacobian of the gradient,
-`hessian_sparsity(f, shape)` calls `jacobian_sparsity(jax.grad(f), shape)`.
 
 ## Stage 2: Coloring
 
@@ -90,6 +118,22 @@ not the input values.
 When computing Jacobians at many different inputs,
 you pay the detection and coloring cost once,
 then reuse the `ColoredPattern` for each evaluation.
+
+```mermaid
+flowchart LR
+    subgraph once ["Once (precompute)"]
+        D["Detection"] --> C["Coloring"]
+        C --> CP[ColoredPattern]
+    end
+    subgraph repeat ["Per evaluation"]
+        CP --> DC["Decompression"]
+        X["x₁, x₂, ..."] --> DC
+        DC --> J["Sparse Jacobian"]
+    end
+
+    style once fill:#f3e5f5,stroke:#7c4dff
+    style repeat fill:#e8f5e9,stroke:#4caf50
+```
 
 This amortization is the key to performance on repeated evaluations,
 which is the common case in optimization and scientific computing.
