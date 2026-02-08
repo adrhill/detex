@@ -239,13 +239,11 @@ def test_split():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_matmul():
-    """Matrix multiplication (dot_general) triggers conservative fallback.
+    """Matrix multiplication (dot_general) tracks row/column dependencies.
 
-    TODO(dot_general): Implement precise handler for dot_general primitive.
-    Precise: output[i,j] depends on row i of first input and column j of second.
     For f(x) = x @ x.T, output[i,j] depends on rows i and j of input.
+    Diagonal blocks share deps, off-diagonal blocks union both rows.
     """
 
     def f(x):
@@ -253,27 +251,33 @@ def test_matmul():
         return (mat @ mat.T).flatten()
 
     result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
-    # TODO: Should track row/column dependencies, not be fully dense
-    expected = np.ones((4, 4), dtype=int)
+    expected = np.array(
+        [
+            [1, 1, 0, 0],
+            [1, 1, 1, 1],
+            [1, 1, 1, 1],
+            [0, 0, 1, 1],
+        ]
+    )
     np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_iota_eye():
-    """jnp.eye uses iota internally, triggers conservative fallback.
+    """Eye @ x: dot_general unions over all contracting positions.
 
-    TODO(iota): Add prop_zero_derivative handler for iota (constant output).
-    TODO(dot_general): Also needs dot_general handler for eye @ x.
-    Precise: eye matrix has no input dependency (constant), so eye @ x = x.
+    The handler correctly tracks structural dependencies but cannot
+    exploit value-level zeros in the eye matrix.
+    Each output unions all x elements along the contracting axis,
+    so the result is dense (every output depends on all inputs).
     """
 
     def f(x):
-        # Multiply x by identity - should preserve diagonal structure
         return jnp.eye(3) @ x
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # TODO: Should be identity matrix (eye @ x = x)
+    # Dense because dot_general unions over all contracting positions,
+    # regardless of the actual values (eye has structural zeros we can't see).
     expected = np.ones((3, 3), dtype=int)
     np.testing.assert_array_equal(result, expected)
 

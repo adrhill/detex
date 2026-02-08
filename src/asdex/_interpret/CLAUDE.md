@@ -21,6 +21,7 @@ _gather.py         # gather (static/dynamic indices)
 _scatter.py        # scatter, scatter-add (static/dynamic indices)
 _select.py         # select_n
 _conv.py           # conv_general_dilated
+_dot_general.py    # dot_general (generalized matrix multiply)
 _while.py          # while_loop (fixed-point iteration)
 _cond.py           # cond (union over branches)
 _dynamic_slice.py  # dynamic_slice, dynamic_update_slice

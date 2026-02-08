@@ -25,6 +25,7 @@ from ._commons import (
 from ._concatenate import prop_concatenate
 from ._cond import prop_cond
 from ._conv import prop_conv_general_dilated
+from ._dot_general import prop_dot_general
 from ._dynamic_slice import prop_dynamic_slice, prop_dynamic_update_slice
 from ._elementwise import (
     prop_binary_elementwise,
@@ -289,11 +290,12 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         # https://docs.jax.dev/en/latest/jax.lax.html#control-flow-operators
         case "scan" | "associative_scan":
             prop_throw_error(eqn, deps)
+        case "dot_general":
+            prop_dot_general(eqn, deps)
         # Conservative fallback: all outputs depend on all inputs.
         # sort is correctly conservative since sorting is a global operation.
         case (
-            "dot_general"
-            | "reduce_max"
+            "reduce_max"
             | "reduce_prod"
             | "sort"
             | "split"
