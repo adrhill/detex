@@ -12,17 +12,12 @@ from asdex import jacobian_sparsity
 
 @pytest.mark.reduction
 def test_reduce_max():
-    """jnp.max (reduce_max) has correct global sparsity (all inputs matter).
-
-    Unlike reduce_sum which has a handler, reduce_max falls to default.
-    Both should produce the same result: output depends on all inputs.
-    """
+    """jnp.max (reduce_max) full reduction: output depends on all inputs."""
 
     def f(x):
         return jnp.array([jnp.max(x)])
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # All inputs can affect the max (global sparsity)
     expected = np.array([[1, 1, 1]])
     np.testing.assert_array_equal(result, expected)
 
