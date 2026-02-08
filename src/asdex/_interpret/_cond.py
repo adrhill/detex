@@ -6,14 +6,21 @@ from ._commons import (
     ConstVals,
     Deps,
     IndexSets,
+    PropJaxprFn,
     forward_const_vals,
     index_sets,
     seed_const_vals,
 )
 
 
-def prop_cond(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def prop_cond(
+    eqn: JaxprEqn,
+    deps: Deps,
+    const_vals: ConstVals,
+    prop_jaxpr: PropJaxprFn,
+) -> None:
     """cond/switch selects one of several branches based on an integer index.
+
     Since we don't know which branch executes at trace time,
     output deps are the union across all branches.
 
@@ -29,8 +36,6 @@ def prop_cond(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.cond.html
     """
-    from . import prop_jaxpr
-
     branches = eqn.params["branches"]
     operands = eqn.invars[1:]
     operand_deps: list[IndexSets] = [index_sets(deps, v) for v in operands]

@@ -8,6 +8,7 @@ from ._commons import ConstVals, Deps, atom_const_val, atom_shape, index_sets, n
 
 def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Broadcast replicates input elements across new or expanded dimensions.
+
     Each output element depends on exactly one input element,
     determined by projecting output coordinates onto input dimensions.
 
@@ -29,7 +30,6 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> N
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.broadcast_in_dim.html
     """
-
     in_atom = eqn.invars[0]
     in_indices = index_sets(deps, in_atom)
     out_shape = eqn.params["shape"]

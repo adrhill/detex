@@ -4,21 +4,13 @@
       "Bash(uv run ruff --fix .)",
       "Bash(uv run ruff format .)",
       "Bash(uv run ty check)",
-      "Bash(uv run pytest:*)"
-    ]
-  },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "jq -e '.tool_input.file_path | endswith(\".py\")' > /dev/null && uv run ruff check --fix . && uv run ruff format . && uv run ruff format --check . && uv run ty check",
-            "timeout": 60
-          }
-        ]
-      }
+      "Bash(uv run pytest:*)",
+      "WebFetch(domain:docs.jax.dev)",
+      "WebFetch(domain:jax.readthedocs.io)",
+      "Bash(git status:*)",
+      "Bash(git -C * diff *)",
+      "Bash(git -C * log *)",
+      "Bash(git -C * status)"
     ]
   }
 }

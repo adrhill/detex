@@ -35,4 +35,4 @@ def test_zero_size_binary_elementwise():
 
     result = jacobian_sparsity(f, input_shape=3)
     assert result.shape == (0, 3)
-    assert result.nse == 0
+    assert result.nnz == 0

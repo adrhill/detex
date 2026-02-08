@@ -58,12 +58,12 @@ def test_zero_size_input():
 
     result = jacobian_sparsity(f, input_shape=0)
     assert result.shape == (1, 0)
-    assert result.nse == 0
+    assert result.nnz == 0
 
 
 @pytest.mark.reduction
 def test_argmax():
-    """argmax has zero derivative (returns integer index, not differentiable).
+    """Argmax has zero derivative (returns integer index, not differentiable).
 
     Only x[0] contributes because argmax output has empty dependency sets.
     """

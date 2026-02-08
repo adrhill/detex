@@ -17,6 +17,7 @@ from ._commons import (
 
 def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     """Convolution slides a kernel over the input, computing weighted sums.
+
     Each output element depends on a local spatial window of input elements
     across all input channels.
 

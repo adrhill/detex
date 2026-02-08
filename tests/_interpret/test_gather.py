@@ -3,6 +3,7 @@
 https://docs.jax.dev/en/latest/_autosummary/jax.lax.gather.html
 """
 
+import jax.lax as lax
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -35,7 +36,6 @@ def test_gather_indices_through_select_n():
     indices and the gather.
     Const tracking through select_n keeps the indices statically known.
     """
-    import jax.lax as lax
 
     def f(x):
         indices = jnp.array([2, 0, 1])

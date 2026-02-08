@@ -1,10 +1,10 @@
 """Types, constants, and utilities for dependency tracking."""
 
 import math
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import numpy as np
-from jax._src.core import Literal, Var
+from jax._src.core import Jaxpr, Literal, Var
 
 # =============================================================================
 # Type aliases
@@ -21,6 +21,9 @@ ConstVals = dict[Var, np.ndarray]
 
 Atom = Var | Literal
 """Atomic elements in jaxpressions: named intermediates (Var) or constants (Literal)."""
+
+PropJaxprFn = Callable[[Jaxpr, list[IndexSets], ConstVals | None], list[IndexSets]]
+"""Signature of ``prop_jaxpr``, passed as callback to break circular imports."""
 
 
 # =============================================================================

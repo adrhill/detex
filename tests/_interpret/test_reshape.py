@@ -13,7 +13,7 @@ from asdex import jacobian_sparsity
 
 @pytest.mark.array_ops
 def test_reshape_with_dimensions_2d():
-    """reshape with dimensions=(1,0) permutes a 2D array before flattening.
+    """Reshape with dimensions=(1,0) permutes a 2D array before flattening.
 
     ravel(order='F') on a (2, 3) matrix emits dimensions=(1, 0).
     Each output element still depends on exactly one input element.
@@ -38,7 +38,7 @@ def test_reshape_with_dimensions_2d():
 
 @pytest.mark.array_ops
 def test_reshape_with_dimensions_3d():
-    """reshape with dimensions=(2,1,0) permutes a 3D array before flattening.
+    """Reshape with dimensions=(2,1,0) permutes a 3D array before flattening.
 
     ravel(order='F') on a (2, 3, 4) tensor emits dimensions=(2, 1, 0).
     Verifies correct handling with higher-rank permutations.

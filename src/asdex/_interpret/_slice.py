@@ -15,6 +15,7 @@ from ._commons import (
 
 def prop_slice(eqn: JaxprEqn, deps: Deps) -> None:
     """Slicing extracts a contiguous (possibly strided) subarray.
+
     Each output element maps to exactly one input element,
     so dependencies pass through unchanged.
 

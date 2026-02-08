@@ -8,6 +8,7 @@ from ._commons import Deps, atom_shape, conservative_deps, index_sets, numel
 
 def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
     """Reshape changes array shape without changing data or element count.
+
     Dependencies pass through unchanged in row-major (C) order.
     The Jacobian is the identity matrix.
 

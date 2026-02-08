@@ -131,7 +131,6 @@ def test_while_with_closure_const():
     The closure constant doesn't add input dependencies,
     so elementwise multiply with a constant preserves the diagonal pattern.
     """
-
     weights = jnp.array([1.0, 0.0, 1.0])
 
     def f(x):
@@ -150,7 +149,7 @@ def test_while_with_closure_const():
 
 @pytest.mark.control_flow
 def test_while_body_closure_captured_index():
-    """while body uses a closure-captured index array for gather.
+    """While body uses a closure-captured index array for gather.
 
     The gather projects all carry elements onto carry[0].
     Without forwarding const_vals into the body jaxpr,

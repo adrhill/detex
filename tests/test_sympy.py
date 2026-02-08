@@ -7,6 +7,7 @@ matches the ground truth computed from symbolic differentiation.
 
 import random
 from collections.abc import Callable
+from typing import ClassVar
 
 import jax.numpy as jnp
 import numpy as np
@@ -47,7 +48,7 @@ class SympyToJax:
     """Convert SymPy expressions to JAX functions using dispatch on func type."""
 
     # Mapping from SymPy function types to JAX functions
-    UNARY_MAP: dict[type, Callable] = {
+    UNARY_MAP: ClassVar[dict[type, Callable]] = {
         sp.sin: jnp.sin,
         sp.cos: jnp.cos,
         sp.tan: jnp.tan,
@@ -64,6 +65,7 @@ class SympyToJax:
     }
 
     def __init__(self, symbols: list[Symbol]):
+        """Initialize converter with symbol-to-index mapping."""
         self.sym_to_idx = {s: i for i, s in enumerate(symbols)}
 
     def convert(self, e: sp.Basic) -> JaxFn:
@@ -107,9 +109,8 @@ class SympyToJax:
             if e.args[1].is_number:
                 exp_val = float(e.args[1].evalf())  # type: ignore[union-attr]
                 return lambda x, b=base_fn, p=exp_val: b(x) ** p
-            else:
-                exp_fn = self.convert(e.args[1])
-                return lambda x, b=base_fn, p=exp_fn: b(x) ** p(x)
+            exp_fn = self.convert(e.args[1])
+            return lambda x, b=base_fn, p=exp_fn: b(x) ** p(x)
 
         raise NotImplementedError(f"Unsupported: {type(e)} with func={e.func} - {e}")
 
@@ -182,11 +183,11 @@ def random_binary_expr(expr1: sp.Expr, expr2: sp.Expr, rng: random.Random) -> sp
     op = rng.choice(BINARY_OPS)
     if op == "add":
         return expr1 + expr2
-    elif op == "sub":
+    if op == "sub":
         return expr1 - expr2
-    elif op == "mul":
+    if op == "mul":
         return expr1 * expr2
-    elif op == "div":
+    if op == "div":
         # Avoid division by zero
         return expr1 / (Abs(expr2) + 1)
     raise ValueError(f"Unknown operation: {op}")
@@ -213,8 +214,7 @@ def generate_random_expr(
         # Base case: return a symbol or constant
         if rng.random() < 0.8:
             return rng.choice(symbols)
-        else:
-            return sp.Integer(rng.randint(1, 5))
+        return sp.Integer(rng.randint(1, 5))
 
     # Recursive case: build more complex expression
     choice = rng.random()
@@ -223,11 +223,10 @@ def generate_random_expr(
         # Unary operation
         sub_expr = generate_random_expr(symbols, depth - 1, rng, unary_ops)
         return random_unary_expr(sub_expr, rng, unary_ops)
-    else:
-        # Binary operation
-        left = generate_random_expr(symbols, depth - 1, rng, unary_ops)
-        right = generate_random_expr(symbols, depth - 1, rng, unary_ops)
-        return random_binary_expr(left, right, rng)
+    # Binary operation
+    left = generate_random_expr(symbols, depth - 1, rng, unary_ops)
+    right = generate_random_expr(symbols, depth - 1, rng, unary_ops)
+    return random_binary_expr(left, right, rng)
 
 
 def generate_random_function(

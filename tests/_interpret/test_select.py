@@ -12,7 +12,7 @@ from asdex import jacobian_sparsity
 
 @pytest.mark.control_flow
 def test_ifelse_both_branches():
-    """ifelse unions both branches (global sparsity)."""
+    """Ifelse unions both branches (global sparsity)."""
 
     def f(x):
         # jnp.where is the JAX equivalent of ifelse
@@ -25,7 +25,7 @@ def test_ifelse_both_branches():
 
 @pytest.mark.control_flow
 def test_ifelse_one_branch_constant():
-    """ifelse with one constant branch."""
+    """Ifelse with one constant branch."""
 
     def f(x):
         return jnp.array([jnp.where(x[1] < x[2], x[0] + x[1], 1.0)])

@@ -7,7 +7,14 @@ import pytest
 from jax.experimental.sparse import BCOO
 from numpy.testing import assert_allclose
 
-from asdex import color_jacobian_pattern, color_rows, jacobian, jacobian_sparsity
+from asdex import (
+    color_jacobian_pattern,
+    color_rows,
+    hessian,
+    hessian_sparsity,
+    jacobian,
+    jacobian_sparsity,
+)
 
 # =============================================================================
 # Reference tests against jax.jacobian (row coloring, default)
@@ -448,7 +455,6 @@ def test_precomputed_auto_coloring():
 @pytest.mark.hessian
 def test_hessian_quadratic():
     """Hessian of quadratic function: f(x) = x^T A x."""
-    from asdex import hessian
 
     def f(x):
         # Simple quadratic: sum of squares
@@ -464,7 +470,6 @@ def test_hessian_quadratic():
 @pytest.mark.hessian
 def test_hessian_rosenbrock():
     """Hessian of Rosenbrock function (sparse tridiagonal-like pattern)."""
-    from asdex import hessian
 
     def f(x):
         return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
@@ -479,7 +484,6 @@ def test_hessian_rosenbrock():
 @pytest.mark.hessian
 def test_hessian_precomputed_sparsity():
     """Using pre-computed Hessian sparsity pattern."""
-    from asdex import hessian, hessian_sparsity
 
     def f(x):
         return jnp.sum(x**2)
@@ -496,14 +500,13 @@ def test_hessian_precomputed_sparsity():
 @pytest.mark.hessian
 def test_hessian_precomputed_colors():
     """Using pre-computed Hessian sparsity and row colors (backward compat)."""
-    from asdex import hessian, hessian_sparsity
 
     def f(x):
         return jnp.sum((x[1:] - x[:-1]) ** 2)
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
     sparsity = hessian_sparsity(f, input_shape=4)
-    colors, num_colors = color_rows(sparsity)
+    colors, _num_colors = color_rows(sparsity)
 
     result1 = hessian(f, x, sparsity=sparsity, colors=colors).todense()
     expected = jax.hessian(f)(x)
@@ -514,7 +517,6 @@ def test_hessian_precomputed_colors():
 @pytest.mark.hessian
 def test_hessian_zero():
     """Zero Hessian: linear function."""
-    from asdex import hessian
 
     def f(x):
         return jnp.sum(x)  # Linear, Hessian is zero
@@ -529,7 +531,6 @@ def test_hessian_zero():
 @pytest.mark.hessian
 def test_hessian_single_input():
     """Hessian with single input dimension."""
-    from asdex import hessian
 
     def f(x):
         return x[0] ** 3
@@ -547,7 +548,6 @@ def test_hessian_star_coloring_default():
 
     Verify that the result matches jax.hessian for a non-trivial pattern.
     """
-    from asdex import hessian
 
     def f(x):
         return x[0] ** 2 * x[1] + jnp.sin(x[1]) * x[2] + x[2] ** 3
@@ -566,7 +566,6 @@ def test_hessian_arrow_pattern():
     f(x) = x[0] * sum(x) + sum(x**2)
     This creates an arrow-like Hessian where row/col 0 is dense.
     """
-    from asdex import hessian
 
     def f(x):
         return x[0] * jnp.sum(x) + jnp.sum(x**2)

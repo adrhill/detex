@@ -17,7 +17,7 @@ src/asdex/
 ├── __init__.py         # Public API
 ├── pattern.py          # SparsityPattern and ColoredPattern data structures
 ├── detection.py        # Jacobian and Hessian sparsity detection via jaxpr analysis
-├── coloring.py         # Graph coloring (row, column, star) and convenience functions
+├── coloring.py         # Graph coloring (row, column, symmetric) and convenience functions
 ├── decompression.py    # Sparse Jacobian (VJP/JVP) and Hessian (HVP) computation
 └── _interpret/         # Custom jaxpr interpreter for index set propagation
 ```
@@ -57,7 +57,7 @@ jacobian(f, x)                           hessian(f, x)
         One VJP or JVP per color                 One HVP per color (fwd-over-rev)
 
 Convenience: jacobian_coloring(f, shape)   Convenience: hessian_coloring(f, shape)
-             = detect + color                            = detect + star_color
+             = detect + color                            = detect + color_symmetric
 ```
 
 ## Design philosophy
