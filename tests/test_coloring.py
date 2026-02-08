@@ -638,7 +638,7 @@ def test_star_arrow_matrix():
 
 @pytest.mark.coloring
 def test_star_what_fig_41():
-    """Figure 4.1 from Gebremedhin et al. (2005), "What Color Is Your Jacobian?"
+    """Figure 4.1 from Gebremedhin et al. (2005), "What Color Is Your Jacobian?".
 
     6x6 symmetric matrix.
     SMC gets 4 colors with LargestFirst + direct decompression.
@@ -984,7 +984,7 @@ def test_str_row_contains_downarrow():
 
 @pytest.mark.hessian
 def test_hessian_with_colored_pattern():
-    """hessian works with a pre-computed ColoredPattern."""
+    """Hessian works with a pre-computed ColoredPattern."""
 
     def f(x):
         return jnp.sum(x**2) + x[0] * x[1]
@@ -999,7 +999,7 @@ def test_hessian_with_colored_pattern():
 
 @pytest.mark.hessian
 def test_hessian_colored_pattern_zero_hessian():
-    """hessian with colored_pattern handles all-zero Hessian (nnz=0)."""
+    """Hessian with colored_pattern handles all-zero Hessian (nnz=0)."""
 
     def f(x):
         return jnp.sum(x)

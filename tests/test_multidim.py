@@ -163,7 +163,7 @@ def test_multidim_input_and_output_sparsity():
 
 @pytest.mark.jacobian
 def test_jacobian_matrix_input():
-    """jacobian with a (3, 4) matrix input matches jax.jacobian."""
+    """Jacobian with a (3, 4) matrix input matches jax.jacobian."""
 
     def f(x):
         return x.sum(axis=1)
@@ -192,7 +192,7 @@ def test_jacobian_elementwise_matrix():
 
 @pytest.mark.jacobian
 def test_jacobian_2d_output():
-    """jacobian where f returns a (2, 3) matrix."""
+    """Jacobian where f returns a (2, 3) matrix."""
 
     def f(x):
         return (x**2).reshape(2, 3)
@@ -205,7 +205,7 @@ def test_jacobian_2d_output():
 
 @pytest.mark.jacobian
 def test_jacobian_2d_input_and_output():
-    """jacobian where both input and output are 2D."""
+    """Jacobian where both input and output are 2D."""
 
     def f(x):
         # (3, 4) -> (3, 1) with keepdims
@@ -219,7 +219,7 @@ def test_jacobian_2d_input_and_output():
 
 @pytest.mark.hessian
 def test_hessian_matrix_input():
-    """hessian with a (2, 3) matrix input matches jax.hessian."""
+    """Hessian with a (2, 3) matrix input matches jax.hessian."""
 
     def f(x):
         return jnp.sum(x**2)

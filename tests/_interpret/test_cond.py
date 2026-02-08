@@ -13,7 +13,7 @@ from asdex import jacobian_sparsity
 
 @pytest.mark.control_flow
 def test_cond_union_of_branches():
-    """cond unions deps from different branches.
+    """Cond unions deps from different branches.
 
     One branch returns x[:2], the other returns x[1:3].
     The union gives each output deps from both branches.
@@ -43,7 +43,7 @@ def test_cond_union_of_branches():
 
 @pytest.mark.control_flow
 def test_cond_identical_branches():
-    """cond with identical branches returns the same deps as either branch."""
+    """Cond with identical branches returns the same deps as either branch."""
 
     def f(x):
         return jax.lax.cond(
@@ -61,7 +61,7 @@ def test_cond_identical_branches():
 
 @pytest.mark.control_flow
 def test_cond_one_branch_constant():
-    """cond where one branch returns a constant still unions both."""
+    """Cond where one branch returns a constant still unions both."""
 
     def f(x):
         return jax.lax.cond(
@@ -101,7 +101,7 @@ def test_switch_three_branches():
 
 @pytest.mark.control_flow
 def test_cond_asymmetric_branches():
-    """cond where one branch does a reduction, the other is elementwise."""
+    """Cond where one branch does a reduction, the other is elementwise."""
 
     def f(x):
         return jax.lax.cond(
@@ -119,7 +119,7 @@ def test_cond_asymmetric_branches():
 
 @pytest.mark.control_flow
 def test_cond_closure_captured_index():
-    """cond branch with closure-captured index array resolves gather precisely.
+    """Cond branch with closure-captured index array resolves gather precisely.
 
     Without seeding const_vals from the ClosedJaxpr's captured constants,
     the gather in branch_a would be conservative (dense).

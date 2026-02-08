@@ -5,16 +5,14 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import jax.numpy as jnp
 import numpy as np
+from jax.experimental.sparse import BCOO
 from numpy.typing import NDArray
 
 from asdex._display import colored_repr, colored_str, sparsity_repr, sparsity_str
-
-if TYPE_CHECKING:
-    from jax.experimental.sparse import BCOO
 
 
 @dataclass(frozen=True)
@@ -160,8 +158,6 @@ class SparsityPattern:
             data: Optional data values.
                 If None, uses all 1s.
         """
-        from jax.experimental.sparse import BCOO
-
         indices = self._bcoo_indices
         if data is None:
             if self.nnz == 0:
@@ -182,9 +178,11 @@ class SparsityPattern:
     # -------------------------------------------------------------------------
 
     def __str__(self) -> str:
+        """Render sparsity pattern with header and dot/braille grid."""
         return sparsity_str(self)
 
     def __repr__(self) -> str:
+        """Return compact single-line representation."""
         return sparsity_repr(self)
 
 
@@ -308,7 +306,9 @@ class ColoredPattern:
     # -------------------------------------------------------------------------
 
     def __repr__(self) -> str:
+        """Return compact single-line representation."""
         return colored_repr(self)
 
     def __str__(self) -> str:
+        """Render colored pattern with sparsity grid and color assignments."""
         return colored_str(self)

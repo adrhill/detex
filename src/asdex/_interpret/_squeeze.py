@@ -7,6 +7,7 @@ from ._commons import Deps, index_sets
 
 def prop_squeeze(eqn: JaxprEqn, deps: Deps) -> None:
     """Squeeze removes dimensions of size 1 without changing the data.
+
     Since it's a reshape with the same number of elements,
     dependencies pass through unchanged in flat order.
 

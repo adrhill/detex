@@ -13,7 +13,7 @@ class TestValidation:
     """Test input validation."""
 
     def test_mismatched_rows_cols_raises(self):
-        """rows and cols with different lengths raise ValueError."""
+        """Rows and cols with different lengths raise ValueError."""
         with pytest.raises(ValueError, match="same length"):
             SparsityPattern.from_coordinates([0, 1], [0], (2, 2))
 
@@ -96,7 +96,7 @@ class TestConversion:
         np.testing.assert_array_equal(dense, expected)
 
     def test_todense_empty(self):
-        """todense with no non-zeros."""
+        """Todense with no non-zeros."""
         sparsity_pattern = SparsityPattern.from_coordinates([], [], (2, 3))
         dense = sparsity_pattern.todense()
 

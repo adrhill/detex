@@ -72,14 +72,14 @@ def rosenbrock(x):
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="heat_equation")
 def test_heat_detection(benchmark):
-    """Heat equation: sparsity detection"""
+    """Heat equation: sparsity detection."""
     benchmark(jacobian_sparsity, heat_equation_rhs, N)
 
 
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="heat_equation")
 def test_heat_coloring(benchmark):
-    """Heat equation: graph coloring"""
+    """Heat equation: graph coloring."""
     sparsity = jacobian_sparsity(heat_equation_rhs, N)
     benchmark(color_rows, sparsity)
 
@@ -87,7 +87,7 @@ def test_heat_coloring(benchmark):
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="heat_equation")
 def test_heat_materialization(benchmark):
-    """Heat equation: VJP computation (with known sparsity/colors)"""
+    """Heat equation: VJP computation (with known sparsity/colors)."""
     x = np.ones(N)
     colored_pattern = color_jacobian_pattern(
         jacobian_sparsity(heat_equation_rhs, N), "row"
@@ -98,7 +98,7 @@ def test_heat_materialization(benchmark):
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="heat_equation")
 def test_heat_end_to_end(benchmark):
-    """Heat equation: full pipeline"""
+    """Heat equation: full pipeline."""
     x = np.ones(N)
     benchmark(jacobian, heat_equation_rhs, x)
 
@@ -111,14 +111,14 @@ def test_heat_end_to_end(benchmark):
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="convnet")
 def test_convnet_detection(benchmark):
-    """ConvNet: sparsity detection"""
+    """ConvNet: sparsity detection."""
     benchmark(jacobian_sparsity, convnet, N)
 
 
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="convnet")
 def test_convnet_coloring(benchmark):
-    """ConvNet: graph coloring"""
+    """ConvNet: graph coloring."""
     sparsity = jacobian_sparsity(convnet, N)
     benchmark(color_rows, sparsity)
 
@@ -126,7 +126,7 @@ def test_convnet_coloring(benchmark):
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="convnet")
 def test_convnet_materialization(benchmark):
-    """ConvNet: VJP computation (with known sparsity/colors)"""
+    """ConvNet: VJP computation (with known sparsity/colors)."""
     x = np.ones(N)
     colored_pattern = color_jacobian_pattern(jacobian_sparsity(convnet, N), "row")
     benchmark(jacobian, convnet, x, colored_pattern)
@@ -135,7 +135,7 @@ def test_convnet_materialization(benchmark):
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="convnet")
 def test_convnet_end_to_end(benchmark):
-    """ConvNet: full pipeline"""
+    """ConvNet: full pipeline."""
     x = np.ones(N)
     benchmark(jacobian, convnet, x)
 
@@ -148,14 +148,14 @@ def test_convnet_end_to_end(benchmark):
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="rosenbrock")
 def test_rosenbrock_detection(benchmark):
-    """Rosenbrock: Hessian sparsity detection"""
+    """Rosenbrock: Hessian sparsity detection."""
     benchmark(hessian_sparsity, rosenbrock, N)
 
 
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="rosenbrock")
 def test_rosenbrock_coloring(benchmark):
-    """Rosenbrock: graph coloring"""
+    """Rosenbrock: graph coloring."""
     sparsity = hessian_sparsity(rosenbrock, N)
     benchmark(color_rows, sparsity)
 
@@ -163,7 +163,7 @@ def test_rosenbrock_coloring(benchmark):
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="rosenbrock")
 def test_rosenbrock_materialization(benchmark):
-    """Rosenbrock: HVP computation (with known sparsity/colors)"""
+    """Rosenbrock: HVP computation (with known sparsity/colors)."""
     x = np.ones(N)
     sparsity = hessian_sparsity(rosenbrock, N)
     colors, _ = color_rows(sparsity)
@@ -173,6 +173,6 @@ def test_rosenbrock_materialization(benchmark):
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="rosenbrock")
 def test_rosenbrock_end_to_end(benchmark):
-    """Rosenbrock: full pipeline"""
+    """Rosenbrock: full pipeline."""
     x = np.ones(N)
     benchmark(hessian, rosenbrock, x)

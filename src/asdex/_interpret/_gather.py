@@ -20,7 +20,7 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 
     For static start_indices (Literal or tracked const),
     each output element depends on specific input elements.
-    For dynamic (traced) start_indices, we fall back to conservative.
+    For dynamic (traced) start_indices, falls back to conservative.
 
     Precise path handles the common pattern where the gather selects
     along dim 0 and keeps all other dims intact

@@ -165,9 +165,7 @@ def _render_dots(pattern: SparsityPattern) -> str:
     dense = pattern.todense()
     lines = []
     for i in range(pattern.m):
-        row_chars = []
-        for j in range(pattern.n):
-            row_chars.append("●" if dense[i, j] else "⋅")
+        row_chars = ["●" if dense[i, j] else "⋅" for j in range(pattern.n)]
         lines.append(" ".join(row_chars))
     return "\n".join(lines)
 
@@ -207,9 +205,7 @@ def _render_braille(
         sj = round(int(j) * (scale_width - 1) / col_denom)
         grid[si // 4][sj // 2] |= braille_bits[(sj % 2) * 4 + (si % 4)]
 
-    lines = []
-    for row in grid:
-        lines.append("".join(chr(0x2800 + bits) for bits in row))
+    lines = ["".join(chr(0x2800 + bits) for bits in row) for row in grid]
     return "\n".join(lines)
 
 

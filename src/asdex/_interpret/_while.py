@@ -6,14 +6,21 @@ from ._commons import (
     ConstVals,
     Deps,
     IndexSets,
+    PropJaxprFn,
     forward_const_vals,
     index_sets,
     seed_const_vals,
 )
 
 
-def prop_while(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def prop_while(
+    eqn: JaxprEqn,
+    deps: Deps,
+    const_vals: ConstVals,
+    prop_jaxpr: PropJaxprFn,
+) -> None:
     """while_loop iterates a body until a condition becomes false.
+
     The carry variables may accumulate dependencies across iterations,
     so we iterate propagation to a fixed point.
 
@@ -30,8 +37,6 @@ def prop_while(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.while_loop.html
     """
-    from . import prop_jaxpr
-
     body_closed = eqn.params["body_jaxpr"]
     body_jaxpr = body_closed.jaxpr
     body_nconsts = eqn.params["body_nconsts"]

@@ -16,6 +16,7 @@ from ._commons import (
 
 def prop_reduce_sum(eqn: JaxprEqn, deps: Deps) -> None:
     """Sum reduction aggregates elements along specified axes.
+
     Each output depends on all input elements that were summed into it.
 
     This handles the ``reduce_sum`` primitive

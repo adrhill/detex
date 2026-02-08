@@ -62,7 +62,7 @@ def check_conv_sparsity(
 
 
 @pytest.mark.parametrize(
-    "input_hw,kernel_size,channels",
+    ("input_hw", "kernel_size", "channels"),
     [
         ((4, 4), (2, 2), (1, 1)),
         ((4, 4), (3, 3), (1, 1)),

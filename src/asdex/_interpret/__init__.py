@@ -80,8 +80,7 @@ def prop_jaxpr(
     input_indices: list[IndexSets],
     const_vals: ConstVals | None = None,
 ) -> list[IndexSets]:
-    """
-    Propagate index sets through a jaxpr.
+    """Propagate index sets through a jaxpr.
 
     Args:
         jaxpr: The jaxpr to analyze
@@ -268,9 +267,9 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         case "iota":
             _prop_iota(eqn, deps, const_vals)
         case "while":
-            prop_while(eqn, deps, const_vals)
+            prop_while(eqn, deps, const_vals, prop_jaxpr)
         case "cond":
-            prop_cond(eqn, deps, const_vals)
+            prop_cond(eqn, deps, const_vals, prop_jaxpr)
         case "dynamic_slice":
             prop_dynamic_slice(eqn, deps, const_vals)
         case "dynamic_update_slice":
@@ -305,7 +304,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 
 
 def _prop_iota(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
-    """iota generates a constant index array with no input dependencies.
+    """Iota generates a constant index array with no input dependencies.
 
     The output is fully determined by the parameters (shape, dtype, dimension),
     so all dependency sets are empty.
@@ -333,6 +332,7 @@ def _prop_iota(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 
 def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
     """Conservative fallback for primitives without precise handlers.
+
     Assumes worst-case: every output element may depend on every input element.
     This is correct but may overestimate sparsity (more nonzeros than necessary).
 
@@ -347,6 +347,7 @@ def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
 
 def prop_throw_error(eqn: JaxprEqn, deps: Deps) -> None:
     """Raise an error for unknown primitives.
+
     This ensures we don't silently produce incorrect sparsity patterns.
     """
     msg = (

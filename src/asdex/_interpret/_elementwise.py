@@ -48,6 +48,7 @@ def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
 
 def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
     """Integer power x^n is element-wise.
+
     Each output depends only on the corresponding input element.
     Special case: x^0 = 1 has zero derivative, so no dependencies.
 
@@ -72,6 +73,7 @@ def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
 
 def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     """Binary element-wise ops (add, mul, etc.) combine two arrays element-wise.
+
     Each output element depends on the corresponding elements from both inputs.
     Broadcasting is handled: scalars contribute to all output elements.
 
@@ -103,6 +105,7 @@ def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
 
 def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     """Unary element-wise ops (exp, sin, etc.) apply a function to each element.
+
     Each output depends only on the corresponding input element.
     The Jacobian is diagonal.
 
@@ -121,6 +124,7 @@ def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
 
 def prop_convert_element_type(eqn: JaxprEqn, deps: Deps) -> None:
     """Type conversion (e.g., float32 → float64) changes dtype without changing values.
+
     Dependencies pass through unchanged.
     The Jacobian is the identity matrix.
 

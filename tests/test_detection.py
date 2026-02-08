@@ -14,7 +14,7 @@ from asdex import hessian_sparsity, jacobian_sparsity
 
 @pytest.mark.elementwise
 def test_simple_dependencies():
-    """Test f(x) = [x0+x1, x1*x2, x2]"""
+    """Test f(x) = [x0+x1, x1*x2, x2]."""
 
     def f(x):
         return jnp.array([x[0] + x[1], x[1] * x[2], x[2]])
@@ -78,7 +78,7 @@ def test_hessian_quadratic():
 
 @pytest.mark.elementwise
 def test_complex_dependencies():
-    """Test f(x) = [x0*x1 + sin(x2), x3, x0*x1*x3]"""
+    """Test f(x) = [x0*x1 + sin(x2), x3, x0*x1*x3]."""
 
     def f(x):
         a = x[0] * x[1]
@@ -93,7 +93,7 @@ def test_complex_dependencies():
 
 @pytest.mark.elementwise
 def test_diagonal_jacobian():
-    """Test f(x) = x^2 (element-wise) produces diagonal sparsity"""
+    """Test f(x) = x^2 (element-wise) produces diagonal sparsity."""
 
     def f(x):
         return x**2
@@ -105,7 +105,7 @@ def test_diagonal_jacobian():
 
 @pytest.mark.elementwise
 def test_dense_jacobian():
-    """Test f(x) = [sum(x), prod(x)] produces dense sparsity"""
+    """Test f(x) = [sum(x), prod(x)] produces dense sparsity."""
 
     def f(x):
         return jnp.array([jnp.sum(x), jnp.prod(x)])
@@ -117,7 +117,7 @@ def test_dense_jacobian():
 
 @pytest.mark.elementwise
 def test_sct_readme_example():
-    """Test SCT README example: f(x) = [x1^2, 2*x1*x2^2, sin(x3)]"""
+    """Test SCT README example: f(x) = [x1^2, 2*x1*x2^2, sin(x3)]."""
 
     def f(x):
         return jnp.array([x[0] ** 2, 2 * x[0] * x[1] ** 2, jnp.sin(x[2])])
@@ -134,7 +134,7 @@ def test_sct_readme_example():
 
 @pytest.mark.elementwise
 def test_identity():
-    """Identity function: f(x) = x"""
+    """Identity function: f(x) = x."""
 
     def f(x):
         return x
@@ -163,7 +163,7 @@ def test_constant():
 
 @pytest.mark.elementwise
 def test_zero_derivative_ceil_round():
-    """ceil/round have zero derivative: f(x) = [x1*x2, ceil(x1*x2), x1*round(x2)]"""
+    """ceil/round have zero derivative: f(x) = [x1*x2, ceil(x1*x2), x1*round(x2)]."""
 
     def f(x):
         return jnp.array([x[0] * x[1], jnp.ceil(x[0] * x[1]), x[0] * jnp.round(x[1])])
@@ -176,7 +176,7 @@ def test_zero_derivative_ceil_round():
 
 @pytest.mark.elementwise
 def test_zero_derivative_floor():
-    """floor has zero derivative."""
+    """Floor has zero derivative."""
 
     def f(x):
         return jnp.floor(x)
@@ -188,7 +188,7 @@ def test_zero_derivative_floor():
 
 @pytest.mark.elementwise
 def test_zero_derivative_sign():
-    """sign has zero derivative."""
+    """Sign has zero derivative."""
 
     def f(x):
         return jnp.sign(x)
@@ -331,7 +331,7 @@ def test_multiply_by_zero():
 
 @pytest.mark.elementwise
 def test_binary_min_max():
-    """min and max operations."""
+    """Min and max operations."""
 
     def f(x):
         return jnp.array([jnp.minimum(x[0], x[1]), jnp.maximum(x[1], x[2])])

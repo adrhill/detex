@@ -8,6 +8,7 @@ from ._commons import Deps, IndexSets, atom_shape, index_sets
 
 def prop_concatenate(eqn: JaxprEqn, deps: Deps) -> None:
     """Concatenate joins arrays along a specified axis.
+
     Each output element comes from exactly one input element.
 
     For concat([A, B], axis=0): output = [A; B] (vertical stack).

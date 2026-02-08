@@ -120,10 +120,7 @@ def color_jacobian_pattern(
         return ColoredPattern(
             sparsity, colors=col_colors, num_colors=num_col, mode="JVP"
         )
-    else:
-        return ColoredPattern(
-            sparsity, colors=row_colors, num_colors=num_row, mode="VJP"
-        )
+    return ColoredPattern(sparsity, colors=row_colors, num_colors=num_row, mode="VJP")
 
 
 def color_hessian_pattern(sparsity: SparsityPattern) -> ColoredPattern:

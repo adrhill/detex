@@ -61,8 +61,7 @@ def jacobian(
 
     if colored_pattern.mode == "VJP":
         return _jacobian_rows(f, x, colored_pattern, out_shape)
-    else:
-        return _jacobian_cols(f, x, colored_pattern)
+    return _jacobian_cols(f, x, colored_pattern)
 
 
 def hessian(
@@ -101,7 +100,6 @@ def hessian(
         Sparse Hessian as BCOO of shape ``(n, n)``
         where ``n = x.size``.
     """
-
     x = jnp.asarray(x)
     n = x.size
 

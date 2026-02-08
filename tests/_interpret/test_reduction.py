@@ -63,7 +63,7 @@ def test_zero_size_input():
 
 @pytest.mark.reduction
 def test_argmax():
-    """argmax has zero derivative (returns integer index, not differentiable).
+    """Argmax has zero derivative (returns integer index, not differentiable).
 
     Only x[0] contributes because argmax output has empty dependency sets.
     """

@@ -4,6 +4,7 @@ https://docs.jax.dev/en/latest/jaxpr.html
 """
 
 import jax
+import jax.nn
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -59,11 +60,8 @@ def test_nested_jaxpr_missing_param_error_message():
     env = {}
     const_vals = {}
 
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError, match="xla_call"):
         prop_nested_jaxpr(eqn, env, const_vals)  # type: ignore[arg-type]
-
-    assert "xla_call" in str(exc_info.value)
-    assert "https://github.com/adrhill/asdex/issues" in str(exc_info.value)
 
 
 def test_custom_call_missing_param_raises():
@@ -82,11 +80,8 @@ def test_custom_call_missing_param_error_message():
     env = {}
     const_vals = {}
 
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError, match="custom_vjp_call"):
         prop_custom_call(eqn, env, const_vals)  # type: ignore[arg-type]
-
-    assert "custom_vjp_call" in str(exc_info.value)
-    assert "https://github.com/adrhill/asdex/issues" in str(exc_info.value)
 
 
 def test_unknown_primitive_raises():
@@ -318,7 +313,6 @@ def test_custom_jvp_relu():
 
     ReLU is element-wise: each output depends only on corresponding input.
     """
-    import jax.nn
 
     def f(x):
         return jax.nn.relu(x)

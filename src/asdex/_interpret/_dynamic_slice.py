@@ -19,6 +19,7 @@ def _resolve_starts(
     eqn: JaxprEqn, start_offset: int, const_vals: ConstVals
 ) -> list[int] | None:
     """Try to resolve start indices as static ints.
+
     Returns None if any start depends on runtime values.
     """
     starts: list[int] = []
@@ -32,6 +33,7 @@ def _resolve_starts(
 
 def prop_dynamic_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """dynamic_slice extracts a sub-array at a potentially dynamic offset.
+
     With static start indices, each output element maps to exactly one input element.
     With dynamic starts, falls back to conservative.
 
@@ -69,6 +71,7 @@ def prop_dynamic_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None
 
 def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """dynamic_update_slice overwrites a sub-array at a potentially dynamic offset.
+
     With static start indices, updated positions get update deps,
     the rest keep operand deps.
     With dynamic starts, falls back to conservative.
