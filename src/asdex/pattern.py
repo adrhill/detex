@@ -349,7 +349,7 @@ class ColoredPattern:
         mode: The AD primitive used per color.
             ``"VJP"`` for row-colored Jacobians,
             ``"JVP"`` for column-colored Jacobians,
-            ``"HVP"`` for star-colored Hessians.
+            ``"HVP"`` for symmetrically colored Hessians.
     """
 
     sparsity: SparsityPattern
@@ -402,7 +402,7 @@ class ColoredPattern:
     def _star_extraction_indices(
         self,
     ) -> tuple[NDArray[np.intp], NDArray[np.intp]]:
-        """Pre-compute HVP extraction indices with star-coloring direction choice.
+        """Pre-compute HVP extraction indices with symmetric coloring direction choice.
 
         For each nonzero ``(i, j)``:
         - diagonal (``i == j``): use ``compressed[colors[i]][i]``

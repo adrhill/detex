@@ -10,26 +10,31 @@ from asdex.coloring import (
     color_hessian_pattern,
     color_jacobian_pattern,
     color_rows,
+    color_symmetric,
     hessian_coloring,
     jacobian_coloring,
-    star_color,
 )
 from asdex.decompression import hessian, jacobian
 from asdex.detection import hessian_sparsity, jacobian_sparsity
 from asdex.pattern import ColoredPattern, SparsityPattern
 
 __all__ = [
+    # End-to-end: detect + color + decompress
+    "jacobian",
+    "hessian",
+    # Convenience: detect + color
+    "jacobian_coloring",
+    "hessian_coloring",
+    # Detection
     "jacobian_sparsity",
     "hessian_sparsity",
+    # Coloring
     "color_jacobian_pattern",
     "color_hessian_pattern",
     "color_rows",
     "color_cols",
-    "star_color",
-    "jacobian_coloring",
-    "hessian_coloring",
-    "ColoredPattern",
-    "jacobian",
-    "hessian",
+    "color_symmetric",
+    # Data structures
     "SparsityPattern",
+    "ColoredPattern",
 ]

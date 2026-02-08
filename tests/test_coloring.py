@@ -18,10 +18,10 @@ from asdex import (
     color_cols,
     color_jacobian_pattern,
     color_rows,
+    color_symmetric,
     hessian,
     hessian_coloring,
     jacobian_coloring,
-    star_color,
 )
 
 
@@ -577,7 +577,7 @@ def test_star_diagonal():
     """Diagonal Hessian: no off-diagonal entries, 1 color suffices."""
     sparsity = _make_pattern([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
 
-    colors, num_colors = star_color(sparsity)
+    colors, num_colors = color_symmetric(sparsity)
 
     assert num_colors == 1
     assert _is_valid_star_coloring(sparsity, colors)
@@ -593,7 +593,7 @@ def test_star_dense():
             cols.append(j)
     sparsity = _make_pattern(rows, cols, (4, 4))
 
-    colors, num_colors = star_color(sparsity)
+    colors, num_colors = color_symmetric(sparsity)
 
     assert _is_valid_star_coloring(sparsity, colors)
     # Dense 4x4 needs at least 4 colors for distance-1
@@ -610,7 +610,7 @@ def test_star_tridiagonal():
     cols = [0, 1, 0, 1, 2, 1, 2, 3, 2, 3]
     sparsity = _make_pattern(rows, cols, (4, 4))
 
-    colors, num_colors = star_color(sparsity)
+    colors, num_colors = color_symmetric(sparsity)
 
     assert _is_valid_star_coloring(sparsity, colors)
     assert num_colors == 3
@@ -626,7 +626,7 @@ def test_star_arrow_matrix():
     """
     sparsity = _make_arrow(10)
 
-    star_colors, star_num = star_color(sparsity)
+    star_colors, star_num = color_symmetric(sparsity)
     row_colors, row_num = color_rows(sparsity)
 
     assert _is_valid_star_coloring(sparsity, star_colors)
@@ -653,7 +653,7 @@ def test_star_what_fig_41():
         ]
     )
 
-    colors, num_colors = star_color(sparsity)
+    colors, num_colors = color_symmetric(sparsity)
 
     assert _is_valid_star_coloring(sparsity, colors)
     assert num_colors <= 4
@@ -681,7 +681,7 @@ def test_star_what_fig_61():
         ]
     )
 
-    colors, num_colors = star_color(sparsity)
+    colors, num_colors = color_symmetric(sparsity)
 
     assert _is_valid_star_coloring(sparsity, colors)
     assert num_colors <= 4
@@ -702,7 +702,7 @@ def test_star_banded(half_bw: int, expected_star: int):
     """
     sparsity = _make_banded(20, half_bw)
 
-    colors, num_colors = star_color(sparsity)
+    colors, num_colors = color_symmetric(sparsity)
 
     assert _is_valid_star_coloring(sparsity, colors)
     assert num_colors == expected_star
@@ -716,7 +716,7 @@ def test_star_pentadiagonal_8x8():
     """
     sparsity = _make_banded(8, 2)
 
-    colors, num_colors = star_color(sparsity)
+    colors, num_colors = color_symmetric(sparsity)
 
     assert _is_valid_star_coloring(sparsity, colors)
     assert num_colors == 5
@@ -728,7 +728,7 @@ def test_star_not_square_raises():
     sparsity = _make_pattern([0, 1], [0, 1], (3, 4))
 
     with pytest.raises(ValueError, match="square"):
-        star_color(sparsity)
+        color_symmetric(sparsity)
 
 
 @pytest.mark.coloring
@@ -736,7 +736,7 @@ def test_star_empty():
     """Empty pattern."""
     sparsity = _make_pattern([], [], (0, 0))
 
-    colors, num_colors = star_color(sparsity)
+    colors, num_colors = color_symmetric(sparsity)
 
     assert num_colors == 0
     assert len(colors) == 0
@@ -1061,7 +1061,7 @@ def test_hessian_star_decompression_non_unique_branch():
             rows.extend([i, i + 1])
             cols.extend([i + 1, i])
     sparsity = SparsityPattern.from_coordinates(rows, cols, (n, n))
-    colors_arr, num = star_color(sparsity)
+    colors_arr, num = color_symmetric(sparsity)
 
     # Verify star coloring reuses colors (needs only 3 for tridiagonal)
     assert num == 3

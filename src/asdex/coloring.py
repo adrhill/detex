@@ -4,7 +4,7 @@ Greedy coloring assigns colors to vertices such that conflicting vertices
 get different colors.
 Row coloring enables computing multiple Jacobian rows in a single VJP.
 Column coloring enables computing multiple Jacobian columns in a single JVP.
-Star coloring exploits Hessian symmetry for fewer colors.
+Symmetric coloring exploits Hessian symmetry for fewer colors.
 
 Algorithms adapted from SparseMatrixColorings.jl (MIT license)
 Copyright (c) 2024 Guillaume Dalle, Alexis Montoison, and contributors
@@ -22,53 +22,55 @@ from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_jacobian_sparsity
 from asdex.pattern import ColoredPattern, SparsityPattern
 
+# =========================================================================
+# Public API: high-level convenience functions
+# =========================================================================
 
-def _greedy_color(
-    num_vertices: int,
-    conflicts: list[set[int]],
-) -> tuple[NDArray[np.int32], int]:
-    """Greedy graph coloring with LargestFirst vertex ordering.
 
-    Vertices are sorted by decreasing degree (number of conflicts)
-    before the greedy loop.
-    For each vertex in order,
-    assign the smallest color not used by any conflicting vertex.
+def jacobian_coloring(
+    f: Callable,
+    input_shape: tuple[int, ...],
+    partition: Literal["row", "column", "auto"] = "auto",
+) -> ColoredPattern:
+    """Detect Jacobian sparsity and color in one step.
 
     Args:
-        num_vertices: Number of vertices to color
-        conflicts: List of sets where conflicts[v] contains
-            all vertices that conflict with vertex v
+        f: Function taking an array and returning an array.
+        input_shape: Shape of the input array.
+        partition: Which partition to color
+            (``"row"``, ``"column"``, or ``"auto"``).
 
     Returns:
-        Tuple of (colors, num_colors) where:
-        - colors: Array of shape (num_vertices,) with color assignments
-        - num_colors: Total number of colors used
+        A :class:`ColoredPattern` ready for :func:`jacobian`.
     """
-    if num_vertices == 0:
-        return np.array([], dtype=np.int32), 0
+    sparsity = _detect_jacobian_sparsity(f, input_shape)
+    return color_jacobian_pattern(sparsity, partition)
 
-    # LargestFirst ordering: sort vertices by decreasing degree
-    order = sorted(range(num_vertices), key=lambda v: len(conflicts[v]), reverse=True)
 
-    colors = np.full(num_vertices, -1, dtype=np.int32)
-    num_colors = 0
+def hessian_coloring(
+    f: Callable,
+    input_shape: tuple[int, ...],
+) -> ColoredPattern:
+    """Detect Hessian sparsity and color symmetrically in one step.
 
-    for v in order:
-        # Find colors used by conflicting vertices
-        used_colors: set[int] = set()
-        for neighbor in conflicts[v]:
-            if colors[neighbor] >= 0:
-                used_colors.add(colors[neighbor])
+    Uses symmetric coloring,
+    which exploits Hessian symmetry for fewer colors.
 
-        # Assign smallest unused color
-        color = 0
-        while color in used_colors:
-            color += 1
+    Args:
+        f: Scalar-valued function.
+        input_shape: Shape of the input array.
 
-        colors[v] = color
-        num_colors = max(num_colors, color + 1)
+    Returns:
+        A :class:`ColoredPattern` with ``mode="HVP"``
+        ready for :func:`hessian`.
+    """
+    sparsity = _detect_hessian_sparsity(f, input_shape)
+    return color_hessian_pattern(sparsity)
 
-    return colors, num_colors
+
+# =========================================================================
+# Public API: pattern coloring
+# =========================================================================
 
 
 def color_jacobian_pattern(
@@ -126,58 +128,33 @@ def color_jacobian_pattern(
         )
 
 
-def _build_row_conflict_sets(sparsity: SparsityPattern) -> list[set[int]]:
-    """Build conflict graph: rows conflict if they share a non-zero column.
+def color_hessian_pattern(sparsity: SparsityPattern) -> ColoredPattern:
+    """Color a sparsity pattern for sparse Hessian computation.
 
-    For each column, all rows with non-zeros in that column conflict with each other.
-
-    Args:
-        sparsity: SparsityPattern of shape (m, n)
-
-    Returns:
-        List of sets where conflicts[i] contains all rows that conflict with row i
-    """
-    m = sparsity.m
-    conflicts: list[set[int]] = [set() for _ in range(m)]
-
-    # Use cached col_to_rows mapping
-    col_to_rows = sparsity.col_to_rows
-
-    # For each column, mark all pairs of rows as conflicting
-    for rows_in_col in col_to_rows.values():
-        for i, row_i in enumerate(rows_in_col):
-            for row_j in rows_in_col[i + 1 :]:
-                conflicts[row_i].add(row_j)
-                conflicts[row_j].add(row_i)
-
-    return conflicts
-
-
-def _build_col_conflict_sets(sparsity: SparsityPattern) -> list[set[int]]:
-    """Build conflict graph: columns conflict if they share a non-zero row.
-
-    For each row, all columns with non-zeros in that row conflict with each other.
+    Uses symmetric coloring,
+    which exploits Hessian symmetry for fewer colors than row coloring.
 
     Args:
-        sparsity: SparsityPattern of shape (m, n)
+        sparsity: Symmetric sparsity pattern of shape (n, n).
 
     Returns:
-        List of sets where conflicts[j] contains all columns that conflict with column j
+        A :class:`ColoredPattern` with ``mode="HVP"``
+        ready for :func:`hessian`.
     """
-    n = sparsity.n
-    conflicts: list[set[int]] = [set() for _ in range(n)]
+    if sparsity.nnz == 0:
+        return ColoredPattern(
+            sparsity,
+            colors=np.full(sparsity.n, -1, dtype=np.int32),
+            num_colors=0,
+            mode="HVP",
+        )
+    colors_arr, num = color_symmetric(sparsity)
+    return ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="HVP")
 
-    # Use cached row_to_cols mapping
-    row_to_cols = sparsity.row_to_cols
 
-    # For each row, mark all pairs of columns as conflicting
-    for cols_in_row in row_to_cols.values():
-        for i, col_i in enumerate(cols_in_row):
-            for col_j in cols_in_row[i + 1 :]:
-                conflicts[col_i].add(col_j)
-                conflicts[col_j].add(col_i)
-
-    return conflicts
+# =========================================================================
+# Public API: low-level coloring algorithms
+# =========================================================================
 
 
 def color_rows(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
@@ -236,17 +213,16 @@ def color_cols(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
     return _greedy_color(n, conflicts)
 
 
-def star_color(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
-    """Star coloring for symmetric sparse Hessian computation.
+def color_symmetric(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
+    """Greedy symmetric coloring for sparse Hessian computation.
 
-    A star coloring is a distance-1 coloring with the additional constraint
+    Uses star coloring (Gebremedhin et al., 2005):
+    a distance-1 coloring with the additional constraint
     that every path on 4 vertices uses at least 3 colors.
     This enables symmetric decompression using fewer colors than row coloring.
 
     Requires a square sparsity pattern (Hessians are always square).
     Uses LargestFirst vertex ordering.
-
-    Based on Gebremedhin et al. (2005), "What Color Is Your Jacobian?"
 
     Args:
         sparsity: SparsityPattern of shape (n, n) representing the
@@ -261,7 +237,9 @@ def star_color(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
         ValueError: If pattern is not square
     """
     if sparsity.m != sparsity.n:
-        msg = f"Star coloring requires a square pattern, got shape {sparsity.shape}"
+        msg = (
+            f"Symmetric coloring requires a square pattern, got shape {sparsity.shape}"
+        )
         raise ValueError(msg)
 
     n = sparsity.n
@@ -325,66 +303,108 @@ def star_color(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
     return colors, num_colors
 
 
-def color_hessian_pattern(sparsity: SparsityPattern) -> ColoredPattern:
-    """Color a sparsity pattern for sparse Hessian computation.
-
-    Uses star coloring,
-    which exploits Hessian symmetry for fewer colors than row coloring.
-
-    Args:
-        sparsity: Symmetric sparsity pattern of shape (n, n).
-
-    Returns:
-        A :class:`ColoredPattern` with ``mode="HVP"``
-        ready for :func:`hessian`.
-    """
-    if sparsity.nnz == 0:
-        return ColoredPattern(
-            sparsity,
-            colors=np.full(sparsity.n, -1, dtype=np.int32),
-            num_colors=0,
-            mode="HVP",
-        )
-    colors_arr, num = star_color(sparsity)
-    return ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="HVP")
+# =========================================================================
+# Private helpers
+# =========================================================================
 
 
-def jacobian_coloring(
-    f: Callable,
-    input_shape: tuple[int, ...],
-    partition: Literal["row", "column", "auto"] = "auto",
-) -> ColoredPattern:
-    """Detect Jacobian sparsity and color in one step.
+def _greedy_color(
+    num_vertices: int,
+    conflicts: list[set[int]],
+) -> tuple[NDArray[np.int32], int]:
+    """Greedy graph coloring with LargestFirst vertex ordering.
+
+    Vertices are sorted by decreasing degree (number of conflicts)
+    before the greedy loop.
+    For each vertex in order,
+    assign the smallest color not used by any conflicting vertex.
 
     Args:
-        f: Function taking an array and returning an array.
-        input_shape: Shape of the input array.
-        partition: Which partition to color
-            (``"row"``, ``"column"``, or ``"auto"``).
+        num_vertices: Number of vertices to color
+        conflicts: List of sets where conflicts[v] contains
+            all vertices that conflict with vertex v
 
     Returns:
-        A :class:`ColoredPattern` ready for :func:`jacobian`.
+        Tuple of (colors, num_colors) where:
+        - colors: Array of shape (num_vertices,) with color assignments
+        - num_colors: Total number of colors used
     """
-    sparsity = _detect_jacobian_sparsity(f, input_shape)
-    return color_jacobian_pattern(sparsity, partition)
+    if num_vertices == 0:
+        return np.array([], dtype=np.int32), 0
+
+    # LargestFirst ordering: sort vertices by decreasing degree
+    order = sorted(range(num_vertices), key=lambda v: len(conflicts[v]), reverse=True)
+
+    colors = np.full(num_vertices, -1, dtype=np.int32)
+    num_colors = 0
+
+    for v in order:
+        # Find colors used by conflicting vertices
+        used_colors: set[int] = set()
+        for neighbor in conflicts[v]:
+            if colors[neighbor] >= 0:
+                used_colors.add(colors[neighbor])
+
+        # Assign smallest unused color
+        color = 0
+        while color in used_colors:
+            color += 1
+
+        colors[v] = color
+        num_colors = max(num_colors, color + 1)
+
+    return colors, num_colors
 
 
-def hessian_coloring(
-    f: Callable,
-    input_shape: tuple[int, ...],
-) -> ColoredPattern:
-    """Detect Hessian sparsity and star-color in one step.
+def _build_row_conflict_sets(sparsity: SparsityPattern) -> list[set[int]]:
+    """Build conflict graph: rows conflict if they share a non-zero column.
 
-    Uses star coloring,
-    which exploits Hessian symmetry for fewer colors.
+    For each column, all rows with non-zeros in that column conflict with each other.
 
     Args:
-        f: Scalar-valued function.
-        input_shape: Shape of the input array.
+        sparsity: SparsityPattern of shape (m, n)
 
     Returns:
-        A :class:`ColoredPattern` with ``mode="HVP"``
-        ready for :func:`hessian`.
+        List of sets where conflicts[i] contains all rows that conflict with row i
     """
-    sparsity = _detect_hessian_sparsity(f, input_shape)
-    return color_hessian_pattern(sparsity)
+    m = sparsity.m
+    conflicts: list[set[int]] = [set() for _ in range(m)]
+
+    # Use cached col_to_rows mapping
+    col_to_rows = sparsity.col_to_rows
+
+    # For each column, mark all pairs of rows as conflicting
+    for rows_in_col in col_to_rows.values():
+        for i, row_i in enumerate(rows_in_col):
+            for row_j in rows_in_col[i + 1 :]:
+                conflicts[row_i].add(row_j)
+                conflicts[row_j].add(row_i)
+
+    return conflicts
+
+
+def _build_col_conflict_sets(sparsity: SparsityPattern) -> list[set[int]]:
+    """Build conflict graph: columns conflict if they share a non-zero row.
+
+    For each row, all columns with non-zeros in that row conflict with each other.
+
+    Args:
+        sparsity: SparsityPattern of shape (m, n)
+
+    Returns:
+        List of sets where conflicts[j] contains all columns that conflict with column j
+    """
+    n = sparsity.n
+    conflicts: list[set[int]] = [set() for _ in range(n)]
+
+    # Use cached row_to_cols mapping
+    row_to_cols = sparsity.row_to_cols
+
+    # For each row, mark all pairs of columns as conflicting
+    for cols_in_row in row_to_cols.values():
+        for i, col_i in enumerate(cols_in_row):
+            for col_j in cols_in_row[i + 1 :]:
+                conflicts[col_i].add(col_j)
+                conflicts[col_j].add(col_i)
+
+    return conflicts
