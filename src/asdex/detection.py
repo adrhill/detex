@@ -11,28 +11,21 @@ from asdex.pattern import SparsityPattern
 
 
 def jacobian_sparsity(f, input_shape: int | tuple[int, ...]) -> SparsityPattern:
-    """
-    Detect global Jacobian sparsity pattern for f: R^n -> R^m.
+    """Detect global Jacobian sparsity pattern for f: R^n -> R^m.
 
-    This analyzes the computation graph structure directly,
+    Analyzes the computation graph structure directly,
     without evaluating any derivatives.
     The result is valid for all inputs.
 
-    The approach:
-    1. Get the jaxpr (computation graph) for the function
-    2. Propagate per-element index sets through each primitive
-    3. Build the sparsity pattern from output dependencies
-
     Args:
-        f: Function taking an array of the given shape.
+        f: Function taking an array and returning an array.
         input_shape: Shape of the input array.
             An integer is treated as a 1D length.
 
     Returns:
-        SparsityPattern of shape (m, n) where n = prod(input_shape),
-        m = prod(output_shape),
-        and entry (i,j) is present if output i depends on input j.
-        Both input and output are flattened in row-major order.
+        SparsityPattern of shape ``(m, n)``
+        where ``n = prod(input_shape)`` and ``m = prod(output_shape)``.
+        Entry ``(i, j)`` is present if output ``i`` depends on input ``j``.
     """
     dummy_input = jnp.zeros(input_shape)
     closed_jaxpr = jax.make_jaxpr(f)(dummy_input)
@@ -67,19 +60,20 @@ def jacobian_sparsity(f, input_shape: int | tuple[int, ...]) -> SparsityPattern:
 
 
 def hessian_sparsity(f, input_shape: int | tuple[int, ...]) -> SparsityPattern:
-    """
-    Detect global Hessian sparsity pattern for f: R^n -> R.
+    """Detect global Hessian sparsity pattern for f: R^n -> R.
 
-    Computed by analyzing the Jacobian sparsity of the gradient function,
-    demonstrating how our sparsity interpreter composes with JAX's autodiff.
+    Analyzes the Jacobian sparsity of the gradient function,
+    without evaluating any derivatives.
+    The result is valid for all inputs.
 
     Args:
-        f: Scalar-valued function taking an array of the given shape.
+        f: Scalar-valued function taking an array.
         input_shape: Shape of the input array.
             An integer is treated as a 1D length.
 
     Returns:
-        SparsityPattern of shape (n, n) where n = prod(input_shape)
-        and entry (i,j) is present if H[i,j] may be nonzero
+        SparsityPattern of shape ``(n, n)``
+        where ``n = prod(input_shape)``.
+        Entry ``(i, j)`` is present if ``H[i, j]`` may be nonzero.
     """
     return jacobian_sparsity(jax.grad(f), input_shape)

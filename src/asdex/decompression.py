@@ -30,15 +30,15 @@ def jacobian(
 
     Args:
         f: Function taking an array and returning an array.
-            Both may be multi-dimensional.
+            Input and output may be multi-dimensional.
         x: Input point (any shape).
         colored_pattern: Optional pre-computed :class:`ColoredPattern`
-            from :func:`color`.
+            from :func:`~asdex.jacobian_coloring`.
             If None, sparsity is detected and colored automatically.
 
     Returns:
-        Sparse Jacobian matrix of shape (m, n) as BCOO,
-        where n = x.size and m = prod(output_shape)
+        Sparse Jacobian as BCOO of shape ``(m, n)``
+        where ``n = x.size`` and ``m = prod(output_shape)``.
     """
     x = jnp.asarray(x)
     n = x.size
@@ -84,19 +84,22 @@ def hessian(
     Uses forward-over-reverse Hessian-vector products for efficiency.
 
     Args:
-        f: Scalar-valued function returning a scalar.
+        f: Scalar-valued function taking an array.
             Input may be multi-dimensional.
         x: Input point (any shape).
         colored_pattern: Optional pre-computed :class:`ColoredPattern`
-            from :func:`hessian_coloring`.
+            from :func:`~asdex.hessian_coloring`.
             If provided, ``sparsity`` and ``colors`` are ignored.
         sparsity: Optional pre-computed Hessian sparsity pattern from
-            hessian_sparsity(). If None, detected automatically.
-        colors: Optional pre-computed row coloring from color_rows().
+            :func:`~asdex.hessian_sparsity`.
+            If None, detected automatically.
+        colors: Optional pre-computed row coloring from
+            :func:`~asdex.color_rows`.
             If None, symmetric coloring is computed and used automatically.
 
     Returns:
-        Sparse Hessian matrix of shape (n, n) as BCOO
+        Sparse Hessian as BCOO of shape ``(n, n)``
+        where ``n = x.size``.
     """
 
     x = jnp.asarray(x)
