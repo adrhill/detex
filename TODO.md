@@ -7,7 +7,7 @@
 ## Primitive Coverage
 
 Missing precise handlers for:
-- [ ] `transpose` - track dimension permutation (`test_transpose_2d`)
+- [x] `transpose` - track dimension permutation (`test_transpose_2d`)
 - [ ] `dot_general` - matrix multiply sparsity (`test_matmul`, `test_iota_eye`)
 - [ ] `reduce_max`, `reduce_min`, `reduce_prod` - reductions with axes
 - [ ] `rev` - reverse/flip array (`test_reverse`)
@@ -35,7 +35,7 @@ These propagators use conservative fallbacks that could be made precise:
 ## Tests Using Conservative Fallbacks
 
 These tests verify conservative behavior that could be made precise:
-- [ ] `test_transpose_2d` - transpose produces dense, should be permutation matrix
+- [x] `test_transpose_2d` - transpose produces dense, should be permutation matrix
 - [ ] `test_matmul` - dot_general produces dense, should track row/column deps
 - [ ] `test_reverse` - rev produces dense, should be anti-diagonal permutation
 - [x] `test_pad` - pad produces dense, should be sparse (pad values have no deps)

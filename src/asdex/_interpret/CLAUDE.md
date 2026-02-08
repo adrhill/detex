@@ -14,6 +14,7 @@ _squeeze.py        # squeeze
 _reshape.py        # reshape
 _broadcast.py      # broadcast_in_dim
 _concatenate.py    # concatenate
+_transpose.py      # transpose (dimension permutation)
 _reduction.py      # reduce_sum
 _gather.py         # gather (static/dynamic indices)
 _scatter.py        # scatter, scatter-add (static/dynamic indices)

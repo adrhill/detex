@@ -157,13 +157,10 @@ def test_reshape_size_mismatch_fallback():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_transpose_2d():
-    """Transpose should preserve per-element dependencies with reordering.
+    """Transpose preserves per-element dependencies with coordinate reordering.
 
-    TODO(transpose): Implement precise handler for transpose primitive.
-    Currently triggers conservative fallback (all outputs depend on all inputs).
-    Precise: output[i,j] depends only on input[j,i] (permutation matrix).
+    output[i,j] depends only on input[j,i], so the Jacobian is a permutation matrix.
     """
 
     def f(x):
@@ -171,8 +168,12 @@ def test_transpose_2d():
         return mat.T.flatten()  # (3, 2) -> 6 elements
 
     result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
-    # TODO: Should be permutation matrix, not dense
-    expected = np.ones((6, 6), dtype=int)
+    # Transpose of (2,3) -> (3,2): out[i,j] = in[j,i].
+    # Flat mapping: out[0]=in[0], out[1]=in[3], out[2]=in[1],
+    #               out[3]=in[4], out[4]=in[2], out[5]=in[5].
+    expected = np.zeros((6, 6), dtype=int)
+    for out_idx, in_idx in enumerate([0, 3, 1, 4, 2, 5]):
+        expected[out_idx, in_idx] = 1
     np.testing.assert_array_equal(result, expected)
 
 
