@@ -49,6 +49,19 @@ def test_reduce_along_axis():
 
 
 @pytest.mark.reduction
+def test_zero_size_input():
+    """Zero-size input exercises empty union edge case."""
+
+    def f(x):
+        # Sum over empty array gives scalar 0 with no dependencies
+        return jnp.sum(x)
+
+    result = jacobian_sparsity(f, input_shape=0)
+    assert result.shape == (1, 0)
+    assert result.nse == 0
+
+
+@pytest.mark.reduction
 def test_argmax():
     """argmax has zero derivative (returns integer index, not differentiable).
 

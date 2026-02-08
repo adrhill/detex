@@ -9,7 +9,9 @@ through primitives to determine Jacobian sparsity patterns.
 __init__.py        # prop_jaxpr, prop_dispatch, fallbacks
 _commons.py        # IndexSets, Deps, ConstVals, utilities
 _elementwise.py    # unary, binary, zero-derivative, integer_pow, convert_element_type
-_indexing.py       # slice, squeeze, reshape
+_slice.py          # slice
+_squeeze.py        # squeeze
+_reshape.py        # reshape
 _broadcast.py      # broadcast_in_dim
 _concatenate.py    # concatenate
 _reduction.py      # reduce_sum
@@ -33,11 +35,16 @@ _dynamic_slice.py  # dynamic_slice, dynamic_update_slice
 Handlers like `broadcast_in_dim`, `select_n`, and binary ops propagate concrete values through `const_vals`.
 This lets `gather`/`scatter` resolve static indices precisely instead of falling back to conservative.
 
+## Tests
+
+Each handler module `_foo.py` has a corresponding test file `tests/_interpret/test_foo.py`.
+
 ## Adding a New Handler
 
 1. Write `prop_<name>(eqn, deps, ...)` in the appropriate module.
 2. Add a `case` branch in `prop_dispatch`.
 3. Remove from the fallback `case` group if upgrading from conservative.
+4. Add tests in the corresponding `tests/_interpret/test_<module>.py` file.
 
 ## Writing Style
 

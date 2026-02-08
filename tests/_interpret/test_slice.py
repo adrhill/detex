@@ -1,0 +1,87 @@
+"""Tests for slice propagation.
+
+https://docs.jax.dev/en/latest/_autosummary/jax.lax.slice.html
+"""
+
+import jax.numpy as jnp
+import numpy as np
+import pytest
+
+from asdex import jacobian_sparsity
+
+
+@pytest.mark.array_ops
+def test_multidim_slice():
+    """Multi-dimensional slice tracks per-element dependencies precisely.
+
+    Each output element depends on exactly one input element.
+    """
+
+    def f(x):
+        # Reshape to 2D and slice in multiple dimensions
+        mat = x.reshape(3, 3)
+        sliced = mat[0:2, 0:2]  # 2D slice extracts 2x2 submatrix
+        return sliced.flatten()
+
+    result = jacobian_sparsity(f, input_shape=9).todense().astype(int)
+    # Input (3x3): indices 0-8 in row-major order
+    # Slice [0:2, 0:2] extracts: [0,0]=0, [0,1]=1, [1,0]=3, [1,1]=4
+    expected = np.zeros((4, 9), dtype=int)
+    expected[0, 0] = 1  # out[0] <- in[0]
+    expected[1, 1] = 1  # out[1] <- in[1]
+    expected[2, 3] = 1  # out[2] <- in[3]
+    expected[3, 4] = 1  # out[3] <- in[4]
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_roll():
+    """jnp.roll correctly tracks the cyclic permutation.
+
+    output[i] depends on input[(i-shift) % n].
+    """
+
+    def f(x):
+        return jnp.roll(x, shift=1)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # Precise: cyclic permutation matrix
+    # output[0] <- input[2], output[1] <- input[0], output[2] <- input[1]
+    expected = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]], dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_slice_constant_array():
+    """Slicing a constant array produces zero sparsity."""
+
+    def f(_x):
+        const = jnp.array([1.0, 2.0, 3.0, 4.0])
+        return const[1:3]  # Slice constant, no input dependency
+
+    result = jacobian_sparsity(f, input_shape=2).todense().astype(int)
+    expected = np.zeros((2, 2), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_slice_mixed_with_constant():
+    """Slicing input and concatenating with sliced constant."""
+
+    def f(x):
+        const = jnp.array([10.0, 20.0])
+        sliced_x = x[1:3]  # x[1], x[2]
+        sliced_const = const[:1]  # const[0]
+        return jnp.concatenate([sliced_const, sliced_x])
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    # Output: [const[0], x[1], x[2]]
+    expected = np.array(
+        [
+            [0, 0, 0, 0],  # out[0] <- const[0]
+            [0, 1, 0, 0],  # out[1] <- x[1]
+            [0, 0, 1, 0],  # out[2] <- x[2]
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)

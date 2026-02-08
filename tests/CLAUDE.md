@@ -8,21 +8,30 @@ tests/
 ├── test_detection.py           # Sparsity detection tests
 ├── test_coloring.py            # Row coloring tests
 ├── test_decompression.py       # Sparse Jacobian computation tests
-├── test_control_flow.py        # Conditionals (where, select)
 ├── test_vmap.py                # Batched/vmapped operations
 ├── test_benchmarks.py          # Performance benchmarks
 ├── test_sympy.py               # SymPy-based randomized tests
 ├── test_diffrax.py             # Integration tests for diffrax tracing
 └── _interpret/                 # Tests for _interpret submodules
-    ├── test_indexing.py        # Slicing, concat, broadcast, reshape
+    ├── test_slice.py           # Slice operations
+    ├── test_squeeze.py         # Squeeze operations
+    ├── test_reshape.py         # Reshape operations
+    ├── test_broadcast.py       # Broadcast operations
+    ├── test_concatenate.py     # Concatenate and stack
+    ├── test_gather.py          # Gather (fancy indexing)
+    ├── test_scatter.py         # Scatter (at[].set, at[].add, segment_sum)
+    ├── test_elementwise.py     # Elementwise operations
+    ├── test_dynamic_slice.py   # dynamic_slice, dynamic_update_slice
     ├── test_reduction.py       # Reduction operations (sum, max, argmax)
     ├── test_conv.py            # Convolution tests
-    ├── test_internals.py       # Internal propagation functions
+    ├── test_internals.py       # Internal propagation, fallbacks, custom_call
+    ├── test_select.py          # select_n (jnp.where, lax.select)
     ├── test_while.py           # while_loop propagation
     ├── test_cond.py            # cond (conditional branching)
-    ├── test_dynamic_indexing.py # dynamic_slice, dynamic_update_slice
     └── test_nested_jaxpr.py    # const_vals into jit, custom_jvp
 ```
+
+Each handler module `src/asdex/_interpret/_foo.py` has a corresponding test file `tests/_interpret/test_foo.py`.
 
 ## Running Tests
 

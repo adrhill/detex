@@ -154,3 +154,200 @@ def test_reshape_size_mismatch_fallback():
 
     # Conservative: all outputs get union of all input deps
     assert deps[out_var] == [{0, 1, 2}, {0, 1, 2}]
+
+
+# =============================================================================
+# Conservative fallback tests
+# =============================================================================
+
+
+@pytest.mark.array_ops
+@pytest.mark.fallback
+def test_transpose_2d():
+    """Transpose should preserve per-element dependencies with reordering.
+
+    TODO(transpose): Implement precise handler for transpose primitive.
+    Currently triggers conservative fallback (all outputs depend on all inputs).
+    Precise: output[i,j] depends only on input[j,i] (permutation matrix).
+    """
+
+    def f(x):
+        mat = x.reshape(2, 3)
+        return mat.T.flatten()  # (3, 2) -> 6 elements
+
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    # TODO: Should be permutation matrix, not dense
+    expected = np.ones((6, 6), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+@pytest.mark.fallback
+def test_reverse():
+    """jnp.flip triggers conservative fallback.
+
+    TODO(rev): Implement precise handler for rev (reverse) primitive.
+    Precise: output[i] depends on input[n-1-i] (anti-diagonal permutation).
+    """
+
+    def f(x):
+        return jnp.flip(x)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # TODO: Should be anti-diagonal [[0,0,1], [0,1,0], [1,0,0]]
+    expected = np.ones((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+@pytest.mark.fallback
+def test_pad():
+    """jnp.pad triggers conservative fallback.
+
+    TODO(pad): Implement precise handler for pad primitive.
+    Precise: padded elements have no dependency,
+    original elements preserve structure.
+    """
+
+    def f(x):
+        return jnp.pad(x, (1, 1), constant_values=0)
+
+    result = jacobian_sparsity(f, input_shape=2).todense().astype(int)
+    # TODO: Should be [[0,0], [1,0], [0,1], [0,0]] (pad values have no deps)
+    expected = np.ones((4, 2), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+@pytest.mark.fallback
+def test_tile():
+    """jnp.tile triggers conservative fallback.
+
+    TODO(tile): Implement precise handler for broadcast_in_dim used by tile.
+    Precise: each output element depends on corresponding input (mod input size).
+    """
+
+    def f(x):
+        return jnp.tile(x, 2)
+
+    result = jacobian_sparsity(f, input_shape=2).todense().astype(int)
+    # TODO: Should be [[1,0], [0,1], [1,0], [0,1]]
+    expected = np.ones((4, 2), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+@pytest.mark.fallback
+def test_split():
+    """jnp.split triggers conservative fallback via the split primitive.
+
+    TODO(split): Implement precise handler for split primitive.
+    Precise: each output element depends only on corresponding input.
+    """
+
+    def f(x):
+        parts = jnp.split(x, 2)
+        return jnp.concatenate([parts[1], parts[0]])  # swap halves
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    # TODO: Should be permutation [[0,0,1,0], [0,0,0,1], [1,0,0,0], [0,1,0,0]]
+    expected = np.ones((4, 4), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+@pytest.mark.fallback
+def test_matmul():
+    """Matrix multiplication (dot_general) triggers conservative fallback.
+
+    TODO(dot_general): Implement precise handler for dot_general primitive.
+    Precise: output[i,j] depends on row i of first input and column j of second.
+    For f(x) = x @ x.T, output[i,j] depends on rows i and j of input.
+    """
+
+    def f(x):
+        mat = x.reshape(2, 2)
+        return (mat @ mat.T).flatten()
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    # TODO: Should track row/column dependencies, not be fully dense
+    expected = np.ones((4, 4), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+@pytest.mark.fallback
+def test_iota_eye():
+    """jnp.eye uses iota internally, triggers conservative fallback.
+
+    TODO(iota): Add prop_zero_derivative handler for iota (constant output).
+    TODO(dot_general): Also needs dot_general handler for eye @ x.
+    Precise: eye matrix has no input dependency (constant), so eye @ x = x.
+    """
+
+    def f(x):
+        # Multiply x by identity - should preserve diagonal structure
+        return jnp.eye(3) @ x
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # TODO: Should be identity matrix (eye @ x = x)
+    expected = np.ones((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+@pytest.mark.fallback
+def test_sort():
+    """jnp.sort triggers conservative fallback.
+
+    Precise: all outputs depend on all inputs (sorting is a global operation).
+    """
+
+    def f(x):
+        return jnp.sort(x)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # Conservative fallback is actually correct here
+    expected = np.ones((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_custom_jvp_relu():
+    """jax.nn.relu uses custom_jvp but tracks element-wise dependencies.
+
+    ReLU is element-wise: each output depends only on corresponding input.
+    """
+    import jax.nn
+
+    def f(x):
+        return jax.nn.relu(x)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_custom_vjp_user_defined():
+    """User-defined custom_vjp traces forward computation."""
+
+    @jax.custom_vjp
+    def my_square(x):
+        return x**2
+
+    def my_square_fwd(x):
+        return my_square(x), x
+
+    def my_square_bwd(res, g):
+        x = res
+        return (2 * x * g,)
+
+    my_square.defvjp(my_square_fwd, my_square_bwd)
+
+    def f(x):
+        return my_square(x)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.eye(3, dtype=int)  # Element-wise operation
+    np.testing.assert_array_equal(result, expected)
