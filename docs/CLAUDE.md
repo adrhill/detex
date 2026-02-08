@@ -11,10 +11,14 @@ docs/
 │   ├── jacobians.md          # How-To: sparse Jacobians
 │   └── hessians.md           # How-To: sparse Hessians
 ├── explanation/
-│   ├── pipeline.md           # Explanation: the ASD pipeline
 │   └── coloring.md           # Explanation: graph coloring
 ├── reference/
-│   └── api.md                # Auto-generated API reference
+│   ├── jacobian.md           # Reference: jacobian(), jacobian_coloring(), etc.
+│   ├── hessian.md            # Reference: hessian(), hessian_coloring(), etc.
+│   ├── sparsity.md           # Reference: jacobian_sparsity(), hessian_sparsity()
+│   ├── coloring.md           # Reference: color_rows(), color_cols(), color_symmetric()
+│   ├── data-structures.md    # Reference: SparsityPattern, ColoredPattern
+│   └── api.md                # Reference: all docstrings on one page
 └── javascripts/
     └── mathjax.js            # MathJax configuration
 ```

@@ -35,10 +35,14 @@ nav:
       - Sparse Jacobians: how-to/jacobians.md
       - Sparse Hessians: how-to/hessians.md
   - Explanation:
-      - The ASD Pipeline: explanation/pipeline.md
       - Graph Coloring: explanation/coloring.md
   - Reference:
-      - API Reference: reference/api.md
+      - Jacobian: reference/jacobian.md
+      - Hessian: reference/hessian.md
+      - Sparsity Detection: reference/sparsity.md
+      - Coloring: reference/coloring.md
+      - Data Structures: reference/data-structures.md
+      - Full API: reference/api.md
   - Benchmarks: https://adrianhill.de/asdex/dev/bench/
 
 not_in_nav: |
