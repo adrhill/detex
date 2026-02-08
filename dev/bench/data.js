@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770514548968,
+  "lastUpdate": 1770566180012,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -1662,6 +1662,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.013664416081184756",
             "extra": "mean: 1.5657332655999994 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "709b88779c03a2d3224f064d897e05c31776a249",
+          "message": "Add MkDocs documentation site (#27)\n\n* Add MkDocs documentation site\n\nSet up MkDocs with Material theme following the Diataxis framework:\ntutorials, how-to guides, explanations, and auto-generated API reference.\nIncludes GitHub Actions workflow for deployment alongside existing benchmarks.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Improve docs: executable code blocks, mermaid diagrams, content updates\n\n- Add markdown-exec for live code execution in docs\n- Add mermaid diagrams to pipeline explanation page\n- Rewrite getting-started with one-call API, benchmarks, and Hessian example\n- Rename \"The 3-Stage Pipeline\" to \"The ASD Pipeline\"\n- Remove contributing page (user edit)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Restructure docs: add Tutorials tab, executable examples, and manual sparsity docs\n\n- Move getting-started.md into tutorials/ folder with its own nav tab\n- Remove section overview index.md pages (tutorials, how-to, explanation)\n- Add executable code blocks with hidden print cells to how-to guides\n- Document manual SparsityPattern construction (from_dense, from_coordinates, from_bcoo)\n- Add precompute warning admonitions to one-call API sections\n- Expand docs/CLAUDE.md with structure overview, clearer Diataxis descriptions, and restart note\n- Update mkdocs.yml nav and fix cross-section links\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Improve Hessian how-to guide structure, gitignore site/, and polish tutorial\n\n- Restructure hessians.md to match jacobians.md layout (separate sections for\n  manual sparsity, detect+color, precomputing)\n- Add executable code blocks with hidden prints to hessians.md\n- Use sparse multi-dimensional example (sum(x**3)) instead of dense one\n- Add site/ to .gitignore\n- Minor tutorial polish\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Split API reference into per-topic pages and remove pipeline explanation\n\n- Remove explanation/pipeline.md\n- Split reference/api.md into jacobian.md, hessian.md, sparsity.md,\n  coloring.md, and data-structures.md\n- Keep reference/api.md as a full API page with all docstrings\n- Update nav, docs/CLAUDE.md structure tree, and cross-links\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add custom CSS for sidebar section headers and tweak reference pages\n\n- Style sidebar section headers as small, bold, uppercase labels\n  to visually distinguish them from page links\n- Move color_jacobian_pattern/color_hessian_pattern back to coloring reference\n- Swap order of data structures (ColoredPattern first)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add sparsity detection explanation page\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Update the Getting started guide.\n\n* Trim README\n\n* Fix API reference\n\n* Expand the graph coloring explanation page\n\nAdd concrete Jacobian example, compression/decompression section,\nand references. Streamline symmetric coloring discussion.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-08T16:55:30+01:00",
+          "tree_id": "0579cbee5577e6e920b7f81d5bc2f01c23d7bba1",
+          "url": "https://github.com/adrhill/asdex/commit/709b88779c03a2d3224f064d897e05c31776a249"
+        },
+        "date": 1770566178780,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 723.1767987559738,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002757190643072523",
+            "extra": "mean: 1.3827877245512081 msec\nrounds: 167"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3198.8332419460407,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000007690668532322336",
+            "extra": "mean: 312.6139827756825 usec\nrounds: 2032"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 61.48627350301963,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00045187093142807697",
+            "extra": "mean: 16.263792600000215 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 83.36331633943327,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003361716729393651",
+            "extra": "mean: 11.99568400000146 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 22.444171310600588,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012198139784861858",
+            "extra": "mean: 44.554997649999706 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 239.40403633936577,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000024446120423793942",
+            "extra": "mean: 4.177039014423533 msec\nrounds: 208"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 30.961574741357943,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010937023342586971",
+            "extra": "mean: 32.298098800001185 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 11.507784520242707,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0015505797816357453",
+            "extra": "mean: 86.89769939999792 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 46.879095267421185,
+            "unit": "iter/sec",
+            "range": "stddev: 0.011706003566131759",
+            "extra": "mean: 21.331469694445104 msec\nrounds: 36"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 5.0739246208727735,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006657095718346416",
+            "extra": "mean: 197.08609699999613 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 22.886192156990347,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006941844016833498",
+            "extra": "mean: 43.694468400002506 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 0.6523400235172981,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012243624098424461",
+            "extra": "mean: 1.5329428886000016 sec\nrounds: 5"
           }
         ]
       }
