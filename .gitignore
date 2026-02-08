@@ -11,6 +11,9 @@ uv.lock
 .pytest_cache
 .ruff_cache
 
+# MkDocs build output
+site/
+
 # Virtual environments
 .venv
 .claude/settings.local.json

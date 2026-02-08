@@ -53,13 +53,8 @@ x = jnp.ones(50)
 J = jacobian(f, x, colored_pattern)
 ```
 
-```python exec="true" session="gs"
-print(f"```\nJ.shape = {J.shape}```")
-```
-
 The result is a JAX
 [BCOO](https://docs.jax.dev/en/latest/jax.experimental.sparse.html) sparse matrix.
-
 We can verify that `asdex` produces the same result as `jax.jacobian`:
 
 ```python exec="true" session="gs" source="above"
@@ -71,7 +66,8 @@ np.testing.assert_allclose(J.todense(), J_dense, atol=1e-6)
 ```
 
 On larger problems, the speedup from coloring becomes significant.
-Let's benchmark on a 5000-dimensional input:
+Let's benchmark on a 5000-dimensional input
+(note that timings may vary as part of the doc-building process):
 
 ```python exec="true" session="gs" source="above"
 import timeit
