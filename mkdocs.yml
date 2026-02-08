@@ -35,6 +35,7 @@ nav:
       - Sparse Jacobians: how-to/jacobians.md
       - Sparse Hessians: how-to/hessians.md
   - Explanation:
+      - Sparsity Detection: explanation/sparsity-detection.md
       - Graph Coloring: explanation/coloring.md
   - Reference:
       - Jacobian: reference/jacobian.md
