@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770506275948,
+  "lastUpdate": 1770509918733,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -1230,6 +1230,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0072790151265666484",
             "extra": "mean: 1.5236569680000058 sec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4826cb6a0a83177816d1f47b643cd8478fecff5f",
+          "message": "Clean up interpreter module and tests (#25)\n\n* Add JAX doc URLs and improve handler docstrings\n\n- Add JAX doc URLs to all handler docstrings missing them\n- Add JAX doc URLs to test module docstrings\n- Fix parameter names to match JAX API (start_indices, scatter_indices)\n- Document precise-path conditions in gather and scatter\n- Document conv assumption (feature_group_count=1, batch_group_count=1)\n- Clarify reduce_sum vs jax.lax.reduce naming difference\n- Document reshape bug with dimensions parameter\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Fix reshape handler ignoring `dimensions` parameter\n\nWhen `dimensions` is not None, `jax.lax.reshape` transposes the input\naxes before reshaping (e.g. `ravel(order='F')` emits `dimensions=(1,0)`).\nThe handler previously passed deps through in the original flat order,\nproducing incorrect (not merely conservative) sparsity patterns.\n\nFix by building a flat index mapping via `np.arange().reshape().transpose()`,\nmirroring the actual element reordering JAX performs.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add 3D test for reshape dimensions fix\n\nTest ravel(order='F') on a (2, 3, 4) tensor,\nwhich emits dimensions=(2, 1, 0) — a higher-rank permutation\nthan the 2D case already tested.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Extract shared utilities from `_interpret` handlers\n\nAdd `atom_shape`, `flat_to_coords`, and `conservative_deps` helpers to\n`_commons.py` to reduce duplication across handler modules.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Split `_indexing.py` into `_slice.py`, `_squeeze.py`, and `_reshape.py`\n\nEach handler now lives in its own module, consistent with the rest of\nthe `_interpret` package.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Split test files to match `_interpret` handler modules\n\nOne test file per handler: `_foo.py` → `test_foo.py`.\nMove `test_control_flow.py` → `_interpret/test_select.py`,\nrename `test_dynamic_indexing.py` → `test_dynamic_slice.py`,\nand move fallback/custom_call tests into `test_internals.py`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-08T01:17:51+01:00",
+          "tree_id": "bcca8d345906904d2f614bb3464bd4cc2c7d63e0",
+          "url": "https://github.com/adrhill/asdex/commit/4826cb6a0a83177816d1f47b643cd8478fecff5f"
+        },
+        "date": 1770509917494,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 661.4605313115261,
+            "unit": "iter/sec",
+            "range": "stddev: 0.003868998829324764",
+            "extra": "mean: 1.511806000000071 msec\nrounds: 160"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3274.813967175358,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000007622603729831648",
+            "extra": "mean: 305.3608571428365 usec\nrounds: 2058"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 56.08014669490991,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010245683445397706",
+            "extra": "mean: 17.831622399995695 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 40.25880096439686,
+            "unit": "iter/sec",
+            "range": "stddev: 0.02635418907275455",
+            "extra": "mean: 24.839289200002668 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 22.378545760733655,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012485335515297359",
+            "extra": "mean: 44.68565610526142 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 243.325166666264,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000035022010391951884",
+            "extra": "mean: 4.1097269702955295 msec\nrounds: 202"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 28.923406261884008,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010631299104126302",
+            "extra": "mean: 34.57407440000679 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 9.759748849650636,
+            "unit": "iter/sec",
+            "range": "stddev: 0.02777464658779883",
+            "extra": "mean: 102.46165299999461 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 43.62749628088578,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013650826531622348",
+            "extra": "mean: 22.921324514286262 msec\nrounds: 35"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 5.30002260645173,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005517831193163254",
+            "extra": "mean: 188.67844049998914 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 23.147545561808457,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002724181699510639",
+            "extra": "mean: 43.20112460000587 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 0.6490283559454185,
+            "unit": "iter/sec",
+            "range": "stddev: 0.008256847120334209",
+            "extra": "mean: 1.5407647305999945 sec\nrounds: 5"
           }
         ]
       }
