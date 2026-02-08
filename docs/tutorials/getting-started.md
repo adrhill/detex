@@ -5,17 +5,19 @@ This tutorial walks through the three stages of automatic sparse differentiation
 
 ## The Problem
 
-For a function \(f: \mathbb{R}^n \to \mathbb{R}^m\),
-computing the full Jacobian \(J \in \mathbb{R}^{m \times n}\)
-requires \(n\) forward-mode or \(m\) reverse-mode AD passes.
-In practice, many Jacobians are *sparse*
-— most entries are structurally zero, regardless of the input.
+For a function $f: \mathbb{R}^n \to \mathbb{R}^m$, computing the full Jacobian $J \in \mathbb{R}^{m \times n}$ requires $n$ forward-mode or $m$ reverse-mode AD passes.
+In practice, for example in scientific machine learning,
+many Jacobians are *sparse* (i.e., most entries are structurally zero, regardless of the input).
 
 `asdex` exploits this sparsity in three steps:
-
 1. **Detect** the sparsity pattern by tracing the computation graph
 2. **Color** the pattern so that structurally orthogonal rows (or columns) share a color
-3. **Decompress** one AD pass per color into the sparse Jacobian
+3. **Decompress** one AD pass per color into the sparse Jacobian or Hessian
+
+This reduces the computational cost from $m$ (or $n$) AD passes to just the number of colors,
+yielding significant speedups on large sparse problems,
+especially when the cost of detection and coloring can be amortized over repeated evaluations.
+The same approach applies to sparse Hessians via forward-over-reverse AD.
 
 ## Sparse Jacobians
 
@@ -37,13 +39,24 @@ colored_pattern = jacobian_coloring(f, input_shape=50)
 print(f"```\n{colored_pattern}\n```")
 ```
 
-The print-out shows the original sparsity pattern (left)
-compressed into just two colors (right).
-`asdex` automatically tried both row and column coloring
-and selected column coloring (2 JVPs) since JVPs are cheaper,
-reducing the cost from 49 VJPs or 50 JVPs to just 2 JVPs.
+The print-out shows the original sparsity pattern (left) compressed into just two colors (right).
+`asdex` automatically ran multiple coloring algorithms,
+selected column coloring (2 JVPs) over row coloring (2 VJPs) since JVPs are cheaper,
+reducing the cost from 49 VJPs or 50 JVPs without coloring to just 2 JVPs.
+Note that on small problems, this doesn't directly translate into a speedup of factor 25x,
+as the decompression overhead dominates.
 
-Now compute the sparse Jacobian using the colored pattern:
+!!! info "Global Sparsity Patterns"
+
+    The detected pattern is a **global** sparsity pattern:
+    it depends only on the function's structure, not on any particular input.
+    This means it may contain extra nonzeros compared to the sparsity at a specific point,
+    but it is guaranteed to be correct everywhere.
+    If you encounter overly conservative patterns,
+    please [open an issue](https://github.com/adrhill/asdex/issues).
+    See [Sparsity Detection](../explanation/sparsity-detection.md) for details.
+
+Now we can compute the sparse Jacobian using the colored pattern:
 
 ```python exec="true" session="gs" source="above"
 import jax.numpy as jnp
@@ -112,28 +125,21 @@ print("```\n" + "\n".join(lines) + "\n```")
 For scalar-valued functions \(f: \mathbb{R}^n \to \mathbb{R}\),
 `asdex` can detect Hessian sparsity and compute sparse Hessians:
 
-```python exec="true" session="gs" source="above"
+```python
 from asdex import hessian_coloring, hessian
 
 def g(x):
     return jnp.sum(x ** 2)
 
 colored_pattern = hessian_coloring(g, input_shape=20)
-```
 
-```python exec="true" session="gs"
-print(f"```\n{colored_pattern}\n```")
-```
-
-Compute the sparse Hessian using the colored pattern:
-
-```python exec="true" session="gs" source="above"
-x = jnp.ones(20)
-H = hessian(g, x, colored_pattern)
+for x in inputs:
+    H = hessian(g, x, colored_pattern)
 ```
 
 ## Next Steps
 
-- [Computing Sparse Jacobians](../how-to/jacobians.md) — more Jacobian recipes
-- [Computing Sparse Hessians](../how-to/hessians.md) — Hessian computation guide
-- [Graph Coloring](../explanation/coloring.md) — how and why coloring reduces cost
+- [Computing Sparse Jacobians](../how-to/jacobians.md) — Guide on Jacobian computation
+- [Computing Sparse Hessians](../how-to/hessians.md) — Guide on Hessian computation
+- [Sparsity Detection](../explanation/sparsity-detection.md) — Explanation how sparsity patterns are detected
+- [Graph Coloring](../explanation/coloring.md) — Explanation how coloring reduces cost

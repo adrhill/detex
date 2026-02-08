@@ -138,9 +138,8 @@ uv run mkdocs serve
 This starts a live-reloading server at `http://127.0.0.1:8000`.
 Use `uv run mkdocs build --strict` to catch broken links and warnings.
 
-Live reload handles content changes well,
-but changes to `mkdocs.yml` (nav, theme features, plugins) often require
-stopping and restarting `mkdocs serve` to take effect.
+Live reload is unreliable —
+always stop and restart `mkdocs serve` to see changes.
 
 ## Navigation Structure
 
