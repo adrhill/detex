@@ -60,6 +60,10 @@ Convenience: jacobian_coloring(f, shape)   Convenience: hessian_coloring(f, shap
              = detect + color                            = detect + color_symmetric
 ```
 
+## Commits
+
+Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for all commit messages (e.g. `feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
+
 ## Design philosophy
 
 When writing new code, adhere to these design principles:
