@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://adrianhill.de/asdex/explanation/coloring/">
+        <link rel="canonical" href="https://adrianhill.de/asdex/how-to/brusselator/">
       
       
-        <link rel="prev" href="../sparsity-detection/">
+        <link rel="prev" href="../hessians/">
       
       
-        <link rel="next" href="../../reference/">
+        <link rel="next" href="../../explanation/sparsity-detection/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Graph Coloring - asdex</title>
+        <title>Example: Brusselator PDE - asdex</title>
       
     
     
@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#graph-coloring" class="md-skip">
+        <a href="#example-brusselator-pde" class="md-skip">
           Skip to content
         </a>
       
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Graph Coloring
+              Example: Brusselator PDE
             
           </span>
         </div>
@@ -439,8 +439,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -451,11 +453,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -476,7 +478,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -494,7 +496,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/jacobians/" class="md-nav__link">
+      <a href="../jacobians/" class="md-nav__link">
         
   
   
@@ -522,7 +524,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../how-to/hessians/" class="md-nav__link">
+      <a href="../hessians/" class="md-nav__link">
         
   
   
@@ -530,123 +532,6 @@
     
   
     Sparse Hessians
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../how-to/brusselator/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Example: Brusselator PDE
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Explanation
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Explanation
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../sparsity-detection/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Sparsity Detection
   
 
     
@@ -683,7 +568,7 @@
   <span class="md-ellipsis">
     
   
-    Graph Coloring
+    Example: Brusselator PDE
   
 
     
@@ -701,7 +586,7 @@
   <span class="md-ellipsis">
     
   
-    Graph Coloring
+    Example: Brusselator PDE
   
 
     
@@ -727,10 +612,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#why-coloring-helps" class="md-nav__link">
+  <a href="#the-brusselator-system" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Coloring Helps
+        The Brusselator System
       
     </span>
   </a>
@@ -738,10 +623,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-conflict-graph" class="md-nav__link">
+  <a href="#discretizing-the-rhs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Conflict Graph
+        Discretizing the RHS
       
     </span>
   </a>
@@ -749,10 +634,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#compression-and-decompression" class="md-nav__link">
+  <a href="#detecting-and-coloring-the-jacobian" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Compression and Decompression
+        Detecting and Coloring the Jacobian
       
     </span>
   </a>
@@ -760,21 +645,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#symmetric-coloring-for-hessians" class="md-nav__link">
+  <a href="#computing-the-jacobian" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Symmetric Coloring for Hessians
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-greedy-algorithm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The Greedy Algorithm
+        Computing the Jacobian
       
     </span>
   </a>
@@ -796,6 +670,121 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/sparsity-detection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sparsity Detection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/coloring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Graph Coloring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1089,10 +1078,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#why-coloring-helps" class="md-nav__link">
+  <a href="#the-brusselator-system" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why Coloring Helps
+        The Brusselator System
       
     </span>
   </a>
@@ -1100,10 +1089,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-conflict-graph" class="md-nav__link">
+  <a href="#discretizing-the-rhs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Conflict Graph
+        Discretizing the RHS
       
     </span>
   </a>
@@ -1111,10 +1100,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#compression-and-decompression" class="md-nav__link">
+  <a href="#detecting-and-coloring-the-jacobian" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Compression and Decompression
+        Detecting and Coloring the Jacobian
       
     </span>
   </a>
@@ -1122,21 +1111,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#symmetric-coloring-for-hessians" class="md-nav__link">
+  <a href="#computing-the-jacobian" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Symmetric Coloring for Hessians
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-greedy-algorithm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The Greedy Algorithm
+        Computing the Jacobian
       
     </span>
   </a>
@@ -1174,108 +1152,111 @@
   
 
 
-<h1 id="graph-coloring">Graph Coloring<a class="headerlink" href="#graph-coloring" title="Permanent link">&para;</a></h1>
-<p>Graph coloring is the key technique that makes sparse differentiation efficient.
-This page explains why coloring reduces the cost of computing sparse Jacobians and Hessians,
-how rows or columns are grouped to share AD passes,
-and how the results are compressed and decompressed.</p>
-<h2 id="why-coloring-helps">Why Coloring Helps<a class="headerlink" href="#why-coloring-helps" title="Permanent link">&para;</a></h2>
-<p>Consider a Jacobian with <span class="arithmatex">\(m\)</span> rows and <span class="arithmatex">\(n\)</span> columns.
-Without exploiting sparsity, computing it requires <span class="arithmatex">\(m\)</span> VJPs (one per row)
-or <span class="arithmatex">\(n\)</span> JVPs (one per column).
-But if two columns have no nonzero rows in common
-— that is, they are <strong>structurally orthogonal</strong> —
-their JVPs can be combined into a single pass.
-We simply add their seed vectors together
-and decompose the result afterward,
-which works because the nonzeros don't overlap.
-The same idea applies symmetrically to rows and VJPs.</p>
-<p>To see this concretely,
-consider a <span class="arithmatex">\(4 \times 6\)</span> Jacobian with the following sparsity pattern
-(<span class="arithmatex">\(\times\)</span> marks a structural nonzero):</p>
+<h1 id="example-brusselator-pde">Example: Brusselator PDE<a class="headerlink" href="#example-brusselator-pde" title="Permanent link">&para;</a></h1>
+<p>This example computes the sparse Jacobian of a semi-discretized
+2D reaction-diffusion system using <code>asdex</code>.</p>
+<h2 id="the-brusselator-system">The Brusselator System<a class="headerlink" href="#the-brusselator-system" title="Permanent link">&para;</a></h2>
+<p>The Brusselator models autocatalytic reactions
+on a 2D domain <span class="arithmatex">\([0, 1]^2\)</span> with periodic boundary conditions:</p>
 <div class="arithmatex">\[
-J = \begin{pmatrix}
-\times &amp; \times &amp; &amp; &amp; &amp; \\
-&amp; &amp; \times &amp; \times &amp; &amp; \\
-&amp; &amp; &amp; &amp; \times &amp; \times \\
-\times &amp; &amp; &amp; \times &amp; &amp; \\
-\end{pmatrix}
+\frac{\partial u}{\partial t} = 1 + u^2 v - 4.4\,u + \alpha \nabla^2 u
 \]</div>
-<p>Computing <span class="arithmatex">\(J\)</span> by forward-mode AD would naively require 6 JVPs, one per column.
-But inspecting the sparsity pattern reveals two groups of structurally orthogonal columns:
-<span class="arithmatex">\(\{1, 3, 5\}\)</span> and <span class="arithmatex">\(\{2, 4, 6\}\)</span>.
-Assigning one color per group reduces 6 JVPs to just 2.</p>
-<h2 id="the-conflict-graph">The Conflict Graph<a class="headerlink" href="#the-conflict-graph" title="Permanent link">&para;</a></h2>
-<p>Graph coloring formalizes this idea.
-We build a <strong>conflict graph</strong> whose vertices are the rows (or columns) of the matrix
-and whose edges connect pairs that share a nonzero column (or row).
-A <strong>proper coloring</strong> of this graph assigns colors to vertices
-so that no two adjacent vertices share a color.
-Vertices with the same color are then guaranteed to be structurally orthogonal,
-meaning they can share an AD pass.
-The total number of passes equals the number of colors,
-which is often dramatically fewer than the matrix dimension.</p>
-<p>There are two variants.
-<strong>Row coloring</strong> treats rows as vertices and connects rows that share a nonzero column;
-same-colored rows are evaluated together using VJPs (reverse-mode AD).
-<strong>Column coloring</strong> treats columns as vertices and connects columns that share a nonzero row;
-same-colored columns are evaluated together using JVPs (forward-mode AD).
-By default, <code>asdex</code> tries both and picks whichever needs fewer colors.
-When tied, it prefers column coloring
-since JVPs are generally cheaper in JAX.</p>
-<h2 id="compression-and-decompression">Compression and Decompression<a class="headerlink" href="#compression-and-decompression" title="Permanent link">&para;</a></h2>
-<p>Coloring defines not just how many AD passes to perform,
-but also how to set up each pass and how to extract the sparse matrix from the results.</p>
-<p>The coloring assigns each column (or row) a color,
-and from this we build a <strong>seed matrix</strong> <span class="arithmatex">\(S\)</span> with one column per color.
-The seed for color <span class="arithmatex">\(c\)</span> is the sum of the standard basis vectors
-for all columns assigned that color.
-In the example above, the two seeds are <span class="arithmatex">\(e_1 + e_3 + e_5\)</span> and <span class="arithmatex">\(e_2 + e_4 + e_6\)</span>.
-Running one JVP per seed produces the <strong>compressed matrix</strong> <span class="arithmatex">\(B = JS\)</span>,
-which has only <code>num_colors</code> columns instead of <span class="arithmatex">\(n\)</span>.</p>
-<p>Recovering the sparse Jacobian from <span class="arithmatex">\(B\)</span> is called <strong>decompression</strong>.
-Because same-colored columns are structurally orthogonal,
-each nonzero <span class="arithmatex">\(J_{ij}\)</span> appears unambiguously in exactly one entry of <span class="arithmatex">\(B\)</span>:
-row <span class="arithmatex">\(i\)</span>, column <span class="arithmatex">\(\text{color}(j)\)</span>.
-We simply read off each nonzero from the compressed matrix
-using the known color assignments — this is <strong>direct decompression</strong>.
-<code>asdex</code> uses direct decompression exclusively.
-An alternative family of methods (substitution-based decompression)
-solves small triangular systems to recover entries from denser colorings,
-but <code>asdex</code> does not implement these.</p>
-<h2 id="symmetric-coloring-for-hessians">Symmetric Coloring for Hessians<a class="headerlink" href="#symmetric-coloring-for-hessians" title="Permanent link">&para;</a></h2>
-<p>Hessians are symmetric (<span class="arithmatex">\(H_{ij} = H_{ji}\)</span>),
-so each off-diagonal entry appears twice in the matrix.
-Exploiting this redundancy can significantly reduce the number of colors needed,
-since recovering <span class="arithmatex">\(H_{ij}\)</span> from a compressed column simultaneously gives us <span class="arithmatex">\(H_{ji}\)</span> for free.
-The coloring operates on an <strong>adjacency graph</strong> whose vertices are variables
-and whose edges connect pairs <span class="arithmatex">\(i, j\)</span> with <span class="arithmatex">\(H_{ij} \neq 0\)</span>.
-Diagonal entries are always recoverable, so only off-diagonal nonzeros create edges.</p>
-<p><code>asdex</code> uses <strong>star coloring</strong> (Gebremedhin et al., 2005) on this graph:
-a proper coloring with the additional constraint
-that every path on 4 vertices uses at least 3 colors.
-This constraint ensures that for each off-diagonal nonzero <span class="arithmatex">\(H_{ij}\)</span>,
-at least one of <span class="arithmatex">\(i\)</span> or <span class="arithmatex">\(j\)</span> has a unique color among the other's neighbors,
-making every entry unambiguously recoverable from the compressed product.
-Star coloring typically needs far fewer colors
-than treating the Hessian as a general Jacobian and applying row or column coloring.</p>
-<h2 id="the-greedy-algorithm">The Greedy Algorithm<a class="headerlink" href="#the-greedy-algorithm" title="Permanent link">&para;</a></h2>
-<p><code>asdex</code> colors graphs using a greedy algorithm with <strong>LargestFirst</strong> vertex ordering.
-Vertices are sorted by decreasing degree (number of conflicts),
-and each vertex is assigned the smallest color not already used by any of its neighbors.
-Handling high-degree vertices first tends to produce fewer colors in practice,
-because the most constrained vertices are colored while the most options are still available.</p>
-<p>The greedy algorithm does not guarantee an optimal coloring,
-but it is fast — <span class="arithmatex">\(O(|V| + |E|)\)</span> in the size of the conflict graph —
-and produces good results for the sparsity patterns
-typically encountered in scientific computing.</p>
+<div class="arithmatex">\[
+\frac{\partial v}{\partial t} = 3.4\,u - u^2 v + \alpha \nabla^2 v
+\]</div>
+<p>with diffusion coefficient <span class="arithmatex">\(\alpha = 10\)</span>.
+See the <a href="#references">SciML Brusselator tutorials</a> for the full formulation
+including a localized forcing term,
+which is omitted here since it is state-independent
+and does not affect the Jacobian sparsity.</p>
+<h2 id="discretizing-the-rhs">Discretizing the RHS<a class="headerlink" href="#discretizing-the-rhs" title="Permanent link">&para;</a></h2>
+<p>Semi-discretize in space using second-order finite differences
+on an <span class="arithmatex">\(N \times N\)</span> grid.
+The state vector concatenates both species <span class="arithmatex">\(u\)</span> and <span class="arithmatex">\(v\)</span>,
+giving <span class="arithmatex">\(2N^2\)</span> unknowns:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">N</span> <span class="o">=</span> <span class="mi">32</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">alpha</span> <span class="o">=</span> <span class="mf">10.0</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">dx</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">N</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">brusselator_rhs</span><span class="p">(</span><span class="n">uv</span><span class="p">):</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">u</span> <span class="o">=</span> <span class="n">uv</span><span class="p">[:</span><span class="n">N</span><span class="o">*</span><span class="n">N</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">v</span> <span class="o">=</span> <span class="n">uv</span><span class="p">[</span><span class="n">N</span><span class="o">*</span><span class="n">N</span><span class="p">:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="c1"># 5-point Laplacian with periodic boundary conditions</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">laplacian</span><span class="p">(</span><span class="n">w</span><span class="p">):</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        <span class="k">return</span> <span class="p">(</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>            <span class="n">jnp</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>            <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>            <span class="o">-</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">w</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>        <span class="p">)</span> <span class="o">/</span> <span class="n">dx</span><span class="o">**</span><span class="mi">2</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="n">du</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">u</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">v</span> <span class="o">-</span> <span class="mf">4.4</span> <span class="o">*</span> <span class="n">u</span> <span class="o">+</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">laplacian</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="n">dv</span> <span class="o">=</span> <span class="mf">3.4</span> <span class="o">*</span> <span class="n">u</span> <span class="o">-</span> <span class="n">u</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">v</span> <span class="o">+</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">laplacian</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">du</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">dv</span><span class="o">.</span><span class="n">ravel</span><span class="p">()])</span>
+</code></pre></div>
+<h2 id="detecting-and-coloring-the-jacobian">Detecting and Coloring the Jacobian<a class="headerlink" href="#detecting-and-coloring-the-jacobian" title="Permanent link">&para;</a></h2>
+<p>The Jacobian has shape <span class="arithmatex">\(2048 \times 2048\)</span>,
+but only 6 nonzeros per row
+(5 from the Laplacian stencil plus 1 from reaction coupling).
+Detect the sparsity and color it in one call:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">jacobian_coloring</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">colored_pattern</span> <span class="o">=</span> <span class="n">jacobian_coloring</span><span class="p">(</span><span class="n">brusselator_rhs</span><span class="p">,</span> <span class="n">input_shape</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">N</span> <span class="o">*</span> <span class="n">N</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ColoredPattern(2048×2048, nnz=12288, sparsity=99.7%, JVP, 12 colors)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  12 JVPs (instead of 2048 VJPs or 2048 JVPs)
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>⎡⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤   ⎡⣿⣿⣿⣿⣃⡀⎤
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>⎢⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⣍⠃⎥
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>⎢⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣟⢷⠁⎥
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>⎢⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣯⣛⠀⎥
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⡫⠕⎥
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⣮⠀⎥
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⣿⠄⎥
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⣟⠀⎥
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⎥   ⎢⣿⣿⣿⣿⣽⠀⎥
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>⎢⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⎥   ⎢⣿⣿⣿⣿⣮⣁⎥
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>⎢⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⎥ → ⎢⣿⣿⣿⣿⣿⡏⎥
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⣟⡃⎥
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⣿⠃⎥
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⣿⣄⎥
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⣿⡷⎥
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⣿⠀⎥
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⣿⡃⎥
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⠀⠀⎥   ⎢⣿⣿⣿⣿⣿⠀⎥
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⣄⠀⎥   ⎢⣿⣿⣿⣿⣿⡄⎥
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣷⎦   ⎣⣿⣿⣿⣿⣿⣶⎦
+</code></pre></div>
+<p>Instead of 2048 JVPs or VJPs,
+<code>asdex</code> needs only as many as there are colors.</p>
+<h2 id="computing-the-jacobian">Computing the Jacobian<a class="headerlink" href="#computing-the-jacobian" title="Permanent link">&para;</a></h2>
+<p>With the colored pattern precomputed,
+evaluate the sparse Jacobian at any state:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">jacobian</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Brusselator initial condition</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">x</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">xx</span><span class="p">,</span> <span class="n">yy</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">u0</span> <span class="o">=</span> <span class="mf">22.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">yy</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">yy</span><span class="p">))</span> <span class="o">**</span> <span class="mf">1.5</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">v0</span> <span class="o">=</span> <span class="mf">27.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">xx</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">xx</span><span class="p">))</span> <span class="o">**</span> <span class="mf">1.5</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">uv0</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">u0</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">v0</span><span class="o">.</span><span class="n">ravel</span><span class="p">()])</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">J</span> <span class="o">=</span> <span class="n">jacobian</span><span class="p">(</span><span class="n">brusselator_rhs</span><span class="p">,</span> <span class="n">uv0</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>BCOO(float32[2048, 2048], nse=12288)
+</code></pre></div>
+<p>Make sure to reuse the <code>colored_pattern</code> across evaluations at different states,
+such that only the decompression step is repeated.</p>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<p>This example is based on tutorials from the <a href="https://sciml.ai">SciML</a> ecosystem.
+Consider giving the <a href="https://julialang.org">Julia programming language</a> a shot, it is fantastic.</p>
 <ul>
-<li><a href="https://arxiv.org/abs/2505.07308"><em>Revisiting Sparse Matrix Coloring and Bicoloring</em></a>, Montoison et al. (2025)</li>
-<li><a href="https://epubs.siam.org/doi/10.1137/S0036144504444711"><em>What Color Is Your Jacobian? Graph Coloring for Computing Derivatives</em></a>, Gebremedhin et al. (2005)</li>
-<li><a href="https://epubs.siam.org/doi/abs/10.1137/050639879"><em>New Acyclic and Star Coloring Algorithms with Application to Computing Hessians</em></a>, Gebremedhin et al. (2007)</li>
-<li><a href="https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286"><em>Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation</em></a>, Gebremedhin et al. (2009)</li>
-<li><a href="https://dl.acm.org/doi/10.1145/2513109.2513110"><em>ColPack: Software for graph coloring and related problems in scientific computing</em></a>, Gebremedhin et al. (2013)</li>
+<li><a href="https://docs.sciml.ai/NonlinearSolve/stable/tutorials/large_systems/">NonlinearSolve.jl: <em>Efficiently Solving Large Sparse Ill-Conditioned Nonlinear Systems in Julia</em></a>
+  (MIT License, <a href="https://github.com/SciML/NonlinearSolve.jl/blob/master/LICENSE">Copyright (c) 2020 Julia Computing, Inc.</a>)</li>
+<li><a href="https://docs.sciml.ai/MethodOfLines/stable/tutorials/brusselator/">MethodOfLines.jl: <em>Getting Started</em></a> 
+  (MIT License, <a href="https://github.com/SciML/MethodOfLines.jl/blob/master/LICENSE">Copyright (c) 2022 SciML Open Source Scientific Machine Learning Organization.</a>)</li>
 </ul>
 
 
