@@ -27,8 +27,8 @@ def jacobian_sparsity(
 
     Returns:
         SparsityPattern of shape ``(m, n)``
-        where ``n = prod(input_shape)`` and ``m = prod(output_shape)``.
-        Entry ``(i, j)`` is present if output ``i`` depends on input ``j``.
+            where ``n = prod(input_shape)`` and ``m = prod(output_shape)``.
+            Entry ``(i, j)`` is present if output ``i`` depends on input ``j``.
     """
     dummy_input = jnp.zeros(input_shape)
     closed_jaxpr = jax.make_jaxpr(f)(dummy_input)
@@ -78,7 +78,7 @@ def hessian_sparsity(
 
     Returns:
         SparsityPattern of shape ``(n, n)``
-        where ``n = prod(input_shape)``.
-        Entry ``(i, j)`` is present if ``H[i, j]`` may be nonzero.
+            where ``n = prod(input_shape)``.
+            Entry ``(i, j)`` is present if ``H[i, j]`` may be nonzero.
     """
     return jacobian_sparsity(jax.grad(f), input_shape)

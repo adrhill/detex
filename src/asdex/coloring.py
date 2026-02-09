@@ -167,8 +167,9 @@ def color_rows(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
 
     Returns:
         Tuple of (colors, num_colors) where:
-        - colors: Array of shape (m,) with color assignment for each row
-        - num_colors: Total number of colors used
+
+            - colors: Array of shape (m,) with color assignment for each row
+            - num_colors: Total number of colors used
     """
     m = sparsity.m
 
@@ -195,8 +196,9 @@ def color_cols(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
 
     Returns:
         Tuple of (colors, num_colors) where:
-        - colors: Array of shape (n,) with color assignment for each column
-        - num_colors: Total number of colors used
+
+            - colors: Array of shape (n,) with color assignment for each column
+            - num_colors: Total number of colors used
     """
     n = sparsity.n
 
@@ -224,8 +226,9 @@ def color_symmetric(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
 
     Returns:
         Tuple of (colors, num_colors) where:
-        - colors: Array of shape (n,) with color assignment for each row/column
-        - num_colors: Total number of colors used
+
+            - colors: Array of shape (n,) with color assignment for each row/column
+            - num_colors: Total number of colors used
 
     Raises:
         ValueError: If pattern is not square
@@ -320,8 +323,9 @@ def _greedy_color(
 
     Returns:
         Tuple of (colors, num_colors) where:
-        - colors: Array of shape (num_vertices,) with color assignments
-        - num_colors: Total number of colors used
+
+            - colors: Array of shape (num_vertices,) with color assignments
+            - num_colors: Total number of colors used
     """
     if num_vertices == 0:
         return np.array([], dtype=np.int32), 0

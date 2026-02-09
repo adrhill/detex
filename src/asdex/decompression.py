@@ -35,8 +35,8 @@ def jacobian(
 
     Returns:
         A function that takes an input array and returns
-        the sparse Jacobian as BCOO of shape ``(m, n)``
-        where ``n = x.size`` and ``m = prod(output_shape)``.
+            the sparse Jacobian as BCOO of shape ``(m, n)``
+            where ``n = x.size`` and ``m = prod(output_shape)``.
     """
     if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
         raise TypeError(
@@ -68,8 +68,8 @@ def hessian(
 
     Returns:
         A function that takes an input array and returns
-        the sparse Hessian as BCOO of shape ``(n, n)``
-        where ``n = x.size``.
+            the sparse Hessian as BCOO of shape ``(n, n)``
+            where ``n = x.size``.
     """
     if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
         raise TypeError(
