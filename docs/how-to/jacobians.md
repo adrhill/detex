@@ -31,9 +31,9 @@ from asdex import jacobian_coloring, jacobian
 
 colored_pattern = jacobian_coloring(f, input_shape=1000)
 
-jac_f = jacobian(f, colored_pattern)
+jac_fn = jacobian(f, colored_pattern)
 for x in inputs:
-    J = jac_f(x)
+    J = jac_fn(x)
 ```
 
 The colored pattern depends only on the function structure,
@@ -135,7 +135,8 @@ Finally, color the sparsity pattern and compute the Jacobian:
 from asdex import color_jacobian_pattern, jacobian
 
 colored_pattern = color_jacobian_pattern(sparsity)
-J = jacobian(f, colored_pattern)(x)
+jac_fn = jacobian(f, colored_pattern)
+J = jac_fn(x)
 ```
 
 ## Multi-Dimensional Inputs

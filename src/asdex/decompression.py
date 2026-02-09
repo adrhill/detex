@@ -44,10 +44,10 @@ def jacobian(
             "The API changed: use jacobian(f)(x) instead of jacobian(f, x)."
         )
 
-    def eval_jacobian(x: ArrayLike) -> BCOO:
+    def jac_fn(x: ArrayLike) -> BCOO:
         return _eval_jacobian(f, jnp.asarray(x), colored_pattern)
 
-    return eval_jacobian
+    return jac_fn
 
 
 def hessian(
@@ -77,10 +77,10 @@ def hessian(
             "The API changed: use hessian(f)(x) instead of hessian(f, x)."
         )
 
-    def eval_hessian(x: ArrayLike) -> BCOO:
+    def hess_fn(x: ArrayLike) -> BCOO:
         return _eval_hessian(f, jnp.asarray(x), colored_pattern)
 
-    return eval_hessian
+    return hess_fn
 
 
 # =========================================================================

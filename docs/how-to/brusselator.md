@@ -89,7 +89,8 @@ u0 = 22.0 * (yy * (1 - yy)) ** 1.5
 v0 = 27.0 * (xx * (1 - xx)) ** 1.5
 uv0 = jnp.concatenate([u0.ravel(), v0.ravel()])
 
-J = jacobian(brusselator_rhs, colored_pattern)(uv0)
+jac_fn = jacobian(brusselator_rhs, colored_pattern)
+J = jac_fn(uv0)
 ```
 
 ```python exec="true" session="bruss"

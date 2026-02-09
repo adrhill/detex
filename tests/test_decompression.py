@@ -149,14 +149,14 @@ def test_different_input_points():
         return jnp.array([x[0] * x[1], x[1] ** 2, jnp.exp(x[2])])
 
     sparsity = jacobian_sparsity(f, input_shape=3)
-    jac_f = jacobian(f, color_jacobian_pattern(sparsity))
+    jac_fn = jacobian(f, color_jacobian_pattern(sparsity))
 
     for x in [
         np.array([1.0, 2.0, 0.5]),
         np.array([0.0, 0.0, 0.0]),
         np.array([-1.0, 3.0, -0.5]),
     ]:
-        result = jac_f(x).todense()
+        result = jac_fn(x).todense()
         expected = jax.jacobian(f)(x)
         assert_allclose(result, expected, rtol=1e-5)
 

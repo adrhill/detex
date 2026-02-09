@@ -66,6 +66,7 @@ Precompute:  jacobian_coloring(f, shape)   hessian_coloring(f, shape)
 ## Commits
 
 Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for all commit messages (e.g. `feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
+For breaking changes, add `!` after the type (e.g. `feat!:`).
 
 ## Design philosophy
 

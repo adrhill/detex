@@ -93,8 +93,8 @@ def test_heat_materialization(benchmark):
     colored_pattern = color_jacobian_pattern(
         jacobian_sparsity(heat_equation_rhs, N), "row"
     )
-    jac_f = jacobian(heat_equation_rhs, colored_pattern)
-    benchmark(jac_f, x)
+    jac_fn = jacobian(heat_equation_rhs, colored_pattern)
+    benchmark(jac_fn, x)
 
 
 @pytest.mark.dashboard
@@ -102,8 +102,8 @@ def test_heat_materialization(benchmark):
 def test_heat_end_to_end(benchmark):
     """Heat equation: full pipeline."""
     x = np.ones(N)
-    jac_f = jacobian(heat_equation_rhs)
-    benchmark(jac_f, x)
+    jac_fn = jacobian(heat_equation_rhs)
+    benchmark(jac_fn, x)
 
 
 # -----------------------------------------------------------------------------
@@ -132,8 +132,8 @@ def test_convnet_materialization(benchmark):
     """ConvNet: VJP computation (with known sparsity/colors)."""
     x = np.ones(N)
     colored_pattern = color_jacobian_pattern(jacobian_sparsity(convnet, N), "row")
-    jac_f = jacobian(convnet, colored_pattern)
-    benchmark(jac_f, x)
+    jac_fn = jacobian(convnet, colored_pattern)
+    benchmark(jac_fn, x)
 
 
 @pytest.mark.dashboard
@@ -141,8 +141,8 @@ def test_convnet_materialization(benchmark):
 def test_convnet_end_to_end(benchmark):
     """ConvNet: full pipeline."""
     x = np.ones(N)
-    jac_f = jacobian(convnet)
-    benchmark(jac_f, x)
+    jac_fn = jacobian(convnet)
+    benchmark(jac_fn, x)
 
 
 # -----------------------------------------------------------------------------
@@ -172,8 +172,8 @@ def test_rosenbrock_materialization(benchmark):
     x = np.ones(N)
     sparsity = hessian_sparsity(rosenbrock, N)
     cp = color_hessian_pattern(sparsity)
-    hess_f = hessian(rosenbrock, cp)
-    benchmark(hess_f, x)
+    hess_fn = hessian(rosenbrock, cp)
+    benchmark(hess_fn, x)
 
 
 @pytest.mark.dashboard
@@ -181,5 +181,5 @@ def test_rosenbrock_materialization(benchmark):
 def test_rosenbrock_end_to_end(benchmark):
     """Rosenbrock: full pipeline."""
     x = np.ones(N)
-    hess_f = hessian(rosenbrock)
-    benchmark(hess_f, x)
+    hess_fn = hessian(rosenbrock)
+    benchmark(hess_fn, x)

@@ -35,9 +35,9 @@ from asdex import hessian_coloring, hessian
 
 colored_pattern = hessian_coloring(g, input_shape=100)
 
-hess_g = hessian(g, colored_pattern)
+hess_fn = hessian(g, colored_pattern)
 for x in inputs:
-    H = hess_g(x)
+    H = hess_fn(x)
 ```
 
 The colored pattern depends only on the function structure,
@@ -134,7 +134,8 @@ Finally, color the sparsity pattern and compute the Hessian:
 from asdex import color_hessian_pattern, hessian
 
 colored_pattern = color_hessian_pattern(sparsity)
-H = hessian(f, colored_pattern)(x)
+hess_fn = hessian(f, colored_pattern)
+H = hess_fn(x)
 ```
 
 ## Multi-Dimensional Inputs
