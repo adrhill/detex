@@ -75,7 +75,7 @@ Instead of 49 VJPs or 50 JVPs,
 
 ## Acknowledgements
 
-This package is built with Claude Code on the basis of previous work by Adrian Hill (@adrhill), Guillaume Dalle (@gdalle), and Alexis Montoison (@amontoison) in the [Julia programming language](https://julialang.org):
+This package is built with Claude Code on the basis of previous work by Adrian Hill ([`@adrhill`](https://github.com/adrhill)), Guillaume Dalle ([`@gdalle`](https://github.com/gdalle)), and Alexis Montoison ([`@amontoison`](https://github.com/amontoison)) in the [Julia programming language](https://julialang.org):
 
 - A. Hill, G. Dalle, A. Montoison: [_An Illustrated Guide to Automatic Sparse Differentiation_](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/), ICLR Blogpost, 2025
 - A. Hill & G. Dalle: [_Sparser, Better, Faster, Stronger: Efficient Automatic Differentiation for Sparse Jacobians and Hessians_](https://openreview.net/forum?id=GtXSN52nIW), TMLR, 2025
@@ -84,4 +84,4 @@ This package is built with Claude Code on the basis of previous work by Adrian H
 - G. Dalle, A. Montoison: [`SparseMatrixColorings.jl`](https://github.com/gdalle/SparseMatrixColorings.jl)
 - G. Dalle: [`sparsediffax`](https://github.com/gdalle/sparsediffax)
 
-which in turn also stands on the shoulders of giants -- notably Andreas Griewank, Andrea Walther, and Assefaw Gebremedhin.
+which in turn also stands on the shoulders of giants — notably Andreas Griewank, Andrea Walther, and Assefaw Gebremedhin.
