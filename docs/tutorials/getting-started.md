@@ -63,7 +63,7 @@ import jax.numpy as jnp
 from asdex import jacobian
 
 x = jnp.ones(50)
-J = jacobian(f, x, colored_pattern)
+J = jacobian(f, colored_pattern)(x)
 ```
 
 The result is a JAX
@@ -90,10 +90,11 @@ colored_pattern = jacobian_coloring(f, input_shape=n)
 x = jnp.ones(n)
 
 # Warm up JIT caches
-_ = jacobian(f, x, colored_pattern)
+jac_f = jacobian(f, colored_pattern)
+_ = jac_f(x)
 _ = jax.jacobian(f)(x)
 
-t_asdex = timeit.timeit(lambda: jacobian(f, x, colored_pattern).block_until_ready(), number=10) / 10
+t_asdex = timeit.timeit(lambda: jac_f(x).block_until_ready(), number=10) / 10
 t_jax = timeit.timeit(lambda: jax.jacobian(f)(x).block_until_ready(), number=10) / 10
 ```
 
@@ -117,7 +118,7 @@ print("```\n" + "\n".join(lines) + "\n```")
     colored_pattern = jacobian_coloring(f, input_shape=5000)
 
     for x in inputs:
-        J = jacobian(f, x, colored_pattern)
+        J = jacobian(f, colored_pattern)(x)
     ```
 
 ## Sparse Hessians
@@ -131,10 +132,10 @@ from asdex import hessian_coloring, hessian
 def g(x):
     return jnp.sum(x ** 2)
 
-colored_pattern = hessian_coloring(g, input_shape=20)
+hess_g = hessian(g, hessian_coloring(g, input_shape=20))
 
 for x in inputs:
-    H = hessian(g, x, colored_pattern)
+    H = hess_g(x)
 ```
 
 ## Next Steps

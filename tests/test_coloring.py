@@ -991,7 +991,7 @@ def test_hessian_with_colored_pattern():
 
     x = np.array([1.0, 2.0, 3.0])
     cp = hessian_coloring(f, x.shape)
-    result = hessian(f, x, colored_pattern=cp).todense()
+    result = hessian(f, cp)(x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -1006,7 +1006,7 @@ def test_hessian_colored_pattern_zero_hessian():
 
     x = np.array([1.0, 2.0, 3.0])
     cp = hessian_coloring(f, x.shape)
-    result = hessian(f, x, colored_pattern=cp)
+    result = hessian(f, cp)(x)
 
     assert result.shape == (3, 3)
     assert_allclose(result.todense(), np.zeros((3, 3)))
@@ -1068,6 +1068,6 @@ def test_hessian_star_decompression_non_unique_branch():
     assert num == 3
 
     cp = ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="HVP")
-    result = hessian(f, x, colored_pattern=cp).todense()
+    result = hessian(f, cp)(x).todense()
 
     assert_allclose(result, expected, rtol=1e-5)
