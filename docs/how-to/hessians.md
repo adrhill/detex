@@ -34,8 +34,8 @@ precompute the colored pattern once:
 from asdex import hessian_coloring, hessian
 
 colored_pattern = hessian_coloring(g, input_shape=100)
-
 hess_fn = hessian(g, colored_pattern)
+
 for x in inputs:
     H = hess_fn(x)
 ```

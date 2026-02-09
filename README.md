@@ -57,6 +57,7 @@ print(colored_pattern)
 # ⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⎦   ⎣⠉⎦
 
 jac_fn = jacobian(f, colored_pattern)
+
 for x in inputs:
     J = jac_fn(x)
 ```

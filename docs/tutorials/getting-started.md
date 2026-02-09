@@ -90,9 +90,10 @@ n = 5000
 colored_pattern = jacobian_coloring(f, input_shape=n)
 x = jnp.ones(n)
 
-# Warm up JIT caches
 jac_fn_asdex = jacobian(f, colored_pattern)
 jac_fn_jax = jax.jacobian(f)
+
+# Warm up JIT caches
 _ = jac_fn_asdex(x)
 _ = jac_fn_jax(x)
 

@@ -30,8 +30,8 @@ precompute the colored pattern once:
 from asdex import jacobian_coloring, jacobian
 
 colored_pattern = jacobian_coloring(f, input_shape=1000)
-
 jac_fn = jacobian(f, colored_pattern)
+
 for x in inputs:
     J = jac_fn(x)
 ```
