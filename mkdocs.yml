@@ -34,6 +34,7 @@ nav:
   - How-To Guides:
       - Sparse Jacobians: how-to/jacobians.md
       - Sparse Hessians: how-to/hessians.md
+      - "Example: Brusselator PDE": how-to/brusselator.md
   - Explanation:
       - Sparsity Detection: explanation/sparsity-detection.md
       - Graph Coloring: explanation/coloring.md
