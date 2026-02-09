@@ -56,8 +56,10 @@ print(colored_pattern)
 # ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⎥   ⎢⣿⎥
 # ⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⎦   ⎣⠉⎦
 
+jac_fn = jacobian(f, colored_pattern)
+
 for x in inputs:
-    J = jacobian(f, x, colored_pattern)
+    J = jac_fn(x)
 ```
 
 Instead of 49 VJPs or 50 JVPs,

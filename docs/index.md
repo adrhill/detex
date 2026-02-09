@@ -44,7 +44,8 @@ colored_pattern = jacobian_coloring(f, input_shape=1000)
 
 # Compute sparse Jacobians efficiently:
 x = np.random.randn(1000)
-J = jacobian(f, x, colored_pattern)
+jac_fn = jacobian(f, colored_pattern)
+J = jac_fn(x)
 ```
 
 Instead of 999 VJPs or 1000 JVPs,

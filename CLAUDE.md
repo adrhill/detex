@@ -42,7 +42,7 @@ uv run pytest
 ## Architecture
 
 ```
-jacobian(f, x)                           hessian(f, x)
+jacobian(f, colored_pattern)(x)          hessian(f, colored_pattern)(x)
   │                                        │
   ├─ 1. DETECTION                          ├─ 1. DETECTION
   │     jacobian_sparsity(f, input_shape)   │     hessian_sparsity(f, input_shape)
@@ -56,13 +56,17 @@ jacobian(f, x)                           hessian(f, x)
   └─ 3. DECOMPRESSION                      └─ 3. DECOMPRESSION
         One VJP or JVP per color                 One HVP per color (fwd-over-rev)
 
-Convenience: jacobian_coloring(f, shape)   Convenience: hessian_coloring(f, shape)
-             = detect + color                            = detect + color_symmetric
+Convenience: jacobian(f)(x)              Convenience: hessian(f)(x)
+             = auto-detect + color + decompress  = auto-detect + color + decompress
+
+Precompute:  jacobian_coloring(f, shape)   hessian_coloring(f, shape)
+             = detect + color                = detect + color_symmetric
 ```
 
 ## Commits
 
 Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for all commit messages (e.g. `feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
+For breaking changes, add `!` after the type (e.g. `feat!:`).
 
 ## Design philosophy
 

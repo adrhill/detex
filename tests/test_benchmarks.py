@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from asdex import (
+    color_hessian_pattern,
     color_jacobian_pattern,
     color_rows,
     hessian,
@@ -92,7 +93,8 @@ def test_heat_materialization(benchmark):
     colored_pattern = color_jacobian_pattern(
         jacobian_sparsity(heat_equation_rhs, N), "row"
     )
-    benchmark(jacobian, heat_equation_rhs, x, colored_pattern)
+    jac_fn = jacobian(heat_equation_rhs, colored_pattern)
+    benchmark(jac_fn, x)
 
 
 @pytest.mark.dashboard
@@ -100,7 +102,8 @@ def test_heat_materialization(benchmark):
 def test_heat_end_to_end(benchmark):
     """Heat equation: full pipeline."""
     x = np.ones(N)
-    benchmark(jacobian, heat_equation_rhs, x)
+    jac_fn = jacobian(heat_equation_rhs)
+    benchmark(jac_fn, x)
 
 
 # -----------------------------------------------------------------------------
@@ -129,7 +132,8 @@ def test_convnet_materialization(benchmark):
     """ConvNet: VJP computation (with known sparsity/colors)."""
     x = np.ones(N)
     colored_pattern = color_jacobian_pattern(jacobian_sparsity(convnet, N), "row")
-    benchmark(jacobian, convnet, x, colored_pattern)
+    jac_fn = jacobian(convnet, colored_pattern)
+    benchmark(jac_fn, x)
 
 
 @pytest.mark.dashboard
@@ -137,7 +141,8 @@ def test_convnet_materialization(benchmark):
 def test_convnet_end_to_end(benchmark):
     """ConvNet: full pipeline."""
     x = np.ones(N)
-    benchmark(jacobian, convnet, x)
+    jac_fn = jacobian(convnet)
+    benchmark(jac_fn, x)
 
 
 # -----------------------------------------------------------------------------
@@ -166,8 +171,9 @@ def test_rosenbrock_materialization(benchmark):
     """Rosenbrock: HVP computation (with known sparsity/colors)."""
     x = np.ones(N)
     sparsity = hessian_sparsity(rosenbrock, N)
-    colors, _ = color_rows(sparsity)
-    benchmark(hessian, rosenbrock, x, sparsity=sparsity, colors=colors)
+    cp = color_hessian_pattern(sparsity)
+    hess_fn = hessian(rosenbrock, cp)
+    benchmark(hess_fn, x)
 
 
 @pytest.mark.dashboard
@@ -175,4 +181,5 @@ def test_rosenbrock_materialization(benchmark):
 def test_rosenbrock_end_to_end(benchmark):
     """Rosenbrock: full pipeline."""
     x = np.ones(N)
-    benchmark(hessian, rosenbrock, x)
+    hess_fn = hessian(rosenbrock)
+    benchmark(hess_fn, x)

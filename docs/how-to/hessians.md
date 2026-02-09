@@ -11,7 +11,7 @@ The simplest way to compute a sparse Hessian:
 ```python
 from asdex import hessian
 
-H = hessian(f, x)
+H = hessian(f)(x)
 ```
 
 This detects sparsity, colors the pattern symmetrically, and decompresses.
@@ -34,9 +34,10 @@ precompute the colored pattern once:
 from asdex import hessian_coloring, hessian
 
 colored_pattern = hessian_coloring(g, input_shape=100)
+hess_fn = hessian(g, colored_pattern)
 
 for x in inputs:
-    H = hessian(g, x, colored_pattern)
+    H = hess_fn(x)
 ```
 
 The colored pattern depends only on the function structure,
@@ -133,7 +134,8 @@ Finally, color the sparsity pattern and compute the Hessian:
 from asdex import color_hessian_pattern, hessian
 
 colored_pattern = color_hessian_pattern(sparsity)
-H = hessian(f, x, colored_pattern)
+hess_fn = hessian(f, colored_pattern)
+H = hess_fn(x)
 ```
 
 ## Multi-Dimensional Inputs
