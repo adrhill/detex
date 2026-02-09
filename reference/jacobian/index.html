@@ -1137,14 +1137,14 @@
 
 
 <h2 id="asdex.jacobian" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#asdex.jacobian" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
 
-        <p>Compute sparse Jacobian using coloring and AD.</p>
+        <p>Build a sparse Jacobian function using coloring and AD.</p>
 <p>Uses row coloring + VJPs or column coloring + JVPs,
 depending on which needs fewer colors.</p>
 
@@ -1179,22 +1179,6 @@ Input and output may be multi-dimensional.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>x</code>
-            </td>
-            <td>
-                  <code><span title="numpy.typing.ArrayLike">ArrayLike</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Input point (any shape).</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
                 <code>colored_pattern</code>
             </td>
             <td>
@@ -1214,7 +1198,7 @@ Input and output may be multi-dimensional.</p>
       dataclass
   " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a>
 from <a class="autorefs autorefs-internal" title="asdex.jacobian_coloring(f, input_shape, partition='auto')" href="#asdex.jacobian_coloring"><code>jacobian_coloring</code></a>.
-If None, sparsity is detected and colored automatically.</p>
+If None, sparsity is detected and colored automatically on each call.</p>
               </div>
             </td>
             <td>
@@ -1236,17 +1220,27 @@ If None, sparsity is detected and colored automatically.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="jax.experimental.sparse.BCOO">BCOO</span></code>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="jax.experimental.sparse.BCOO">BCOO</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Sparse Jacobian as BCOO of shape <code>(m, n)</code></p>
+                <p>A function that takes an input array and returns</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="jax.experimental.sparse.BCOO">BCOO</span></code>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="jax.experimental.sparse.BCOO">BCOO</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the sparse Jacobian as BCOO of shape <code>(m, n)</code></p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="jax.experimental.sparse.BCOO">BCOO</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1365,7 +1359,7 @@ If None, sparsity is detected and colored automatically.</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.jacobian(f, x, colored_pattern=None)" href="#asdex.jacobian"><code>jacobian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.jacobian(f, colored_pattern=None)" href="#asdex.jacobian"><code>jacobian</code></a>.</p>
               </div>
             </td>
           </tr>
@@ -1601,7 +1595,7 @@ computed together in a single VJP (or JVP).</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.jacobian(f, x, colored_pattern=None)" href="#asdex.jacobian"><code>jacobian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.jacobian(f, colored_pattern=None)" href="#asdex.jacobian"><code>jacobian</code></a>.</p>
               </div>
             </td>
           </tr>

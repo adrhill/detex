@@ -1137,21 +1137,16 @@
 
 
 <h2 id="asdex.hessian" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sparsity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#asdex.hessian" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
 
-        <p>Compute sparse Hessian using coloring and HVPs.</p>
-<p>When <code>colored_pattern</code> is provided,
-extracts sparsity and colors from it
-and uses symmetric decompression.
-When <code>colors</code> is provided (backward compatibility with pre-computed
-<code>color_rows</code> colors), uses the original row-coloring decompression.
-When both are None, uses symmetric coloring for fewer colors.</p>
-<p>Uses forward-over-reverse Hessian-vector products for efficiency.</p>
+        <p>Build a sparse Hessian function using coloring and HVPs.</p>
+<p>Uses symmetric (star) coloring and forward-over-reverse
+Hessian-vector products for efficiency.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1184,22 +1179,6 @@ Input may be multi-dimensional.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>x</code>
-            </td>
-            <td>
-                  <code><span title="numpy.typing.ArrayLike">ArrayLike</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Input point (any shape).</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
                 <code>colored_pattern</code>
             </td>
             <td>
@@ -1219,48 +1198,7 @@ Input may be multi-dimensional.</p>
       dataclass
   " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a>
 from <a class="autorefs autorefs-internal" title="asdex.hessian_coloring(f, input_shape)" href="#asdex.hessian_coloring"><code>hessian_coloring</code></a>.
-If provided, <code>sparsity</code> and <code>colors</code> are ignored.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>sparsity</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="asdex.SparsityPattern
-
-
-  
-      dataclass
-   (asdex.pattern.SparsityPattern)" href="../#asdex.SparsityPattern">SparsityPattern</a> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional pre-computed Hessian sparsity pattern from
-<a class="autorefs autorefs-internal" title="asdex.hessian_sparsity(f, input_shape)" href="#asdex.hessian_sparsity"><code>hessian_sparsity</code></a>.
-If None, detected automatically.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>colors</code>
-            </td>
-            <td>
-                  <code><span title="numpy.typing.NDArray">NDArray</span>[<span title="numpy.int32">int32</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional pre-computed row coloring from
-<a class="autorefs autorefs-internal" title="asdex.color_rows(sparsity)" href="../#asdex.color_rows"><code>color_rows</code></a>.
-If None, symmetric coloring is computed and used automatically.</p>
+If None, sparsity is detected and colored automatically on each call.</p>
               </div>
             </td>
             <td>
@@ -1282,17 +1220,27 @@ If None, symmetric coloring is computed and used automatically.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="jax.experimental.sparse.BCOO">BCOO</span></code>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="jax.experimental.sparse.BCOO">BCOO</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Sparse Hessian as BCOO of shape <code>(n, n)</code></p>
+                <p>A function that takes an input array and returns</p>
               </div>
             </td>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="jax.experimental.sparse.BCOO">BCOO</span></code>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="jax.experimental.sparse.BCOO">BCOO</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the sparse Hessian as BCOO of shape <code>(n, n)</code></p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="jax.experimental.sparse.BCOO">BCOO</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1396,7 +1344,7 @@ which exploits Hessian symmetry for fewer colors.</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, x, colored_pattern=None, sparsity=None, colors=None)" href="#asdex.hessian"><code>hessian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None)" href="#asdex.hessian"><code>hessian</code></a>.</p>
               </div>
             </td>
           </tr>
@@ -1612,7 +1560,7 @@ which exploits Hessian symmetry for fewer colors than row coloring.</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, x, colored_pattern=None, sparsity=None, colors=None)" href="#asdex.hessian"><code>hessian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None)" href="#asdex.hessian"><code>hessian</code></a>.</p>
               </div>
             </td>
           </tr>
