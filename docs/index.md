@@ -60,13 +60,13 @@ Instead of 999 VJPs or 1000 JVPs,
 
 ## Acknowledgements
 
-This package is built with Claude Code on the basis of previous work by Adrian Hill ([`@adrhill`](https://github.com/adrhill)), Guillaume Dalle ([`@gdalle`](https://github.com/gdalle)), and Alexis Montoison ([`@amontoison`](https://github.com/amontoison)) in the [Julia programming language](https://julialang.org):
+This package is built with Claude Code based on previous work by Adrian Hill ([`@adrhill`](https://github.com/adrhill)), Guillaume Dalle ([`@gdalle`](https://github.com/gdalle)), and Alexis Montoison ([`@amontoison`](https://github.com/amontoison)) in the [Julia programming language](https://julialang.org):
 
-- A. Hill, G. Dalle, A. Montoison: [_An Illustrated Guide to Automatic Sparse Differentiation_](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/), ICLR Blogpost, 2025
-- A. Hill & G. Dalle: [_Sparser, Better, Faster, Stronger: Efficient Automatic Differentiation for Sparse Jacobians and Hessians_](https://openreview.net/forum?id=GtXSN52nIW), TMLR, 2025
-- A. Montoison, G. Dalle, A. Gebremedhin: [_Revisiting Sparse Matrix Coloring and Bicoloring_](https://arxiv.org/abs/2505.07308), Preprint, 2025
-- A. Hill, G. Dalle: [`SparseConnectivityTracer.jl`](https://github.com/adrhill/SparseConnectivityTracer.jl)
-- G. Dalle, A. Montoison: [`SparseMatrixColorings.jl`](https://github.com/gdalle/SparseMatrixColorings.jl)
-- G. Dalle: [`sparsediffax`](https://github.com/gdalle/sparsediffax)
+- [_An Illustrated Guide to Automatic Sparse Differentiation_](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/), A. Hill, G. Dalle, A. Montoison (2025)
+- [_Sparser, Better, Faster, Stronger: Efficient Automatic Differentiation for Sparse Jacobians and Hessians_](https://openreview.net/forum?id=GtXSN52nIW), A. Hill & G. Dalle (2025)
+- [_Revisiting Sparse Matrix Coloring and Bicoloring_](https://arxiv.org/abs/2505.07308), A. Montoison, G. Dalle, A. Gebremedhin (2025)
+- [_SparseConnectivityTracer.jl_](https://github.com/adrhill/SparseConnectivityTracer.jl), A. Hill, G. Dalle
+- [_SparseMatrixColorings.jl_](https://github.com/gdalle/SparseMatrixColorings.jl), G. Dalle, A. Montoison
+- [_sparsediffax_](https://github.com/gdalle/sparsediffax), G. Dalle
 
-which in turn also stands on the shoulders of giants — notably Andreas Griewank, Andrea Walther, and Assefaw Gebremedhin.
+which in turn stands on the shoulders of giants — notably Andreas Griewank, Andrea Walther, and Assefaw Gebremedhin.
