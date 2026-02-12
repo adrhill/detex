@@ -104,6 +104,85 @@ def test_jacobian_where_one_constant_false():
     np.testing.assert_array_equal(result, expected)
 
 
+@pytest.mark.elementwise
+def test_jacobian_composite_foo():
+    """Composite function: all inputs contribute to output.
+
+    SCT: foo(x) = x[1] + x[2] * x[3] + 1 / x[4] + 1 * x[5]
+    """
+
+    def f(x):
+        return jnp.array([x[0] + x[1] * x[2] + 1.0 / x[3] + 1.0 * x[4]])
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    expected = np.array([[1, 1, 1, 1, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_jacobian_composite_bar():
+    """Composite function with power term: foo(x) + x[2]^x[5].
+
+    SCT: bar(x) = foo(x) + x[2]^x[5]
+    """
+
+    def f(x):
+        foo = x[0] + x[1] * x[2] + 1.0 / x[3] + 1.0 * x[4]
+        return jnp.array([foo + x[1] ** x[4]])
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    expected = np.array([[1, 1, 1, 1, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_jacobian_ampgo07():
+    """AMPGO07 benchmark: complex expression with comparison, sin, log, abs.
+
+    SCT: f(x) = (x <= 0) * Inf + sin(x) + sin(10/3 * x) + log(|x|) - 0.84*x + 3
+    The (x <= 0) comparison has zero derivative,
+    so the entire expression depends on x.
+    """
+
+    def f(x):
+        return jnp.array(
+            [
+                (x[0] <= 0).astype(float) * jnp.inf
+                + jnp.sin(x[0])
+                + jnp.sin(10.0 / 3.0 * x[0])
+                + jnp.log(jnp.abs(x[0]))
+                - 0.84 * x[0]
+                + 3.0
+            ]
+        )
+
+    result = jacobian_sparsity(f, input_shape=1).todense().astype(int)
+    expected = np.array([[1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_ampgo07():
+    """AMPGO07 benchmark: Hessian is nonzero due to sin, log.
+
+    SCT: f(x) = (x <= 0) * Inf + sin(x) + sin(10/3 * x) + log(|x|) - 0.84*x + 3
+    """
+
+    def f(x):
+        return (
+            (x[0] <= 0).astype(float) * jnp.inf
+            + jnp.sin(x[0])
+            + jnp.sin(10.0 / 3.0 * x[0])
+            + jnp.log(jnp.abs(x[0]))
+            - 0.84 * x[0]
+            + 3.0
+        )
+
+    H = hessian_sparsity(f, input_shape=1).todense().astype(int)
+    expected = np.array([[1]])
+    np.testing.assert_array_equal(H, expected)
+
+
 # =============================================================================
 # Global Hessian — from SparseConnectivityTracer test_hessian.jl
 # =============================================================================

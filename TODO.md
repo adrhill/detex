@@ -1,5 +1,9 @@
 # TODO - Next Steps for asdex
 
+## Usability
+
+- [ ] Auto-squeeze scalar-valued functions with output shape `(1,)` in `hessian_sparsity` — currently fails with `TypeError: Gradient only defined for scalar-output functions`
+
 ## Conservative Propagators
 
 These propagators use conservative fallbacks that could be made precise:
