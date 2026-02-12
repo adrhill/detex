@@ -41,6 +41,7 @@ from ._platform_index import prop_platform_index
 from ._reduce import prop_reduce
 from ._reshape import prop_reshape
 from ._rev import prop_rev
+from ._scan import prop_scan
 from ._scatter import prop_scatter
 from ._select import prop_select_n
 from ._slice import prop_slice
@@ -297,7 +298,9 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_zero_derivative(eqn, deps)
         # TODO: add precise handlers for remaining control flow operators.
         # https://docs.jax.dev/en/latest/jax.lax.html#control-flow-operators
-        case "scan" | "associative_scan":
+        case "scan":
+            prop_scan(eqn, deps, const_vals, prop_jaxpr)
+        case "associative_scan":
             prop_throw_error(eqn, deps)
         case "dot_general":
             prop_dot_general(eqn, deps)

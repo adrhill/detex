@@ -25,6 +25,9 @@ Atom = Var | Literal
 PropJaxprFn = Callable[[Jaxpr, list[IndexSets], ConstVals | None], list[IndexSets]]
 """Signature of ``prop_jaxpr``, passed as callback to break circular imports."""
 
+_MAX_FIXED_POINT_ITERS = 500
+"""Safety bound for fixed-point iteration in while_loop and scan."""
+
 
 # =============================================================================
 # Utility functions

@@ -3,6 +3,7 @@
 from jax._src.core import JaxprEqn
 
 from ._commons import (
+    _MAX_FIXED_POINT_ITERS,
     ConstVals,
     Deps,
     IndexSets,
@@ -61,8 +62,7 @@ def prop_while(
     # Fixed-point iteration:
     # each iteration propagates the body and unions the result with current carry.
     # Since deps only grow (monotone on a finite lattice), this converges.
-    max_iters = 100
-    for _ in range(max_iters):
+    for _iteration in range(_MAX_FIXED_POINT_ITERS):
         body_input = const_input + carry_deps
         body_output = prop_jaxpr(body_jaxpr, body_input, const_vals)
 
@@ -77,6 +77,13 @@ def prop_while(
 
         if not changed:
             break
+    else:
+        msg = (
+            f"Fixed-point iteration did not converge after "
+            f"{_MAX_FIXED_POINT_ITERS} iterations. "
+            "Please report this at https://github.com/adrhill/asdex/issues"
+        )
+        raise RuntimeError(msg)  # pragma: no cover
 
     # Write final carry deps to outvars
     for outvar, out_deps in zip(eqn.outvars, carry_deps, strict=True):

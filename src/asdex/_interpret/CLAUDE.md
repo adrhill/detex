@@ -24,6 +24,7 @@ _select.py         # select_n
 _conv.py           # conv_general_dilated
 _dot_general.py    # dot_general (generalized matrix multiply)
 _while.py          # while_loop (fixed-point iteration)
+_scan.py           # scan (fixed-point iteration on carry)
 _cond.py           # cond (union over branches)
 _dynamic_slice.py  # dynamic_slice, dynamic_update_slice
 _platform_index.py # platform_index (platform selection constant)
