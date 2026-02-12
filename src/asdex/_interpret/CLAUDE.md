@@ -26,6 +26,7 @@ _dot_general.py    # dot_general (generalized matrix multiply)
 _while.py          # while_loop (fixed-point iteration)
 _cond.py           # cond (union over branches)
 _dynamic_slice.py  # dynamic_slice, dynamic_update_slice
+_platform_index.py # platform_index (platform selection constant)
 ```
 
 ## Key Types
