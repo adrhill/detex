@@ -17,6 +17,7 @@ _concatenate.py    # concatenate
 _transpose.py      # transpose (dimension permutation)
 _rev.py            # rev (reverse along dimensions)
 _reduce.py         # reduce_sum, reduce_max, reduce_min, reduce_prod
+_top_k.py          # top_k (top-k selection along last axis)
 _gather.py         # gather (static/dynamic indices)
 _scatter.py        # scatter, scatter-add (static/dynamic indices)
 _select.py         # select_n

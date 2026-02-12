@@ -9,7 +9,7 @@
 ## Primitive Coverage
 
 Missing precise handlers for:
-- [ ] `top_k` - conservative is correct (or close to it)
+- [x] `top_k` - reduction along last axis for values, zero derivative for indices
 - [x] `scatter_mul`, `scatter_max`, `scatter_min` - extend existing `prop_scatter`
 - [ ] `platform_index` - used by `jnp.diag` and other platform-dispatched ops
 

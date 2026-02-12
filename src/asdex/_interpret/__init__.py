@@ -44,6 +44,7 @@ from ._scatter import prop_scatter
 from ._select import prop_select_n
 from ._slice import prop_slice
 from ._squeeze import prop_squeeze
+from ._top_k import prop_top_k
 from ._transpose import prop_transpose
 from ._while import prop_while
 
@@ -287,6 +288,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_dynamic_slice(eqn, deps, const_vals)
         case "dynamic_update_slice":
             prop_dynamic_update_slice(eqn, deps, const_vals)
+        case "top_k":
+            prop_top_k(eqn, deps)
         case "not":
             prop_zero_derivative(eqn, deps)
         # TODO: add precise handlers for remaining control flow operators.
