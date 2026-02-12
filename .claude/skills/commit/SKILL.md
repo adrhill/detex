@@ -21,8 +21,8 @@ consumers of your library:
    (this correlates with `PATCH` in Semantic Versioning).
 2. **feat:** a commit of the _type_ `feat` introduces a new feature to the codebase
    (this correlates with `MINOR`in Semantic Versioning).
-3. **BREAKING CHANGE:** a commit that has a footer `BREAKING CHANGE:`, or appends a `!` after the type/scope, introduces a breaking API change
-   (correlating with `MAJOR` in Semantic Versioning).
+3. **BREAKING CHANGE:** a commit that has a footer BREAKING CHANGE:, or appends a ! after the type/scope, introduces a breaking API change
+   (correlating with MAJOR in Semantic Versioning).
    A BREAKING CHANGE can be part of commits of any _type_.
 4. _types_ other than `fix:` and `feat:` are allowed, e.g. `build:`, `chore:`,
   `ci:`, `docs:`, `style:`, `refactor:`, `perf:`, `test:`, and others.
@@ -44,6 +44,8 @@ Analyze all staged and unstaged changes and draft a commit message:
 - Use Conventional Commits syntax: `<type>[optional scope]: <description>`
 - Keep the first line under 70 characters
 - Focus on the "why" rather than the "what"
+- Include a body when the change is non-trivial.
+  The body should explain context, motivation, or list key changes.
 
 Afterwards, ask for feedback regarding the commit message.
 
@@ -54,6 +56,8 @@ Stage the relevant files by name (avoid `git add -A` or `git add .`) and create 
 ```
 git add <files> && git commit -m "$(cat <<'EOF'
 <type>[optional scope]: <description>
+
+<optional body>
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 EOF
