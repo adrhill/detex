@@ -273,7 +273,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_custom_call(eqn, deps, const_vals)
         case "gather":
             prop_gather(eqn, deps, const_vals)
-        case "scatter" | "scatter-add":
+        case "scatter" | "scatter-add" | "scatter-mul" | "scatter-min" | "scatter-max":
             prop_scatter(eqn, deps, const_vals)
         case "select_n":
             prop_select_n(eqn, deps, const_vals)

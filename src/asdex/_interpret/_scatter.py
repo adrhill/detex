@@ -32,7 +32,7 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         Positions NOT in idx: depend on corresponding operand element.
         Positions in idx: depend on corresponding updates element.
 
-    For scatter-add: out[idx[i]] = operand[idx[i]] + updates[i]
+    For scatter-add/mul/min/max: out[idx[i]] = combine(operand[idx[i]], updates[i])
         Positions in idx: depend on BOTH operand AND updates.
 
     Example: arr = [a, b, c], arr.at[1].set(x) = [a, x, c]
@@ -65,7 +65,9 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         # Static indices - track which positions get updates
         dim_nums = eqn.params["dimension_numbers"]
         update_jaxpr = eqn.params.get("update_jaxpr")
-        is_scatter_add = update_jaxpr is not None
+        # All combine variants (add, mul, min, max) have the same dependency
+        # structure: the output depends on both operand and updates.
+        is_combine = update_jaxpr is not None
 
         operand_shape = atom_shape(eqn.invars[0])
         out_shape = atom_shape(eqn.outvars[0])
@@ -94,8 +96,8 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             for out_pos in range(out_size):
                 if out_pos in scatter_positions:
                     update_idx_list = scatter_positions[out_pos]
-                    if is_scatter_add:
-                        # scatter-add: depends on operand AND all updates at this position
+                    if is_combine:
+                        # combine (add/mul/min/max): depends on operand AND all updates
                         combined = operand_indices[out_pos].copy()
                         for update_idx in update_idx_list:
                             if update_idx < len(updates_indices):

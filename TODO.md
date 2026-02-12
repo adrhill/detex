@@ -10,7 +10,7 @@
 
 Missing precise handlers for:
 - [ ] `top_k` - conservative is correct (or close to it)
-- [ ] `scatter_sub`, `scatter_mul`, `scatter_max`, `scatter_min` - extend existing `prop_scatter`
+- [x] `scatter_mul`, `scatter_max`, `scatter_min` - extend existing `prop_scatter`
 - [ ] `platform_index` - used by `jnp.diag` and other platform-dispatched ops
 
 ## Control Flow
