@@ -31,6 +31,7 @@ tests/
     ├── test_select.py          # select_n (jnp.where, lax.select)
     ├── test_while.py           # while_loop propagation
     ├── test_cond.py            # cond (conditional branching)
+    ├── test_platform_index.py  # platform_index (platform_dependent, diag)
     └── test_nested_jaxpr.py    # const_vals into jit, custom_jvp
 ```
 

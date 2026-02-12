@@ -9,7 +9,7 @@
 ## Primitive Coverage
 
 Missing precise handlers for:
-- [ ] `platform_index` - used by `jnp.diag` and other platform-dispatched ops
+- [x] `platform_index` - used by `jnp.diag` and other platform-dispatched ops
 
 ## Control Flow
 

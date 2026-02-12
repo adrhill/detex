@@ -37,6 +37,7 @@ from ._elementwise import (
 )
 from ._gather import prop_gather
 from ._pad import prop_pad
+from ._platform_index import prop_platform_index
 from ._reduce import prop_reduce
 from ._reshape import prop_reshape
 from ._rev import prop_rev
@@ -284,6 +285,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_while(eqn, deps, const_vals, prop_jaxpr)
         case "cond":
             prop_cond(eqn, deps, const_vals, prop_jaxpr)
+        case "platform_index":
+            prop_platform_index(eqn, deps)
         case "dynamic_slice":
             prop_dynamic_slice(eqn, deps, const_vals)
         case "dynamic_update_slice":
