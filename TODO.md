@@ -9,8 +9,6 @@
 ## Primitive Coverage
 
 Missing precise handlers for:
-- [x] `top_k` - reduction along last axis for values, zero derivative for indices
-- [ ] `scatter_sub`, `scatter_mul`, `scatter_max`, `scatter_min` - extend existing `prop_scatter`
 - [ ] `platform_index` - used by `jnp.diag` and other platform-dispatched ops
 
 ## Control Flow

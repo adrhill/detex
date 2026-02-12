@@ -120,6 +120,31 @@ def test_scatter_2d():
 
 
 @pytest.mark.array_ops
+@pytest.mark.parametrize("method", ["mul", "min", "max"])
+def test_scatter_combine(method):
+    """Scatter combine variants union dependencies from operand and updates.
+
+    Targeted positions depend on both the original value and the update.
+    Non-targeted positions depend only on the operand.
+    """
+
+    def f(x):
+        arr = x[:3]
+        return getattr(arr.at[1], method)(x[3])
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.array(
+        [
+            [1, 0, 0, 0],  # out[0] <- x[0]
+            [0, 1, 0, 1],  # out[1] <- combine(x[1], x[3])
+            [0, 0, 1, 0],  # out[2] <- x[2]
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
 def test_segment_sum():
     """segment_sum groups elements by segment ID.
 
