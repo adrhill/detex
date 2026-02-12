@@ -99,6 +99,13 @@ def _eval_jacobian(
     if colored_pattern is None:
         sparsity = _detect_sparsity(f, x.shape)
         colored_pattern = color_jacobian_pattern(sparsity)
+    else:
+        expected = colored_pattern.sparsity.input_shape
+        if x.shape != expected:
+            raise ValueError(
+                f"Input shape {x.shape} does not match the colored pattern, "
+                f"which expects shape {expected}."
+            )
 
     sparsity = colored_pattern.sparsity
     m = sparsity.m
@@ -128,6 +135,13 @@ def _eval_hessian(
     if colored_pattern is None:
         sparsity = _detect_hessian_sparsity(f, x.shape)
         colored_pattern = color_hessian_pattern(sparsity)
+    else:
+        expected = colored_pattern.sparsity.input_shape
+        if x.shape != expected:
+            raise ValueError(
+                f"Input shape {x.shape} does not match the colored pattern, "
+                f"which expects shape {expected}."
+            )
 
     sparsity = colored_pattern.sparsity
 

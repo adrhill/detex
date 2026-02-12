@@ -26,17 +26,22 @@ class SparsityPattern:
         rows: Row indices of non-zero entries, shape ``(nnz,)``
         cols: Column indices of non-zero entries, shape ``(nnz,)``
         shape: Matrix dimensions ``(m, n)``
+        input_shape: Shape of the function input that produced this pattern.
+            Defaults to ``(n,)`` if not specified.
     """
 
     rows: NDArray[np.int32]
     cols: NDArray[np.int32]
     shape: tuple[int, int]
+    input_shape: tuple[int, ...] | None = None
 
     def __post_init__(self) -> None:
-        """Validate inputs."""
+        """Validate inputs and set defaults."""
         if len(self.rows) != len(self.cols):
             msg = f"rows and cols must have same length, got {len(self.rows)} and {len(self.cols)}"
             raise ValueError(msg)
+        if self.input_shape is None:
+            object.__setattr__(self, "input_shape", (self.n,))
 
     # -------------------------------------------------------------------------
     # Properties
@@ -95,6 +100,8 @@ class SparsityPattern:
         rows: NDArray[np.int32] | list[int],
         cols: NDArray[np.int32] | list[int],
         shape: tuple[int, int],
+        *,
+        input_shape: tuple[int, ...] | None = None,
     ) -> SparsityPattern:
         """Create pattern from row and column index arrays.
 
@@ -102,11 +109,14 @@ class SparsityPattern:
             rows: Row indices of non-zero entries.
             cols: Column indices of non-zero entries.
             shape: Matrix dimensions ``(m, n)``.
+            input_shape: Shape of the function input.
+                Defaults to ``(n,)`` if not specified.
         """
         return cls(
             rows=np.asarray(rows, dtype=np.int32),
             cols=np.asarray(cols, dtype=np.int32),
             shape=shape,
+            input_shape=input_shape,
         )
 
     @classmethod

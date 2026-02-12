@@ -1028,6 +1028,19 @@ def test_str_hvp_mode():
 
 
 @pytest.mark.coloring
+def test_repr_colored_pattern():
+    """ColoredPattern __repr__ returns a compact single-line string."""
+
+    def f(x):
+        return x**2
+
+    cp = jacobian_coloring(f, (3,))
+    r = repr(cp)
+
+    assert "ColoredPattern" in r
+
+
+@pytest.mark.coloring
 def test_color_empty_pattern():
     """Coloring an empty sparsity pattern returns 0 colors."""
     sparsity = _make_pattern([], [], (0, 3))
