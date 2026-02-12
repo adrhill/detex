@@ -14,7 +14,7 @@ Missing precise handlers for:
 ## Control Flow
 
 - [x] `scan` - iterative jaxpr application
-- [ ] `associative_scan` - parallel prefix scan
+- [x] `associative_scan` - decomposes into slice/add/pad/concatenate (not a primitive)
 
 ## Architecture Improvements
 

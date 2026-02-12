@@ -300,8 +300,6 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         # https://docs.jax.dev/en/latest/jax.lax.html#control-flow-operators
         case "scan":
             prop_scan(eqn, deps, const_vals, prop_jaxpr)
-        case "associative_scan":
-            prop_throw_error(eqn, deps)
         case "dot_general":
             prop_dot_general(eqn, deps)
         # Conservative fallback: all outputs depend on all inputs.
