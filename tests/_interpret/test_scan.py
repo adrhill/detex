@@ -332,3 +332,266 @@ def test_scan_jacobian_values():
     sparse_jac = jacobian(f)(x).todense()
     dense_jac = np.array(jax.jacobian(f)(x))
     np.testing.assert_allclose(sparse_jac, dense_jac)
+
+
+@pytest.mark.control_flow
+def test_scan_pytree_xs():
+    """Pytree xs: tuple of arrays as scan inputs.
+
+    JAX flattens leaves into separate invars,
+    so this exercises multiple xs vars with different dep patterns.
+    """
+
+    def f(x):
+        a = x[:3]
+        b = x[3:6]
+
+        def body(carry, xsi):
+            ai, bi = xsi
+            return carry + ai * bi, carry
+
+        carry_out, _ = jax.lax.scan(body, 0.0, (a, b))
+        return jnp.array([carry_out])
+
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    expected = np.ones((1, 6), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_scan_pytree_ys():
+    """Pytree ys: body returns a tuple as the y output.
+
+    Exercises multiple ys outvars in the body jaxpr.
+    """
+
+    def f(x):
+        def body(carry, xi):
+            new_carry = carry + xi
+            return new_carry, (new_carry, xi * 2.0)
+
+        _, (sums, doubled) = jax.lax.scan(body, 0.0, x)
+        return jnp.concatenate([sums, doubled])
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # True sparsity: doubled[t] depends only on x[t],
+    # giving a diagonal block for the last 3 rows.
+    # Overapproximation: xs deps are merged across time steps,
+    # so every doubled element appears to depend on all xs.
+    #   [[1,1,1], [1,1,1], [1,1,1],  # sums (precise)
+    #    [1,0,0], [0,1,0], [0,0,1]]  # doubled (would be precise)
+    expected = np.ones((6, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_scan_length_one():
+    """Single iteration: carry deps equal init deps, ys has one slice."""
+
+    def f(x):
+        def body(carry, xi):
+            return carry + xi, carry
+
+        carry_out, ys = jax.lax.scan(body, jnp.zeros(2), x.reshape(1, 2))
+        return jnp.concatenate([carry_out, ys.ravel()])
+
+    result = jacobian_sparsity(f, input_shape=2).todense().astype(int)
+    # True sparsity: ys[0] = carry_init = zeros, independent of x.
+    # Overapproximation: fixed-point merges carry deps across iterations,
+    # so ys inherits the converged carry deps that include x.
+    #   [[1,0], [0,1],  # carry_out (precise)
+    #    [0,0], [0,0]]  # ys (would be precise)
+    expected = np.array(
+        [
+            [1, 0],
+            [0, 1],
+            [1, 0],
+            [0, 1],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_scan_scalar_carry_scalar_xs():
+    """Simplest possible scan: scalar carry, scalar xs slices."""
+
+    def f(x):
+        def body(carry, xi):
+            return carry + xi, carry
+
+        carry_out, ys = jax.lax.scan(body, 0.0, x)
+        return jnp.concatenate([jnp.array([carry_out]), ys])
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.ones((4, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_scan_unroll():
+    """unroll=True only affects XLA lowering, not the jaxpr.
+
+    Sparsity should be identical to unroll=1.
+    """
+
+    def f_unrolled(x):
+        def body(carry, xi):
+            return carry + xi, carry + xi
+
+        _, ys = jax.lax.scan(body, 0.0, x, unroll=True)
+        return ys
+
+    def f_default(x):
+        def body(carry, xi):
+            return carry + xi, carry + xi
+
+        _, ys = jax.lax.scan(body, 0.0, x)
+        return ys
+
+    sp_unrolled = jacobian_sparsity(f_unrolled, input_shape=4).todense().astype(int)
+    sp_default = jacobian_sparsity(f_default, input_shape=4).todense().astype(int)
+    np.testing.assert_array_equal(sp_unrolled, sp_default)
+
+
+@pytest.mark.control_flow
+def test_scan_ys_independent_of_carry():
+    """Ys depend only on xs, not on carry.
+
+    Body: y = f(xi) only, carry is a counter.
+    ys should not depend on carry_init.
+    """
+
+    def f(x):
+        xs = x[1:].reshape(3, 1)
+        carry_init = x[0:1]
+
+        def body(carry, xi):
+            return carry + 1.0, xi * 2.0
+
+        _, ys = jax.lax.scan(body, carry_init, xs)
+        return ys.ravel()
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    # True sparsity: ys[t] depends only on xs[t].
+    # Overapproximation: xs deps are merged across time steps,
+    # so every ys element appears to depend on all xs elements.
+    #   [[0,1,0,0], [0,0,1,0], [0,0,0,1]]  (would be precise)
+    expected = np.array(
+        [
+            [0, 1, 1, 1],
+            [0, 1, 1, 1],
+            [0, 1, 1, 1],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_scan_carry_only_with_mixing():
+    """Carry-only scan where the body mixes carry elements.
+
+    Tests fixed-point convergence without xs,
+    analogous to while_loop dependency spreading.
+    """
+
+    def f(x):
+        def body(carry, _):
+            # Mix: each element depends on both
+            return jnp.array([carry[0] + carry[1], carry[1]]), None
+
+        carry_out, _ = jax.lax.scan(body, x, None, length=3)
+        return carry_out
+
+    result = jacobian_sparsity(f, input_shape=2).todense().astype(int)
+    # carry[0] depends on both inputs after mixing, carry[1] only on itself
+    expected = np.array(
+        [
+            [1, 1],
+            [0, 1],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_scan_carry_interaction_across_tuple():
+    """Carry elements interact across iterations via tuple carry.
+
+    One carry element feeds into another,
+    so deps spread through fixed-point iteration.
+    """
+
+    def f(x):
+        def body(carry, _):
+            a, b = carry
+            # a gets b's value, b stays
+            return (a + b, b), None
+
+        (a_out, b_out), _ = jax.lax.scan(body, (x[:2], x[2:4]), None, length=3)
+        return jnp.concatenate([a_out, b_out])
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    # a_out depends on both a_init and b_init (elementwise)
+    # b_out depends only on b_init
+    expected = np.array(
+        [
+            [1, 0, 1, 0],
+            [0, 1, 0, 1],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_scan_with_cond_inside():
+    """Scan body contains a conditional branch.
+
+    Exercises scan + cond interaction.
+    """
+
+    def f(x):
+        def body(carry, xi):
+            new_carry = jax.lax.cond(
+                True,
+                lambda c, v: c + v,
+                lambda c, v: c * v,
+                carry,
+                xi,
+            )
+            return new_carry, new_carry
+
+        _, ys = jax.lax.scan(body, 0.0, x)
+        return ys
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # All ys depend on all xs (carry accumulates across iterations)
+    expected = np.ones((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_scan_jacobian_values_pytree_xs():
+    """Verify sparse Jacobian values match dense jax.jacobian with pytree xs."""
+
+    def f(x):
+        a = x[:3]
+        b = x[3:6]
+
+        def body(carry, xsi):
+            ai, bi = xsi
+            return carry + ai * bi, carry
+
+        carry_out, ys = jax.lax.scan(body, 0.0, (a, b))
+        return jnp.concatenate([jnp.array([carry_out]), ys])
+
+    x = jnp.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    sparse_jac = jacobian(f)(x).todense()
+    dense_jac = np.array(jax.jacobian(f)(x))
+    np.testing.assert_allclose(sparse_jac, dense_jac)
