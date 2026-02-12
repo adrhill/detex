@@ -120,67 +120,23 @@ def test_scatter_2d():
 
 
 @pytest.mark.array_ops
-def test_scatter_mul():
-    """Scatter-mul unions dependencies from operand and updates.
+@pytest.mark.parametrize("method", ["mul", "min", "max"])
+def test_scatter_combine(method):
+    """Scatter combine variants union dependencies from operand and updates.
 
-    Positions receiving updates depend on both the original value and the update.
+    Targeted positions depend on both the original value and the update.
+    Non-targeted positions depend only on the operand.
     """
 
     def f(x):
         arr = x[:3]
-        return arr.at[1].mul(x[3])
+        return getattr(arr.at[1], method)(x[3])
 
     result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
     expected = np.array(
         [
             [1, 0, 0, 0],  # out[0] <- x[0]
-            [0, 1, 0, 1],  # out[1] <- x[1] * x[3]
-            [0, 0, 1, 0],  # out[2] <- x[2]
-        ],
-        dtype=int,
-    )
-    np.testing.assert_array_equal(result, expected)
-
-
-@pytest.mark.array_ops
-def test_scatter_min():
-    """Scatter-min unions dependencies from operand and updates.
-
-    Positions receiving updates depend on both the original value and the update.
-    """
-
-    def f(x):
-        arr = x[:3]
-        return arr.at[1].min(x[3])
-
-    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
-    expected = np.array(
-        [
-            [1, 0, 0, 0],  # out[0] <- x[0]
-            [0, 1, 0, 1],  # out[1] <- min(x[1], x[3])
-            [0, 0, 1, 0],  # out[2] <- x[2]
-        ],
-        dtype=int,
-    )
-    np.testing.assert_array_equal(result, expected)
-
-
-@pytest.mark.array_ops
-def test_scatter_max():
-    """Scatter-max unions dependencies from operand and updates.
-
-    Positions receiving updates depend on both the original value and the update.
-    """
-
-    def f(x):
-        arr = x[:3]
-        return arr.at[1].max(x[3])
-
-    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
-    expected = np.array(
-        [
-            [1, 0, 0, 0],  # out[0] <- x[0]
-            [0, 1, 0, 1],  # out[1] <- max(x[1], x[3])
+            [0, 1, 0, 1],  # out[1] <- combine(x[1], x[3])
             [0, 0, 1, 0],  # out[2] <- x[2]
         ],
         dtype=int,
