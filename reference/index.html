@@ -2884,6 +2884,18 @@ by the coloring and decompression stages.</p>
               </div>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="asdex.SparsityPattern.input_shape">input_shape</span></code></td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="int">int</span>, ...] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Shape of the function input that produced this pattern.
+Defaults to <code>(n,)</code> if not specified.</p>
+              </div>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -3055,7 +3067,7 @@ by the coloring and decompression stages.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Validate inputs.</p>
+        <p>Validate inputs and set defaults.</p>
 
 
     </div>
@@ -3066,7 +3078,7 @@ by the coloring and decompression stages.</p>
 
 
 <h3 id="asdex.SparsityPattern.from_coordinates" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">from_coordinates</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">from_coordinates</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">input_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -3137,6 +3149,23 @@ by the coloring and decompression stages.</p>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>input_shape</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="int">int</span>, ...] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Shape of the function input.
+Defaults to <code>(n,)</code> if not specified.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
       </tbody>
