@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770942049005,
+  "lastUpdate": 1770995798626,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -4038,6 +4038,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.012850195064945185",
             "extra": "mean: 52.946293263156456 msec\nrounds: 19"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "009c32c2da6487adaf1bee356f91323a29c1944f",
+          "message": "feat(interpret): add precise handlers for `sort`, `split`, and `tile` (#44)\n\n* feat(interpret): add precise handlers for `split` and `tile` primitives\n\n- Add `_split.py`: partitions input along an axis, each output element\n  maps to exactly one input element (selection matrix Jacobian)\n- Add `_tile.py`: repeats input via modular indexing, each output element\n  depends on exactly one input element\n- Convert `prop_reshape` size-mismatch branch from conservative fallback\n  to ValueError (should never occur in valid JAX code)\n- Remove `split` and `tile` from conservative fallback group\n- Delete TODO.md (all items resolved)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* chore(test): suppress pytest progress output for coding agents\n\nAdd --tb=short -q --no-header defaults and a conftest hook\nto only show output on failures, reducing noise for AI agents.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* feat(interpret): add precise handler for `sort` primitive\n\nSort along one dimension only mixes elements within slices along that\ndimension, producing block-diagonal patterns for multi-dimensional arrays.\nThe conservative fallback was correct for 1D but overly dense for nD.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: add TODO for conservative fallback primitives\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): simplify sort handler with moveaxis grouping\n\nReplace np.indices/ravel_multi_index batch mapping and 1D special case\nwith a single moveaxis+reshape to group flat indices by batch coordinates.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): use union_all to shorten sort handler\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-13T16:16:03+01:00",
+          "tree_id": "c1e02f55448ce6f0caa17a9c359348d8ed74ceb9",
+          "url": "https://github.com/adrhill/asdex/commit/009c32c2da6487adaf1bee356f91323a29c1944f"
+        },
+        "date": 1770995798173,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 690.9142078096987,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0033936562156871588",
+            "extra": "mean: 1.4473577018630857 msec\nrounds: 161"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3191.0828839391606,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000009173216417859197",
+            "extra": "mean: 313.3732455001521 usec\nrounds: 2000"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 59.27249555391687,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00047878416547247963",
+            "extra": "mean: 16.871231599998282 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 80.47854215120998,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005675141620069814",
+            "extra": "mean: 12.42567239999346 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.30256428619717,
+            "unit": "iter/sec",
+            "range": "stddev: 0.016506883476296964",
+            "extra": "mean: 46.9427054210531 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 238.9763874247778,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004580951208033439",
+            "extra": "mean: 4.184513837438304 msec\nrounds: 203"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 27.95862863306994,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00047804367689638296",
+            "extra": "mean: 35.76713339999742 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 11.139021488914315,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007201386855225613",
+            "extra": "mean: 89.77449240000226 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 79.730616940342,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01620858435274737",
+            "extra": "mean: 12.542233314816121 msec\nrounds: 54"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3112.5766852491256,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00000803711231821955",
+            "extra": "mean: 321.2772249882613 usec\nrounds: 2089"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 23.024054251745774,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004455812829041531",
+            "extra": "mean: 43.432837199998175 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 17.100853164129088,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01869145448156639",
+            "extra": "mean: 58.47661461111247 msec\nrounds: 18"
           }
         ]
       }
