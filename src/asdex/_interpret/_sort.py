@@ -12,6 +12,7 @@ from ._commons import (
     atom_numel,
     atom_shape,
     index_sets,
+    union_all,
 )
 
 
@@ -45,26 +46,20 @@ def prop_sort(eqn: JaxprEqn, deps: Deps) -> None:
     dimension = eqn.params["dimension"]
     in_shape = atom_shape(eqn.invars[0])
     total = atom_numel(eqn.invars[0])
-    n = in_shape[dimension]
 
-    # Group flat indices by batch coordinates (all dims except sort dim).
-    # After moveaxis + reshape, groups[b] holds the flat indices for batch b.
+    # groups[b] holds the flat indices for batch slice b.
     groups = np.moveaxis(np.arange(total).reshape(in_shape), dimension, -1).reshape(
-        -1, n
+        -1, in_shape[dimension]
     )
 
-    # Union deps from all operands within each batch group.
-    group_deps: list[set[int]] = [set() for _ in range(len(groups))]
-    for invar in eqn.invars:
-        in_indices = index_sets(deps, invar)
-        for b, flat_indices in enumerate(groups):
-            for idx in flat_indices:
-                group_deps[b] |= in_indices[idx]
+    # Union deps from all operands within each batch slice.
+    all_indices = [index_sets(deps, v) for v in eqn.invars]
+    group_deps = [union_all([ids[i] for ids in all_indices for i in g]) for g in groups]
 
-    # Each output element gets the deps of its batch group.
+    # Broadcast each slice's deps back to every element in the slice.
     for outvar in eqn.outvars:
-        out = [set[int]()] * total
-        for b, flat_indices in enumerate(groups):
-            for idx in flat_indices:
-                out[idx] = group_deps[b].copy()
+        out: list[set[int]] = [set()] * total
+        for gd, g in zip(group_deps, groups, strict=True):
+            for i in g:
+                out[i] = gd.copy()
         deps[outvar] = out
