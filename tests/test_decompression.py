@@ -65,7 +65,7 @@ def test_upper_triangular():
 
 @pytest.mark.jacobian
 def test_mixed_sparsity():
-    """Mixed sparsity pattern from SCT README example."""
+    """Mixed sparsity pattern: f(x) = [x0^2, 2*x0*x1^2, sin(x2)]."""
 
     def f(x):
         return jnp.array([x[0] ** 2, 2 * x[0] * x[1] ** 2, jnp.sin(x[2])])

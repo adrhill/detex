@@ -124,8 +124,8 @@ def test_dense_jacobian():
 
 
 @pytest.mark.elementwise
-def test_sct_readme_example():
-    """Test SCT README example: f(x) = [x1^2, 2*x1*x2^2, sin(x3)]."""
+def test_readme_example():
+    """f(x) = [x1^2, 2*x1*x2^2, sin(x3)]."""
 
     def f(x):
         return jnp.array([x[0] ** 2, 2 * x[0] * x[1] ** 2, jnp.sin(x[2])])
@@ -458,3 +458,363 @@ def test_binary_atan2_rem():
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
     expected = np.array([[1, 1, 0], [0, 1, 1]])
     np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Multi-output Jacobian patterns
+# =============================================================================
+
+
+@pytest.mark.elementwise
+def test_sincos_same_input():
+    """Both sin and cos of the same input depend on that input."""
+
+    def f(x):
+        return jnp.array([jnp.sin(x[0]), jnp.cos(x[0])])
+
+    result = jacobian_sparsity(f, input_shape=1).todense().astype(int)
+    expected = np.array([[1], [1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_vector_index_arithmetic():
+    """Complex index arithmetic: ret[i] = x[i+1]^2 - x[i]^2 + x[n-1-i]^2 - x[n-i-2]^2."""
+
+    def f(x):
+        n = x.shape[0]
+        out = [
+            x[i + 1] ** 2 - x[i] ** 2 + x[n - 1 - i] ** 2 - x[n - i - 2] ** 2
+            for i in range(n - 1)
+        ]
+        return jnp.array(out)
+
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    expected = np.array(
+        [
+            [1, 1, 0, 0, 1, 1],
+            [0, 1, 1, 1, 1, 0],
+            [0, 0, 1, 1, 0, 0],
+            [0, 1, 1, 1, 1, 0],
+            [1, 1, 0, 0, 1, 1],
+        ]
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Composite functions
+# =============================================================================
+
+
+@pytest.mark.elementwise
+def test_composite_mixed_ops_jacobian():
+    """All inputs contribute: x0 + x1*x2 + 1/x3 + x4."""
+
+    def f(x):
+        return jnp.array([x[0] + x[1] * x[2] + 1.0 / x[3] + 1.0 * x[4]])
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    expected = np.array([[1, 1, 1, 1, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_composite_with_power_jacobian():
+    """Composite with power term: x0 + x1*x2 + 1/x3 + x4 + x1^x4."""
+
+    def f(x):
+        foo = x[0] + x[1] * x[2] + 1.0 / x[3] + 1.0 * x[4]
+        return jnp.array([foo + x[1] ** x[4]])
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    expected = np.array([[1, 1, 1, 1, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_ampgo07_jacobian():
+    """AMPGO07 benchmark: comparison, sin, log, abs composed together.
+
+    The (x <= 0) comparison has zero derivative,
+    so the entire expression depends on x.
+    """
+
+    def f(x):
+        return jnp.array(
+            [
+                (x[0] <= 0).astype(float) * jnp.inf
+                + jnp.sin(x[0])
+                + jnp.sin(10.0 / 3.0 * x[0])
+                + jnp.log(jnp.abs(x[0]))
+                - 0.84 * x[0]
+                + 3.0
+            ]
+        )
+
+    result = jacobian_sparsity(f, input_shape=1).todense().astype(int)
+    expected = np.array([[1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Multi-variable Hessian patterns
+# =============================================================================
+
+
+@pytest.mark.hessian
+def test_hessian_diff_cubic():
+    """sum(diff(x).^3) has tridiagonal Hessian."""
+
+    def f(x):
+        d = x[1:] - x[:-1]
+        return jnp.sum(d**3)
+
+    H = hessian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.array(
+        [
+            [1, 1, 0, 0],
+            [1, 1, 1, 0],
+            [0, 1, 1, 1],
+            [0, 0, 1, 1],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_division():
+    """Division creates second-order interactions: x0/x1 + x2 + 1/x3."""
+
+    def f(x):
+        return x[0] / x[1] + x[2] / 1.0 + 1.0 / x[3]
+
+    H = hessian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 1, 0, 0],
+            [1, 1, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 1],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_product_linear():
+    """Products with constants are linear, only cross-terms are nonzero."""
+
+    def f(x):
+        return x[0] * x[1] + x[2] * 1.0 + 1.0 * x[3]
+
+    H = hessian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 1, 0, 0],
+            [1, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_product_of_products():
+    """(x0*x1)*(x2*x3) has all cross-terms nonzero except diagonal."""
+
+    def f(x):
+        return (x[0] * x[1]) * (x[2] * x[3])
+
+    H = hessian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 1, 1, 1],
+            [1, 0, 1, 1],
+            [1, 1, 0, 1],
+            [1, 1, 1, 0],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_product_of_sums():
+    """(x0+x1)*(x2+x3) only has cross-group interactions."""
+
+    def f(x):
+        return (x[0] + x[1]) * (x[2] + x[3])
+
+    H = hessian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 0, 1, 1],
+            [0, 0, 1, 1],
+            [1, 1, 0, 0],
+            [1, 1, 0, 0],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_sum_squared():
+    """(x0+x1+x2+x3)^2 has fully dense Hessian."""
+
+    def f(x):
+        return (x[0] + x[1] + x[2] + x[3]) ** 2
+
+    H = hessian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.ones((4, 4), dtype=int)
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_reciprocal_sum():
+    """1/(x0+x1+x2+x3) has fully dense Hessian."""
+
+    def f(x):
+        return 1.0 / (x[0] + x[1] + x[2] + x[3])
+
+    H = hessian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.ones((4, 4), dtype=int)
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_subtraction_linear():
+    """Subtraction is linear, zero Hessian."""
+
+    def f(x):
+        return (x[0] - x[1]) + (x[2] - 1.0) + (1.0 - x[3])
+
+    H = hessian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.zeros((4, 4), dtype=int)
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_composite_mixed_ops():
+    """Composite: x0 + x1*x2 + 1/x3 + x4."""
+
+    def f(x):
+        return x[0] + x[1] * x[2] + 1.0 / x[3] + 1.0 * x[4]
+
+    H = hessian_sparsity(f, input_shape=5).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_composite_with_power():
+    """Composite with power term: x0 + x1*x2 + 1/x3 + x4 + x1^x4."""
+
+    def f(x):
+        foo = x[0] + x[1] * x[2] + 1.0 / x[3] + 1.0 * x[4]
+        return foo + x[1] ** x[4]
+
+    H = hessian_sparsity(f, input_shape=5).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 1],
+            [0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 1, 0, 0, 1],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_ampgo07():
+    """AMPGO07 benchmark: Hessian is nonzero due to sin, log."""
+
+    def f(x):
+        return (
+            (x[0] <= 0).astype(float) * jnp.inf
+            + jnp.sin(x[0])
+            + jnp.sin(10.0 / 3.0 * x[0])
+            + jnp.log(jnp.abs(x[0]))
+            - 0.84 * x[0]
+            + 3.0
+        )
+
+    H = hessian_sparsity(f, input_shape=1).todense().astype(int)
+    expected = np.array([[1]])
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_clamp_variable_bounds():
+    """Clamp with variable bounds has zero Hessian (piecewise linear in each arg)."""
+
+    def f(x):
+        return jnp.clip(x[0], x[1], x[2])
+
+    H = hessian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.zeros((3, 3), dtype=int)
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_clamp_times_x0():
+    """x0 * clamp(x0, x1, x2) creates cross-term interactions."""
+
+    def f(x):
+        return x[0] * jnp.clip(x[0], x[1], x[2])
+
+    H = hessian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.array(
+        [
+            [1, 1, 1],
+            [1, 0, 0],
+            [1, 0, 0],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_clamp_times_x1():
+    """x1 * clamp(x0, x1, x2) creates cross-term interactions."""
+
+    def f(x):
+        return x[1] * jnp.clip(x[0], x[1], x[2])
+
+    H = hessian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 1, 0],
+            [1, 1, 1],
+            [0, 1, 0],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+def test_hessian_clamp_times_x2():
+    """x2 * clamp(x0, x1, x2) creates cross-term interactions."""
+
+    def f(x):
+        return x[2] * jnp.clip(x[0], x[1], x[2])
+
+    H = hessian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 0, 1],
+            [0, 0, 1],
+            [1, 1, 1],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
