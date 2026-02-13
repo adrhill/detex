@@ -45,7 +45,10 @@ from ._scan import prop_scan
 from ._scatter import prop_scatter
 from ._select import prop_select_n
 from ._slice import prop_slice
+from ._sort import prop_sort
+from ._split import prop_split
 from ._squeeze import prop_squeeze
+from ._tile import prop_tile
 from ._top_k import prop_top_k
 from ._transpose import prop_transpose
 from ._while import prop_while
@@ -302,16 +305,18 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_scan(eqn, deps, const_vals, prop_jaxpr)
         case "dot_general":
             prop_dot_general(eqn, deps)
+        case "split":
+            prop_split(eqn, deps)
+        case "tile":
+            prop_tile(eqn, deps)
+        case "sort":
+            prop_sort(eqn, deps)
         # Conservative fallback: all outputs depend on all inputs.
-        # sort is correctly conservative since sorting is a global operation.
         case (
-            "sort"
-            | "split"
-            | "tile"
-            | "select_if_vmap"
+            "select_if_vmap"
             | "nonbatchable"
-            | "unvmap_any"
-            | "unvmap_max"
+            | "unvmap_any"  # from Equinox
+            | "unvmap_max"  # from Equinox
             | "pure_callback"
         ):
             prop_conservative_fallback(eqn, deps)
@@ -352,7 +357,7 @@ def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
     Assumes worst-case: every output element may depend on every input element.
     This is correct but may overestimate sparsity (more nonzeros than necessary).
 
-    Used for: dot_general, sort, etc.
+    Used for primitives without precise handlers.
     """
     all_inputs: IndexSets = []
     for invar in eqn.invars:

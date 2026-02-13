@@ -1,0 +1,51 @@
+"""Propagation rule for split operations."""
+
+import numpy as np
+from jax._src.core import JaxprEqn
+
+from ._commons import Deps, IndexSets, atom_shape, index_sets
+
+
+def prop_split(eqn: JaxprEqn, deps: Deps) -> None:
+    """Split partitions an array into multiple sub-arrays along an axis.
+
+    Each output element maps to exactly one input element,
+    so dependencies pass through unchanged.
+    Output `k` contains elements from the slice
+    ``[sum(sizes[:k]) : sum(sizes[:k]) + sizes[k]]`` along the split axis.
+
+    The Jacobian is a permutation of rows of the identity matrix.
+
+    Example: x = [a, b, c, d], split(x, sizes=(2, 2))
+        Input deps:  [{0}, {1}, {2}, {3}]
+        Output 0 deps: [{0}, {1}]
+        Output 1 deps: [{2}, {3}]
+
+    Jaxpr:
+        invars[0]: input array
+        axis: dimension along which to split
+        sizes: tuple of sizes for each output chunk
+
+    https://docs.jax.dev/en/latest/_autosummary/jax.lax.split.html
+    """
+    in_indices = index_sets(deps, eqn.invars[0])
+    in_shape = atom_shape(eqn.invars[0])
+    axis = eqn.params["axis"]
+    sizes = eqn.params["sizes"]
+    ndim = len(in_shape)
+
+    # Build a flat index array matching the input shape,
+    # then slice along the split axis for each output.
+    in_flat_indices = np.arange(int(np.prod(in_shape))).reshape(in_shape)
+
+    offset = 0
+    for k, out_var in enumerate(eqn.outvars):
+        size_k = sizes[k]
+        # Slice the input along the split axis
+        slices = [slice(None)] * ndim
+        slices[axis] = slice(offset, offset + size_k)
+        chunk_indices = in_flat_indices[tuple(slices)].ravel()
+
+        out_indices: IndexSets = [in_indices[idx].copy() for idx in chunk_indices]
+        deps[out_var] = out_indices
+        offset += size_k

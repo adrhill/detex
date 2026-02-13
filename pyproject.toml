@@ -72,6 +72,7 @@ build-backend = "hatchling.build"
 packages = ["src/asdex"]
 
 [tool.pytest.ini_options]
+addopts = "--tb=short -q --no-header"  # keep output concise for coding agents
 testpaths = ["tests"]
 markers = [
     "elementwise: simple element-wise operations",

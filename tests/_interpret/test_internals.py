@@ -132,10 +132,10 @@ def test_stop_gradient():
     np.testing.assert_array_equal(result, expected)
 
 
-def test_reshape_size_mismatch_fallback():
-    """Reshape with input/output size mismatch uses conservative fallback.
+def test_reshape_size_mismatch_raises():
+    """Reshape with input/output size mismatch raises ValueError.
 
-    This defensive branch handles unexpected cases where element counts differ.
+    This should never occur in valid JAX code.
     """
     in_var = FakeVar(shape=(3,))
     out_var = FakeVar(shape=(2,))  # Mismatched size
@@ -145,10 +145,8 @@ def test_reshape_size_mismatch_fallback():
     eqn.outvars = [out_var]
 
     deps = {in_var: [{0}, {1}, {2}]}
-    prop_reshape(eqn, deps)  # type: ignore[arg-type]
-
-    # Conservative: all outputs get union of all input deps
-    assert deps[out_var] == [{0, 1, 2}, {0, 1, 2}]
+    with pytest.raises(ValueError, match="Reshape size mismatch"):
+        prop_reshape(eqn, deps)  # type: ignore[arg-type]
 
 
 # =============================================================================
@@ -202,39 +200,29 @@ def test_pad():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_tile():
-    """jnp.tile triggers conservative fallback.
-
-    TODO(tile): Implement precise handler for broadcast_in_dim used by tile.
-    Precise: each output element depends on corresponding input (mod input size).
-    """
+    """jnp.tile tracks per-element dependencies via modular indexing."""
 
     def f(x):
         return jnp.tile(x, 2)
 
     result = jacobian_sparsity(f, input_shape=2).todense().astype(int)
-    # TODO: Should be [[1,0], [0,1], [1,0], [0,1]]
-    expected = np.ones((4, 2), dtype=int)
+    expected = np.array([[1, 0], [0, 1], [1, 0], [0, 1]], dtype=int)
     np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_split():
-    """jnp.split triggers conservative fallback via the split primitive.
-
-    TODO(split): Implement precise handler for split primitive.
-    Precise: each output element depends only on corresponding input.
-    """
+    """jnp.split tracks per-element dependencies through split and concat."""
 
     def f(x):
         parts = jnp.split(x, 2)
         return jnp.concatenate([parts[1], parts[0]])  # swap halves
 
     result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
-    # TODO: Should be permutation [[0,0,1,0], [0,0,0,1], [1,0,0,0], [0,1,0,0]]
-    expected = np.ones((4, 4), dtype=int)
+    expected = np.array(
+        [[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=int
+    )
     np.testing.assert_array_equal(result, expected)
 
 
@@ -283,18 +271,13 @@ def test_iota_eye():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_sort():
-    """jnp.sort triggers conservative fallback.
-
-    Precise: all outputs depend on all inputs (sorting is a global operation).
-    """
+    """1D sort: all outputs depend on all inputs."""
 
     def f(x):
         return jnp.sort(x)
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # Conservative fallback is actually correct here
     expected = np.ones((3, 3), dtype=int)
     np.testing.assert_array_equal(result, expected)
 

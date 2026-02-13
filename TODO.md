@@ -1,13 +1,17 @@
-# TODO - Next Steps for asdex
+# TODO
 
-## Conservative Propagators
+## Conservative fallback primitives
 
-These propagators use conservative fallbacks that could be made precise:
+These primitives in `_interpret/__init__.py` use the conservative fallback.
 
-- [ ] `prop_reshape` - Size mismatch unions all dependencies
-- [ ] `prop_conservative_fallback` - Fallback for unhandled primitives (reduce_max, sort, etc.)
+### Correctly conservative
 
-## Tests Using Conservative Fallbacks
+- **`pure_callback`**: Arbitrary Python callback via `jax.pure_callback()`.
+  Opaque function body — no way to determine sparsity.
+- **`nonbatchable`**: Annotation from `jax.custom_batching.custom_vmap`
+  marking non-batched args. Opaque custom batching rule.
 
-These tests verify conservative behavior that could be made precise:
-- [ ] `test_tile` - broadcast_in_dim produces dense, should track mod pattern
+### Could be improved
+
+- **`select_if_vmap`**: Vmapped `lax.cond` lowered to element-wise select.
+  Structurally similar to `select_n`, which already has a precise handler.
