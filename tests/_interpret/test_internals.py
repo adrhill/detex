@@ -271,18 +271,13 @@ def test_iota_eye():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_sort():
-    """jnp.sort triggers conservative fallback.
-
-    Precise: all outputs depend on all inputs (sorting is a global operation).
-    """
+    """1D sort: all outputs depend on all inputs."""
 
     def f(x):
         return jnp.sort(x)
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # Conservative fallback is actually correct here
     expected = np.ones((3, 3), dtype=int)
     np.testing.assert_array_equal(result, expected)
 
