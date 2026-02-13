@@ -9,12 +9,9 @@ from jax._src.core import JaxprEqn
 
 from ._commons import (
     Deps,
-    IndexSets,
     atom_numel,
     atom_shape,
     index_sets,
-    numel,
-    union_all,
 )
 
 
@@ -47,42 +44,27 @@ def prop_sort(eqn: JaxprEqn, deps: Deps) -> None:
     """
     dimension = eqn.params["dimension"]
     in_shape = atom_shape(eqn.invars[0])
-    ndim = len(in_shape)
+    total = atom_numel(eqn.invars[0])
+    n = in_shape[dimension]
 
-    # Canonicalize negative dimension
-    if dimension < 0:
-        dimension += ndim
+    # Group flat indices by batch coordinates (all dims except sort dim).
+    # After moveaxis + reshape, groups[b] holds the flat indices for batch b.
+    groups = np.moveaxis(np.arange(total).reshape(in_shape), dimension, -1).reshape(
+        -1, n
+    )
 
-    kept_dims = [d for d in range(ndim) if d != dimension]
-    batch_shape = tuple(in_shape[d] for d in kept_dims)
-    n_batches = numel(batch_shape)
-
-    # Collect and union input deps from all operands,
-    # grouped by their non-sort coordinates.
-    group_deps: list[set[int]] = [set() for _ in range(n_batches)]
-
+    # Union deps from all operands within each batch group.
+    group_deps: list[set[int]] = [set() for _ in range(len(groups))]
     for invar in eqn.invars:
         in_indices = index_sets(deps, invar)
-        if not kept_dims:
-            # 1D: single group containing all elements
-            group_deps[0] |= union_all(in_indices)
-        else:
-            in_coords = np.indices(in_shape)
-            batch_coords = tuple(in_coords[d] for d in kept_dims)
-            group_map = np.ravel_multi_index(batch_coords, batch_shape).ravel()
-            for in_flat, elem_deps in enumerate(in_indices):
-                group_deps[group_map[in_flat]] |= elem_deps
+        for b, flat_indices in enumerate(groups):
+            for idx in flat_indices:
+                group_deps[b] |= in_indices[idx]
 
     # Each output element gets the deps of its batch group.
-    # Output shape matches input shape for each operand.
     for outvar in eqn.outvars:
-        out_size = atom_numel(outvar)
-        if not kept_dims:
-            # 1D: all outputs share the single group
-            out_indices: IndexSets = [group_deps[0].copy() for _ in range(out_size)]
-        else:
-            out_coords = np.indices(in_shape)
-            batch_coords = tuple(out_coords[d] for d in kept_dims)
-            group_map = np.ravel_multi_index(batch_coords, batch_shape).ravel()
-            out_indices = [group_deps[group_map[i]].copy() for i in range(out_size)]
-        deps[outvar] = out_indices
+        out = [set[int]()] * total
+        for b, flat_indices in enumerate(groups):
+            for idx in flat_indices:
+                out[idx] = group_deps[b].copy()
+        deps[outvar] = out
