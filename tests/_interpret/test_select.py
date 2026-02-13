@@ -7,7 +7,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from asdex import jacobian_sparsity
+from asdex import hessian_sparsity, jacobian_sparsity
 
 
 @pytest.mark.control_flow
@@ -53,6 +53,18 @@ def test_where_mask():
 
 
 @pytest.mark.control_flow
+def test_ifelse_one_branch_constant_false():
+    """Ifelse with constant true branch only tracks false branch."""
+
+    def f(x):
+        return jnp.array([jnp.where(x[1] < x[2], 1.0, x[2] * x[3])])
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.array([[0, 0, 1, 1]])
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
 def test_select_n_mixed_deps():
     """select_n where branches have different per-element dependencies."""
 
@@ -66,3 +78,68 @@ def test_select_n_mixed_deps():
     # out[0] ← {0} ∪ {3}, out[1] ← {1} ∪ {4}, out[2] ← {2} ∪ {3}
     expected = np.array([[1, 0, 0, 1, 0], [0, 1, 0, 0, 1], [0, 0, 1, 1, 0]], dtype=int)
     np.testing.assert_array_equal(result, expected)
+
+
+# =============================================================================
+# Hessian sparsity for select_n / jnp.where
+# =============================================================================
+
+
+@pytest.mark.hessian
+@pytest.mark.control_flow
+def test_hessian_where_both_branches():
+    """jnp.where unions Hessian patterns from both branches."""
+
+    def f(x):
+        return jnp.where(x[0] > 0, x[0] ** x[1], x[2] * x[3])
+
+    H = hessian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.array(
+        [
+            [1, 1, 0, 0],
+            [1, 1, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+@pytest.mark.control_flow
+def test_hessian_where_one_constant_true():
+    """jnp.where with constant false branch."""
+
+    def f(x):
+        return jnp.where(x[0] > 0, x[0] ** x[1], 1.0)
+
+    H = hessian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.array(
+        [
+            [1, 1, 0, 0],
+            [1, 1, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.hessian
+@pytest.mark.control_flow
+def test_hessian_where_one_constant_false():
+    """jnp.where with constant true branch."""
+
+    def f(x):
+        return jnp.where(x[0] > 0, 1.0, x[2] * x[3])
+
+    H = hessian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0],
+        ]
+    )
+    np.testing.assert_array_equal(H, expected)

@@ -1,8 +1,7 @@
-"""Test asdex on convolutional layers, similar to SCT's performance example.
+"""Test asdex on convolutional layers.
 
 References:
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.conv_general_dilated.html
-    https://github.com/adrhill/SparseConnectivityTracer.jl/blob/main/docs/src/user/performance.md
 """
 
 import jax
@@ -78,7 +77,7 @@ def test_conv_exact(input_hw, kernel_size, channels):
 
 
 def test_conv_sct_example():
-    """SCT example: 28x28 input, 3x3 kernel, 3 in channels, 2 out channels."""
+    """28x28 input, 3x3 kernel, 3 in channels, 2 out channels."""
     check_conv_sparsity((28, 28), (3, 3), (3, 2), verify_exact=False)
 
 

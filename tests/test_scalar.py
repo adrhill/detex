@@ -208,6 +208,20 @@ def test_composition_zero_of_nonlinear():
     np.testing.assert_array_equal(_jac(f), _0)
 
 
+@pytest.mark.hessian
+def test_multiply_by_zero_hessian():
+    """Multiplying by zero still tracks structural Hessian: 0*x^2."""
+
+    def f1(x):
+        return 0.0 * x**2
+
+    def f2(x):
+        return x**2 * 0.0
+
+    np.testing.assert_array_equal(_hes(f1), _1)
+    np.testing.assert_array_equal(_hes(f2), _1)
+
+
 # =============================================================================
 # Binary functions f: R^2 -> R
 #
