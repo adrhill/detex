@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770939349792,
+  "lastUpdate": 1770941112388,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -3822,6 +3822,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.013524877257882071",
             "extra": "mean: 53.967471888886585 msec\nrounds: 18"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "14d521b2e0ec2a6d281547a44397ea1fe323f10c",
+          "message": "test: add further Jacobian and Hessian sparsity tests (#42)\n\n* test: add SCT Global Jacobian and Hessian test cases\n\nPort 26 test cases from SparseConnectivityTracer.jl's Global Jacobian\nand Global Hessian testsets covering element-wise ops, conditional\nbranching, clamp interactions, composite functions, and various\nHessian sparsity patterns.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: add scalar and binary sparsity tests\n\nAdd test_scalar.py with parametrized Jacobian/Hessian tests for unary\n(R->R) and binary (R^2->R) functions covering nonlinear, linear,\nzero-derivative, and constant categories. Extend test_sct.py with\ncomposite function Jacobians and AMPGO07 benchmark. Add TODO for\nauto-squeezing (1,)-shaped output in hessian_sparsity.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(test): distribute test_sct.py into specific test files\n\nMove tests from test_sct.py to their natural homes: multi-variable\npatterns to test_detection.py, where/select Hessians to test_select.py,\nand scalar multiply-by-zero to test_scalar.py. Drop two duplicate\nJacobian where tests already in test_select.py. Remove SCT references\nfrom test docstrings.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-13T01:04:37+01:00",
+          "tree_id": "c7b97f30a43100132fb6f21993c7f176266395d3",
+          "url": "https://github.com/adrhill/asdex/commit/14d521b2e0ec2a6d281547a44397ea1fe323f10c"
+        },
+        "date": 1770941111644,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 727.4552136878331,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0027085314256770636",
+            "extra": "mean: 1.374655073170074 msec\nrounds: 164"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3250.6322520591775,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000010122877984471044",
+            "extra": "mean: 307.6324611516821 usec\nrounds: 2188"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 61.44268883429403,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003676199250515747",
+            "extra": "mean: 16.275329400002647 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 82.83707985843277,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005073497606632555",
+            "extra": "mean: 12.071888599996328 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 23.474296959974954,
+            "unit": "iter/sec",
+            "range": "stddev: 0.008539089758487146",
+            "extra": "mean: 42.599784850002465 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 241.0727813514597,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000028169016294428586",
+            "extra": "mean: 4.148124870812775 msec\nrounds: 209"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 31.09607578531529,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005306354178229245",
+            "extra": "mean: 32.15839860000074 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 11.6617692833323,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009188242088559065",
+            "extra": "mean: 85.75028160000215 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 127.01147006716637,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00018014594367225624",
+            "extra": "mean: 7.873304666666551 msec\nrounds: 15"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3273.1664819843086,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000010519743356701659",
+            "extra": "mean: 305.51455463816336 usec\nrounds: 2059"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 24.152303070632144,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004760465592249132",
+            "extra": "mean: 41.40391900000395 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 18.92967385755103,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013274601161672946",
+            "extra": "mean: 52.82711194736728 msec\nrounds: 19"
           }
         ]
       }
