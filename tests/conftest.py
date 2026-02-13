@@ -1,6 +1,13 @@
 """Pytest configuration and fixtures for asdex tests."""
 
 
+def pytest_report_teststatus(report, config):
+    """Suppress progress dots for passing tests to keep output concise."""
+    if report.when == "call" and report.passed:
+        return "passed", "", ""
+    return None
+
+
 def pytest_configure(config):
     """Register custom markers."""
     config.addinivalue_line("markers", "elementwise: simple element-wise operations")
