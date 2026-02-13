@@ -3,7 +3,7 @@
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, atom_shape, conservative_deps, index_sets, numel
+from ._commons import Deps, atom_shape, index_sets, numel
 
 
 def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
@@ -35,9 +35,12 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
     in_indices = index_sets(deps, eqn.invars[0])
     out_size = numel(atom_shape(eqn.outvars[0]))
     if len(in_indices) != out_size:
-        # Defensive fallback for unexpected size mismatches.
-        deps[eqn.outvars[0]] = conservative_deps(in_indices, out_size)
-        return
+        msg = (
+            f"Reshape size mismatch: input has {len(in_indices)} elements "
+            f"but output expects {out_size}. "
+            "Please report this at https://github.com/adrhill/asdex/issues"
+        )
+        raise ValueError(msg)
 
     dimensions = eqn.params.get("dimensions")
     if dimensions is not None:

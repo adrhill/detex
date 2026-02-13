@@ -28,6 +28,8 @@ tests/
     ├── test_rev.py             # Rev (reverse/flip) operations
     ├── test_conv.py            # Convolution tests
     ├── test_internals.py       # Internal propagation, fallbacks, custom_call
+    ├── test_split.py           # Split operations
+    ├── test_tile.py            # Tile operations
     ├── test_select.py          # select_n (jnp.where, lax.select)
     ├── test_while.py           # while_loop propagation
     ├── test_cond.py            # cond (conditional branching)
