@@ -315,8 +315,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         case (
             "select_if_vmap"
             | "nonbatchable"
-            | "unvmap_any"
-            | "unvmap_max"
+            | "unvmap_any"  # from Equinox
+            | "unvmap_max"  # from Equinox
             | "pure_callback"
         ):
             prop_conservative_fallback(eqn, deps)
