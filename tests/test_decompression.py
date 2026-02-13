@@ -606,6 +606,45 @@ def test_hessian_star_coloring_default():
 
 
 @pytest.mark.hessian
+def test_hessian_squeeze_1d_output():
+    """Hessian auto-squeezes functions returning shape (1,) to scalar."""
+
+    def f(x):
+        return jnp.sum(x**2, keepdims=True)
+
+    x = np.array([1.0, 2.0, 3.0])
+    result = hessian(f)(x).todense()
+    expected = jax.hessian(lambda x: jnp.sum(x**2))(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.hessian
+def test_hessian_sparsity_squeeze_1d_output():
+    """hessian_sparsity auto-squeezes functions returning shape (1,)."""
+
+    def f(x):
+        return jnp.sum(x**2, keepdims=True)
+
+    pattern = hessian_sparsity(f, input_shape=3)
+    expected = hessian_sparsity(lambda x: jnp.sum(x**2), input_shape=3)
+
+    assert pattern.shape == expected.shape
+    assert pattern.nnz == expected.nnz
+
+
+@pytest.mark.hessian
+def test_hessian_squeeze_non_scalar_raises():
+    """Hessian raises ValueError for non-scalar output like (3,)."""
+
+    def f(x):
+        return x**2
+
+    with pytest.raises(ValueError, match="output shape"):
+        hessian(f)(np.array([1.0, 2.0, 3.0]))
+
+
+@pytest.mark.hessian
 def test_hessian_arrow_pattern():
     """Arrow-shaped Hessian: star coloring should use fewer colors.
 

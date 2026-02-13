@@ -72,6 +72,9 @@ def hessian_sparsity(
     without evaluating any derivatives.
     The result is valid for all inputs.
 
+    If ``f`` returns a squeezable shape like ``(1,)`` or ``(1, 1)``,
+    it is automatically squeezed to scalar.
+
     Args:
         f: Scalar-valued function taking an array.
         input_shape: Shape of the input array.
@@ -82,4 +85,24 @@ def hessian_sparsity(
             where ``n = prod(input_shape)``.
             Entry ``(i, j)`` is present if ``H[i, j]`` may be nonzero.
     """
+    f = _ensure_scalar(f, input_shape)
     return jacobian_sparsity(jax.grad(f), input_shape)
+
+
+def _ensure_scalar(f: Callable, input_shape: int | tuple[int, ...]) -> Callable:
+    """Ensure ``f`` returns a scalar, auto-squeezing if possible.
+
+    If ``f`` already returns shape ``()``, it is returned unchanged.
+    If squeezing the output yields a scalar (e.g. shape ``(1,)``),
+    a wrapped version is returned.
+    Otherwise, raises ``ValueError``.
+    """
+    out = jax.eval_shape(f, jnp.zeros(input_shape))
+    if out.shape == ():
+        return f
+    squeezed = jax.eval_shape(lambda x: jnp.squeeze(f(x)), jnp.zeros(input_shape))
+    if squeezed.shape != ():
+        raise ValueError(
+            f"Expected scalar-valued function, but f has output shape {out.shape}."
+        )
+    return lambda x: jnp.squeeze(f(x))

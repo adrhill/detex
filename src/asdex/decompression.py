@@ -8,6 +8,7 @@ from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike
 
 from asdex.coloring import color_hessian_pattern, color_jacobian_pattern
+from asdex.detection import _ensure_scalar
 from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_sparsity
 from asdex.pattern import ColoredPattern
@@ -58,6 +59,9 @@ def hessian(
 
     Uses symmetric (star) coloring and forward-over-reverse
     Hessian-vector products for efficiency.
+
+    If ``f`` returns a squeezable shape like ``(1,)`` or ``(1, 1)``,
+    it is automatically squeezed to scalar.
 
     Args:
         f: Scalar-valued function taking an array.
@@ -129,7 +133,12 @@ def _eval_hessian(
     x: jax.Array,
     colored_pattern: ColoredPattern | None,
 ) -> BCOO:
-    """Evaluate the sparse Hessian of f at x."""
+    """Evaluate the sparse Hessian of f at x.
+
+    If ``f`` returns a squeezable shape like ``(1,)``,
+    it is automatically squeezed to scalar.
+    """
+    f = _ensure_scalar(f, x.shape)
     n = x.size
 
     if colored_pattern is None:
