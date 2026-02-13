@@ -1826,6 +1826,8 @@ where <code>n = x.size</code> and <code>m = prod(output_shape)</code>.</p>
         <p>Build a sparse Hessian function using coloring and HVPs.</p>
 <p>Uses symmetric (star) coloring and forward-over-reverse
 Hessian-vector products for efficiency.</p>
+<p>If <code>f</code> returns a squeezable shape like <code>(1,)</code> or <code>(1, 1)</code>,
+it is automatically squeezed to scalar.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2248,6 +2250,8 @@ Entry <code>(i, j)</code> is present if output <code>i</code> depends on input <
 <p>Analyzes the Jacobian sparsity of the gradient function,
 without evaluating any derivatives.
 The result is valid for all inputs.</p>
+<p>If <code>f</code> returns a squeezable shape like <code>(1,)</code> or <code>(1, 1)</code>,
+it is automatically squeezed to scalar.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>

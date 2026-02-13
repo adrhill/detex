@@ -1203,6 +1203,8 @@ Entry <code>(i, j)</code> is present if output <code>i</code> depends on input <
 <p>Analyzes the Jacobian sparsity of the gradient function,
 without evaluating any derivatives.
 The result is valid for all inputs.</p>
+<p>If <code>f</code> returns a squeezable shape like <code>(1,)</code> or <code>(1, 1)</code>,
+it is automatically squeezed to scalar.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
