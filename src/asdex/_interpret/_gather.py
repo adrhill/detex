@@ -8,6 +8,7 @@ from ._commons import (
     atom_const_val,
     atom_numel,
     atom_shape,
+    check_no_index_sets,
     conservative_indices,
     index_sets,
     permute_indices,
@@ -48,6 +49,8 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.gather.html
     """
     operand_indices = index_sets(deps, eqn.invars[0])
+    # TODO: include start_indices index sets in output dependencies.
+    check_no_index_sets(deps, eqn.invars[1], eqn.primitive.name)
     concrete_indices = atom_const_val(eqn.invars[1], const_vals)
 
     if concrete_indices is not None:

@@ -9,6 +9,7 @@ from ._commons import (
     atom_const_val,
     atom_numel,
     atom_shape,
+    check_no_index_sets,
     conservative_indices,
     index_sets,
     numel,
@@ -56,6 +57,8 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """
     operand_indices = index_sets(deps, eqn.invars[0])
     indices_atom = eqn.invars[1]
+    # TODO: include scatter_indices index sets in output dependencies.
+    check_no_index_sets(deps, indices_atom, eqn.primitive.name)
     updates_indices = index_sets(deps, eqn.invars[2])
 
     # Check if we can get static index values

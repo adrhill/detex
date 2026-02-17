@@ -8,6 +8,7 @@ from ._commons import (
     Deps,
     IndexSets,
     atom_shape,
+    check_no_index_sets,
     flat_to_coords,
     index_sets,
     numel,
@@ -45,6 +46,8 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.conv_general_dilated.html
     """
     lhs_indices = index_sets(deps, eqn.invars[0])  # Input image dependencies
+    # TODO: include kernel (rhs) index sets in output dependencies.
+    check_no_index_sets(deps, eqn.invars[1], eqn.primitive.name)
 
     # Get shapes from avals
     lhs_shape = atom_shape(eqn.invars[0])

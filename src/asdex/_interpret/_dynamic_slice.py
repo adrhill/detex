@@ -9,6 +9,7 @@ from ._commons import (
     IndexSets,
     atom_const_val,
     atom_shape,
+    check_no_index_sets,
     conservative_indices,
     index_sets,
     numel,
@@ -56,6 +57,10 @@ def prop_dynamic_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None
     in_indices = index_sets(deps, operand)
     slice_sizes = eqn.params["slice_sizes"]
 
+    # TODO: include start index sets in output dependencies.
+    for start_atom in eqn.invars[1:]:
+        check_no_index_sets(deps, start_atom, eqn.primitive.name)
+
     starts = _resolve_starts(eqn, 1, const_vals)
     if starts is None:
         deps[eqn.outvars[0]] = conservative_indices(in_indices, numel(slice_sizes))
@@ -97,6 +102,10 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
     upd_indices = index_sets(deps, update)
     operand_shape = atom_shape(operand)
     upd_shape = atom_shape(update)
+
+    # TODO: include start index sets in output dependencies.
+    for start_atom in eqn.invars[2:]:
+        check_no_index_sets(deps, start_atom, eqn.primitive.name)
 
     starts = _resolve_starts(eqn, 2, const_vals)
     if starts is None:
