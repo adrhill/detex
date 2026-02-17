@@ -30,6 +30,8 @@ _split.py          # split (partition along axis)
 _tile.py           # tile (repeat along dimensions)
 _dynamic_slice.py  # dynamic_slice, dynamic_update_slice
 _platform_index.py # platform_index (platform selection constant)
+_equinox/          # Equinox-specific primitives
+  _select_if_vmap.py  # select_if_vmap (vmapped cond)
 ```
 
 ## Key Types

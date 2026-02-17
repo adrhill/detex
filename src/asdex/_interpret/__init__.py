@@ -35,6 +35,7 @@ from ._elementwise import (
     prop_zero_derivative,
     propagate_const_binary,
 )
+from ._equinox._select_if_vmap import prop_select_if_vmap
 from ._gather import prop_gather
 from ._pad import prop_pad
 from ._platform_index import prop_platform_index
@@ -285,6 +286,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_scatter(eqn, deps, const_vals)
         case "select_n":
             prop_select_n(eqn, deps, const_vals)
+        case "select_if_vmap":
+            prop_select_if_vmap(eqn, deps, const_vals)
         case "iota":
             _prop_iota(eqn, deps, const_vals)
         case "while":
@@ -315,8 +318,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_sort(eqn, deps)
         # Conservative fallback: all outputs depend on all inputs.
         case (
-            "select_if_vmap"
-            | "nonbatchable"
+            "nonbatchable"
             | "unvmap_any"  # from Equinox
             | "unvmap_max"  # from Equinox
             | "pure_callback"

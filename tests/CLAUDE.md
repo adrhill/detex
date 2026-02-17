@@ -34,7 +34,9 @@ tests/
     ├── test_while.py           # while_loop propagation
     ├── test_cond.py            # cond (conditional branching)
     ├── test_platform_index.py  # platform_index (platform_dependent, diag)
-    └── test_nested_jaxpr.py    # const_vals into jit, custom_jvp
+    ├── test_nested_jaxpr.py    # const_vals into jit, custom_jvp
+    └── _equinox/               # Equinox-specific primitives
+        └── test_select_if_vmap.py  # select_if_vmap (vmapped cond)
 ```
 
 Each handler module `src/asdex/_interpret/_foo.py` has a corresponding test file `tests/_interpret/test_foo.py`.
