@@ -38,12 +38,29 @@ _platform_index.py # platform_index (platform selection constant)
 - `Deps` = `dict[Var, IndexSets]` — maps jaxpr variables to their index sets
 - `ConstVals` = `dict[Var, np.ndarray]` — statically-known values for precise gather/scatter
 
+## Naming Conventions
+
+**Terminology** — "indices" and "map" mean different things:
+- **"indices" / "index sets"**: `IndexSets` (`list[set[int]]`),
+  the per-element dependency sets used for sparsity tracking.
+- **"map"**: numpy integer arrays that map output positions to input positions.
+  Not index sets.
+
+**Variable names** — use these consistently across handlers:
+- `in_indices`: input index sets (from `index_sets(deps, atom)`)
+- `in_shape`: input array shape (from `atom_shape(atom)`)
+- `permutation_map`: the flat integer array passed to `permute_indices()`
+- `in_position_map`: when a `position_map()` result is stored
+  (e.g., reused across loop iterations in `_split.py`)
+
+**Docstrings** — avoid the term "deps"; prefer "index sets" or "input index sets".
+
 ## Common Utilities in `_commons.py`
 
 - **`position_map(shape)`** —
   builds an array where each element holds its own flat position.
-  Used to derive permutation maps by applying operations (transpose, slice, etc.)
-  to this array.
+  Applying operations (transpose, slice, flip) to this array
+  reveals which input position each output position reads from.
 - **`permute_indices(in_indices, permutation_map)`** —
   builds output index sets by copying from input positions according to a map.
   Used by handlers where each output reads exactly one input element
@@ -54,23 +71,10 @@ _platform_index.py # platform_index (platform selection constant)
 - **`conservative_indices(all_indices, out_size)`** —
   conservative fallback where every output element depends on the union of all inputs.
 
-## Naming Conventions
-
-- **"indices" / "index sets"**: refers to `IndexSets` (`list[set[int]]`),
-  the per-element dependency sets used for sparsity tracking.
-- **"map"**: refers to integer arrays that map output positions to input positions
-  (e.g., `permutation_map`, `position_map`).
-  These are numpy arrays, not index sets.
-- Avoid using "deps" in docstrings; prefer "index sets" or "input index sets".
-
 ## Const Value Tracking
 
 Handlers like `broadcast_in_dim`, `select_n`, and binary ops propagate concrete values through `const_vals`.
 This lets `gather`/`scatter` resolve static indices precisely instead of falling back to conservative.
-
-## Tests
-
-Each handler module `_foo.py` has a corresponding test file `tests/_interpret/test_foo.py`.
 
 ## Adding a New Handler
 
@@ -79,18 +83,21 @@ Each handler module `_foo.py` has a corresponding test file `tests/_interpret/te
 3. Remove from the fallback `case` group if upgrading from conservative.
 4. Add tests in the corresponding `tests/_interpret/test_<module>.py` file.
 
+## Tests
+
+Each handler module `_foo.py` has a corresponding test file `tests/_interpret/test_foo.py`.
+
 ## Writing Style
 
-Use **semantic line breaks** everywhere: one sentence or clause per line in docstrings, comments, and markdown.
+Use **semantic line breaks** everywhere:
+one sentence or clause per line in docstrings, comments, and markdown.
 This applies to all prose, not just docstrings.
-
-## Comments
 
 Focus comments on **why**, not what.
 Explain why a branch exists, why a particular approach was chosen, or why a fallback is needed.
 Don't narrate what the code already says.
 
-## Handler Docstring Style
+### Handler Docstring Style
 
 1. **Semantic summary**: What the operation does and how dependencies flow.
 2. **Math**: The Jacobian structure in concise mathematical notation.
