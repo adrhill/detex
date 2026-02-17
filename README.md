@@ -75,7 +75,7 @@ Instead of 49 VJPs or 50 JVPs,
 
 ## Acknowledgements
 
-This package is built with Claude Code based on previous work by Adrian Hill ([`@adrhill`](https://github.com/adrhill)), Guillaume Dalle ([`@gdalle`](https://github.com/gdalle)), and Alexis Montoison ([`@amontoison`](https://github.com/amontoison)) in the [Julia programming language](https://julialang.org):
+This package is built with Claude Code based on previous work by [Adrian Hill](https://github.com/adrhill), [Guillaume Dalle](https://github.com/gdalle), and [Alexis Montoison](https://github.com/amontoison) in the [Julia programming language](https://julialang.org):
 
 - [_An Illustrated Guide to Automatic Sparse Differentiation_](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/), A. Hill, G. Dalle, A. Montoison (2025)
 - [_Sparser, Better, Faster, Stronger: Efficient Automatic Differentiation for Sparse Jacobians and Hessians_](https://openreview.net/forum?id=GtXSN52nIW), A. Hill & G. Dalle (2025)
