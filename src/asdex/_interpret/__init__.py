@@ -17,7 +17,7 @@ from ._commons import (
     Deps,
     IndexSets,
     atom_numel,
-    conservative_deps,
+    conservative_indices,
     forward_const_vals,
     index_sets,
     seed_const_vals,
@@ -363,7 +363,7 @@ def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
     for invar in eqn.invars:
         all_inputs.extend(index_sets(deps, invar))
     for outvar in eqn.outvars:
-        deps[outvar] = conservative_deps(all_inputs, atom_numel(outvar))
+        deps[outvar] = conservative_indices(all_inputs, atom_numel(outvar))
 
 
 def prop_throw_error(eqn: JaxprEqn, deps: Deps) -> None:

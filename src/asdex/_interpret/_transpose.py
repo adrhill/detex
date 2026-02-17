@@ -2,15 +2,7 @@
 
 from jax._src.core import JaxprEqn
 
-from ._commons import (
-    Deps,
-    IndexSets,
-    atom_shape,
-    flat_to_coords,
-    index_sets,
-    numel,
-    row_strides,
-)
+from ._commons import Deps, atom_shape, index_sets, permute_indices, position_map
 
 
 def prop_transpose(eqn: JaxprEqn, deps: Deps) -> None:
@@ -36,27 +28,7 @@ def prop_transpose(eqn: JaxprEqn, deps: Deps) -> None:
     in_indices = index_sets(deps, eqn.invars[0])
     in_shape = atom_shape(eqn.invars[0])
     permutation = eqn.params["permutation"]
-    ndim = len(in_shape)
 
-    # Compute output shape: out_shape[d] = in_shape[permutation[d]].
-    out_shape = tuple(in_shape[permutation[d]] for d in range(ndim))
+    permutation_map = position_map(in_shape).transpose(permutation).ravel()
 
-    # Build inverse permutation: inv_perm[perm[d]] = d.
-    inv_perm = [0] * ndim
-    for d in range(ndim):
-        inv_perm[permutation[d]] = d
-
-    in_strides = row_strides(in_shape)
-    out_strides = row_strides(out_shape)
-    out_size = numel(out_shape)
-
-    out_indices: IndexSets = []
-    for out_flat in range(out_size):
-        out_coord = flat_to_coords(out_flat, out_strides)
-
-        # Map output coordinate back to input coordinate via inverse permutation.
-        in_flat = sum(out_coord[inv_perm[d]] * in_strides[d] for d in range(ndim))
-
-        out_indices.append(in_indices[in_flat].copy())
-
-    deps[eqn.outvars[0]] = out_indices
+    deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)

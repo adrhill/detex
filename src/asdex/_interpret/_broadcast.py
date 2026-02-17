@@ -3,7 +3,15 @@
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import ConstVals, Deps, atom_const_val, atom_shape, index_sets, numel
+from ._commons import (
+    ConstVals,
+    Deps,
+    atom_const_val,
+    atom_shape,
+    index_sets,
+    numel,
+    permute_indices,
+)
 
 
 def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -67,6 +75,6 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> N
         out_coords[broadcast_dims[i]] if in_shape[i] > 1 else 0
         for i in range(len(in_shape))
     )
-    flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
+    permutation_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    deps[out_var] = [in_indices[j].copy() for j in flat_map]
+    deps[out_var] = permute_indices(in_indices, permutation_map)

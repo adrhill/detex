@@ -5,9 +5,10 @@ from jax._src.core import JaxprEqn
 
 from ._commons import (
     Deps,
-    IndexSets,
     atom_shape,
     index_sets,
+    permute_indices,
+    position_map,
 )
 
 
@@ -35,9 +36,6 @@ def prop_rev(eqn: JaxprEqn, deps: Deps) -> None:
     in_shape = atom_shape(eqn.invars[0])
     dimensions = eqn.params["dimensions"]
 
-    out_size = int(np.prod(in_shape))
-    perm = np.flip(np.arange(out_size).reshape(in_shape), axis=dimensions).ravel()
+    perm = np.flip(position_map(in_shape), axis=dimensions).ravel()
 
-    out_indices: IndexSets = [in_indices[perm[i]].copy() for i in range(out_size)]
-
-    deps[eqn.outvars[0]] = out_indices
+    deps[eqn.outvars[0]] = permute_indices(in_indices, perm)

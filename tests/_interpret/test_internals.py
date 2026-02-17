@@ -8,7 +8,7 @@ import jax.nn
 import jax.numpy as jnp
 import numpy as np
 import pytest
-from jax._src.core import Primitive
+from jax._src.core import Literal, Primitive
 
 from asdex import jacobian_sparsity
 from asdex._interpret import (
@@ -17,6 +17,7 @@ from asdex._interpret import (
     prop_jaxpr,
     prop_nested_jaxpr,
 )
+from asdex._interpret._commons import atom_shape
 from asdex._interpret._reshape import prop_reshape
 
 
@@ -130,6 +131,16 @@ def test_stop_gradient():
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
     expected = np.eye(3, dtype=int)
     np.testing.assert_array_equal(result, expected)
+
+
+def test_atom_shape_literal():
+    """atom_shape extracts shape from Literal values."""
+    val = np.array([1.0, 2.0, 3.0])
+    lit = Literal(val=val, aval=None)
+    assert atom_shape(lit) == (3,)
+
+    scalar_lit = Literal(val=np.float32(1.0), aval=None)
+    assert atom_shape(scalar_lit) == ()
 
 
 def test_reshape_size_mismatch_raises():

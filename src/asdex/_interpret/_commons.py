@@ -128,10 +128,74 @@ def flat_to_coords(flat: int, strides: tuple[int, ...]) -> list[int]:
     return coord
 
 
-def conservative_deps(all_indices: IndexSets, out_size: int) -> IndexSets:
-    """Build conservative output deps where every element depends on the union of all inputs."""
-    all_deps = union_all(all_indices)
-    return [all_deps.copy() for _ in range(out_size)]
+def position_map(shape: Sequence[int]) -> np.ndarray:
+    """Build an array where each element holds its own flat position.
+
+    For shape ``(2, 3)``, returns ``[[0, 1, 2], [3, 4, 5]]``.
+    Applying operations (transpose, slice, etc.) to this array
+    reveals which input position each output position reads from.
+    """
+    return np.arange(numel(shape)).reshape(shape)
+
+
+def permute_indices(
+    in_indices: IndexSets, permutation_map: Sequence[int] | np.ndarray
+) -> IndexSets:
+    """Build output index sets by permuting through a flat index array.
+
+    Each output element ``i`` copies its index set from ``in_indices[permutation_map[i]]``.
+    This is the common pattern for permutation-like ops
+    (transpose, rev, slice, reshape, broadcast, etc.)
+    where each output reads exactly one input element.
+    """
+    return [in_indices[j].copy() for j in permutation_map]
+
+
+def fixed_point_loop(
+    iterate_fn: Callable[[list[IndexSets]], list[IndexSets]],
+    carry: list[IndexSets],
+    n_carry: int,
+) -> list[IndexSets]:
+    """Run ``iterate_fn`` on carry index sets until they stabilize.
+
+    Used by ``while_loop`` and ``scan`` to propagate index sets
+    through loops via fixed-point iteration.
+    Since index sets only grow and are bounded in size
+    (i.e., monotone on a finite lattice),
+    this always converges.
+
+    Mutates ``carry`` in place and returns the final body output
+    (needed by ``scan`` for ``y_slice`` extraction; ignored by ``while_loop``).
+    """
+    body_output: list[IndexSets] = []
+    for _iteration in range(_MAX_FIXED_POINT_ITERS):
+        body_output = iterate_fn(carry)
+
+        changed = False
+        for i in range(n_carry):
+            for j in range(len(carry[i])):
+                before = len(carry[i][j])
+                carry[i][j] |= body_output[i][j]
+                if len(carry[i][j]) > before:
+                    changed = True
+
+        if not changed:
+            break
+    else:
+        msg = (
+            f"Fixed-point iteration did not converge after "
+            f"{_MAX_FIXED_POINT_ITERS} iterations. "
+            "Please report this at https://github.com/adrhill/asdex/issues"
+        )
+        raise RuntimeError(msg)  # pragma: no cover
+
+    return body_output
+
+
+def conservative_indices(all_indices: IndexSets, out_size: int) -> IndexSets:
+    """Build conservative output index sets where every element depends on the union of all inputs."""
+    combined = union_all(all_indices)
+    return [combined.copy() for _ in range(out_size)]
 
 
 def row_strides(shape: Sequence[int]) -> tuple[int, ...]:

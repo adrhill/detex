@@ -1,6 +1,5 @@
 """Propagation rule for gather operations."""
 
-import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
@@ -9,9 +8,10 @@ from ._commons import (
     atom_const_val,
     atom_numel,
     atom_shape,
-    conservative_deps,
+    conservative_indices,
     index_sets,
-    numel,
+    permute_indices,
+    position_map,
 )
 
 
@@ -68,16 +68,17 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             and slice_sizes[1:] == operand_shape[1:]
         ):
             # Map each output element to the flat operand element it reads from.
-            # Fancy-indexing an iota array does this without manual stride math:
-            # iota[k] gives the flat indices of the k-th slice along dim 0.
-            iota = np.arange(numel(operand_shape)).reshape(operand_shape)
-            flat_map = iota[concrete_indices.flatten()].flatten()
-            deps[eqn.outvars[0]] = [operand_indices[i].copy() for i in flat_map]
+            # Fancy-indexing a position map does this without manual stride math:
+            # position_map[k] gives the flat indices of the k-th slice along dim 0.
+            permutation_map = position_map(operand_shape)[
+                concrete_indices.flatten()
+            ].flatten()
+            deps[eqn.outvars[0]] = permute_indices(operand_indices, permutation_map)
             return
 
     # Conservative fallback: every output depends on every input.
     # Always correct (never misses a dependency), but marks the full Jacobian as dense.
     # Used when indices are dynamic or the gather pattern isn't one we handle precisely.
-    deps[eqn.outvars[0]] = conservative_deps(
+    deps[eqn.outvars[0]] = conservative_indices(
         operand_indices, atom_numel(eqn.outvars[0])
     )

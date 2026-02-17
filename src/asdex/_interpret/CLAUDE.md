@@ -38,6 +38,31 @@ _platform_index.py # platform_index (platform selection constant)
 - `Deps` = `dict[Var, IndexSets]` — maps jaxpr variables to their index sets
 - `ConstVals` = `dict[Var, np.ndarray]` — statically-known values for precise gather/scatter
 
+## Common Utilities in `_commons.py`
+
+- **`position_map(shape)`** —
+  builds an array where each element holds its own flat position.
+  Used to derive permutation maps by applying operations (transpose, slice, etc.)
+  to this array.
+- **`permute_indices(in_indices, permutation_map)`** —
+  builds output index sets by copying from input positions according to a map.
+  Used by handlers where each output reads exactly one input element
+  (transpose, rev, slice, reshape, broadcast, split, tile, gather, dynamic_slice).
+- **`fixed_point_loop(iterate_fn, carry, n_carry)`** —
+  runs a body function on carry index sets until they stabilize.
+  Used by `while_loop` and `scan`.
+- **`conservative_indices(all_indices, out_size)`** —
+  conservative fallback where every output element depends on the union of all inputs.
+
+## Naming Conventions
+
+- **"indices" / "index sets"**: refers to `IndexSets` (`list[set[int]]`),
+  the per-element dependency sets used for sparsity tracking.
+- **"map"**: refers to integer arrays that map output positions to input positions
+  (e.g., `permutation_map`, `position_map`).
+  These are numpy arrays, not index sets.
+- Avoid using "deps" in docstrings; prefer "index sets" or "input index sets".
+
 ## Const Value Tracking
 
 Handlers like `broadcast_in_dim`, `select_n`, and binary ops propagate concrete values through `const_vals`.

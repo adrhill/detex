@@ -1,9 +1,8 @@
 """Propagation rule for split operations."""
 
-import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, IndexSets, atom_shape, index_sets
+from ._commons import Deps, atom_shape, index_sets, permute_indices, position_map
 
 
 def prop_split(eqn: JaxprEqn, deps: Deps) -> None:
@@ -36,7 +35,7 @@ def prop_split(eqn: JaxprEqn, deps: Deps) -> None:
 
     # Build a flat index array matching the input shape,
     # then slice along the split axis for each output.
-    in_flat_indices = np.arange(int(np.prod(in_shape))).reshape(in_shape)
+    in_flat_indices = position_map(in_shape)
 
     offset = 0
     for k, out_var in enumerate(eqn.outvars):
@@ -46,6 +45,5 @@ def prop_split(eqn: JaxprEqn, deps: Deps) -> None:
         slices[axis] = slice(offset, offset + size_k)
         chunk_indices = in_flat_indices[tuple(slices)].ravel()
 
-        out_indices: IndexSets = [in_indices[idx].copy() for idx in chunk_indices]
-        deps[out_var] = out_indices
+        deps[out_var] = permute_indices(in_indices, chunk_indices)
         offset += size_k

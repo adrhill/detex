@@ -3,7 +3,7 @@
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, IndexSets, atom_shape, index_sets
+from ._commons import Deps, atom_shape, index_sets, permute_indices
 
 
 def prop_tile(eqn: JaxprEqn, deps: Deps) -> None:
@@ -29,12 +29,10 @@ def prop_tile(eqn: JaxprEqn, deps: Deps) -> None:
     reps = eqn.params["reps"]
 
     out_shape = tuple(s * r for s, r in zip(in_shape, reps, strict=True))
-    out_size = int(np.prod(out_shape))
 
     # Build output coordinates and map back to input via modular arithmetic.
     out_coords = np.indices(out_shape)  # (ndim, *out_shape)
     in_coords = tuple(out_coords[d] % in_shape[d] for d in range(len(in_shape)))
-    in_flat = np.ravel_multi_index(in_coords, in_shape).ravel()
+    permutation_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    out_indices: IndexSets = [in_indices[in_flat[i]].copy() for i in range(out_size)]
-    deps[eqn.outvars[0]] = out_indices
+    deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)

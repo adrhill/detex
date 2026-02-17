@@ -1,9 +1,8 @@
 """Propagation rule for reshape operations."""
 
-import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, atom_shape, index_sets, numel
+from ._commons import Deps, atom_shape, index_sets, numel, permute_indices, position_map
 
 
 def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
@@ -45,12 +44,10 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
     dimensions = eqn.params.get("dimensions")
     if dimensions is not None:
         # dimensions is a permutation applied before the reshape.
-        # Build the flat index mapping: iota transposed then raveled
+        # Build the flat index mapping: position map transposed then raveled
         # tells us which original flat index each output position reads.
         in_shape = atom_shape(eqn.invars[0])
-        perm = (
-            np.arange(len(in_indices)).reshape(in_shape).transpose(dimensions).ravel()
-        )
-        deps[eqn.outvars[0]] = [in_indices[j] for j in perm]
+        perm = position_map(in_shape).transpose(dimensions).ravel()
+        deps[eqn.outvars[0]] = permute_indices(in_indices, perm)
     else:
         deps[eqn.outvars[0]] = in_indices

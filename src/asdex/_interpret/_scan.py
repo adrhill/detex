@@ -3,11 +3,11 @@
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    _MAX_FIXED_POINT_ITERS,
     ConstVals,
     Deps,
     IndexSets,
     PropJaxprFn,
+    fixed_point_loop,
     forward_const_vals,
     index_sets,
     seed_const_vals,
@@ -84,29 +84,10 @@ def prop_scan(
         x_slice_deps.append(merged)
 
     # Fixed-point iteration on carry deps
-    body_output: list[IndexSets] = []
-    for _iteration in range(_MAX_FIXED_POINT_ITERS):
-        body_input = const_deps + carry_deps + x_slice_deps
-        body_output = prop_jaxpr(body_jaxpr, body_input, const_vals)
+    def iterate(carry: list[IndexSets]) -> list[IndexSets]:
+        return prop_jaxpr(body_jaxpr, const_deps + carry + x_slice_deps, const_vals)
 
-        # Union body output carry deps into current carry deps
-        changed = False
-        for i in range(num_carry):
-            for j in range(len(carry_deps[i])):
-                before = len(carry_deps[i][j])
-                carry_deps[i][j] |= body_output[i][j]
-                if len(carry_deps[i][j]) > before:
-                    changed = True
-
-        if not changed:
-            break
-    else:
-        msg = (
-            f"Fixed-point iteration did not converge after "
-            f"{_MAX_FIXED_POINT_ITERS} iterations. "
-            "Please report this at https://github.com/adrhill/asdex/issues"
-        )
-        raise RuntimeError(msg)  # pragma: no cover
+    body_output = fixed_point_loop(iterate, carry_deps, num_carry)
 
     # Write carry_final deps
     for outvar, out_deps in zip(carry_final, carry_deps, strict=True):

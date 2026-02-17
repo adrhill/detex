@@ -9,7 +9,7 @@ from ._commons import (
     atom_const_val,
     atom_numel,
     atom_shape,
-    conservative_deps,
+    conservative_indices,
     index_sets,
     numel,
 )
@@ -124,6 +124,6 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         # For more complex scatter patterns, fall through to conservative
 
     # Dynamic indices or complex scatter - conservative fallback
-    deps[eqn.outvars[0]] = conservative_deps(
+    deps[eqn.outvars[0]] = conservative_indices(
         operand_indices + updates_indices, atom_numel(eqn.outvars[0])
     )

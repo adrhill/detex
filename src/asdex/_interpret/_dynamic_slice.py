@@ -9,9 +9,10 @@ from ._commons import (
     IndexSets,
     atom_const_val,
     atom_shape,
-    conservative_deps,
+    conservative_indices,
     index_sets,
     numel,
+    permute_indices,
 )
 
 
@@ -57,16 +58,16 @@ def prop_dynamic_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None
 
     starts = _resolve_starts(eqn, 1, const_vals)
     if starts is None:
-        deps[eqn.outvars[0]] = conservative_deps(in_indices, numel(slice_sizes))
+        deps[eqn.outvars[0]] = conservative_indices(in_indices, numel(slice_sizes))
         return
 
     # Build flat index map: for each output element, which input element it reads
     in_shape = atom_shape(operand)
     out_coords = np.indices(tuple(slice_sizes))
     in_coords = tuple(s + out_coords[d] for d, s in enumerate(starts))
-    flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
+    permutation_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    deps[eqn.outvars[0]] = [in_indices[j].copy() for j in flat_map]
+    deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)
 
 
 def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -99,7 +100,7 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
 
     starts = _resolve_starts(eqn, 2, const_vals)
     if starts is None:
-        deps[eqn.outvars[0]] = conservative_deps(
+        deps[eqn.outvars[0]] = conservative_indices(
             op_indices + upd_indices, numel(op_shape)
         )
         return
@@ -110,9 +111,9 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
     # Map each update element to its flat position in the operand
     upd_coords = np.indices(upd_shape)
     op_coords = tuple(s + upd_coords[d] for d, s in enumerate(starts))
-    flat_map = np.ravel_multi_index(op_coords, op_shape).ravel()
+    permutation_map = np.ravel_multi_index(op_coords, op_shape).ravel()
 
-    for upd_flat, op_flat in enumerate(flat_map):
+    for upd_flat, op_flat in enumerate(permutation_map):
         out_indices[op_flat] = upd_indices[upd_flat].copy()
 
     deps[eqn.outvars[0]] = out_indices
