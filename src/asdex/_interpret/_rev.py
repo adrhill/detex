@@ -36,6 +36,6 @@ def prop_rev(eqn: JaxprEqn, deps: Deps) -> None:
     in_shape = atom_shape(eqn.invars[0])
     dimensions = eqn.params["dimensions"]
 
-    perm = np.flip(position_map(in_shape), axis=dimensions).ravel()
+    permutation_map = np.flip(position_map(in_shape), axis=dimensions).ravel()
 
-    deps[eqn.outvars[0]] = permute_indices(in_indices, perm)
+    deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)

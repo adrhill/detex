@@ -35,7 +35,7 @@ def prop_split(eqn: JaxprEqn, deps: Deps) -> None:
 
     # Build a flat index array matching the input shape,
     # then slice along the split axis for each output.
-    in_flat_indices = position_map(in_shape)
+    in_position_map = position_map(in_shape)
 
     offset = 0
     for k, out_var in enumerate(eqn.outvars):
@@ -43,7 +43,7 @@ def prop_split(eqn: JaxprEqn, deps: Deps) -> None:
         # Slice the input along the split axis
         slices = [slice(None)] * ndim
         slices[axis] = slice(offset, offset + size_k)
-        chunk_indices = in_flat_indices[tuple(slices)].ravel()
+        permutation_map = in_position_map[tuple(slices)].ravel()
 
-        deps[out_var] = permute_indices(in_indices, chunk_indices)
+        deps[out_var] = permute_indices(in_indices, permutation_map)
         offset += size_k
