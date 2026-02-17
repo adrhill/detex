@@ -34,9 +34,7 @@ def _hes(f, n=1):
     return hessian_sparsity(scalar_f, input_shape=n).todense().astype(int)
 
 
-# =============================================================================
 # Nonlinear unary functions: J = [[1]], H = [[1]]
-# =============================================================================
 
 _NONLINEAR = [
     pytest.param(jnp.sin, id="sin"),
@@ -83,9 +81,7 @@ def test_nonlinear_hessian(f):
     np.testing.assert_array_equal(_hes(f), _1)
 
 
-# =============================================================================
 # Linear functions: J = [[1]], H = [[0]]
-# =============================================================================
 
 _LINEAR = [
     pytest.param(lambda x: x, id="identity"),
@@ -112,9 +108,7 @@ def test_linear_hessian(f):
     np.testing.assert_array_equal(_hes(f), _0)
 
 
-# =============================================================================
 # Zero-derivative functions: J = [[0]], H = [[0]]
-# =============================================================================
 
 _ZERO_DERIV = [
     pytest.param(jnp.sign, id="sign"),
@@ -139,9 +133,7 @@ def test_zero_deriv_hessian(f):
     np.testing.assert_array_equal(_hes(f), _0)
 
 
-# =============================================================================
 # Constant functions: J = [[0]], H = [[0]]
-# =============================================================================
 
 _CONSTANT = [
     pytest.param(lambda _: jnp.array(1.0), id="const"),
@@ -163,9 +155,7 @@ def test_constant_hessian(f):
     np.testing.assert_array_equal(_hes(f), _0)
 
 
-# =============================================================================
 # Compositions: verifying sparsity propagation through chains
-# =============================================================================
 
 
 @pytest.mark.hessian
@@ -222,14 +212,12 @@ def test_multiply_by_zero_hessian():
     np.testing.assert_array_equal(_hes(f2), _1)
 
 
-# =============================================================================
 # Binary functions f: R^2 -> R
 #
 # These test the fundamental Hessian building blocks:
 # whether cross-terms (d²f/dx_i dx_j) appear correctly.
-# =============================================================================
 
-# -- Nonlinear binary: J = [[1, 1]], H has nonzero entries -------------------
+# Nonlinear binary: J = [[1, 1]], H has nonzero entries
 
 _BINARY_NONLINEAR = [
     # (function, expected_hessian, id)
@@ -280,7 +268,7 @@ def test_binary_nonlinear_hessian(f, expected_hessian):
     np.testing.assert_array_equal(_hes(f, n=2), expected_hessian)
 
 
-# -- Linear binary: J = [[1, 1]], H = zeros(2,2) ----------------------------
+# Linear binary: J = [[1, 1]], H = zeros(2,2)
 
 _BINARY_LINEAR = [
     pytest.param(lambda x: x[0] + x[1], id="add"),

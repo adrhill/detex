@@ -43,9 +43,7 @@ class SparsityPattern:
         if self.input_shape is None:
             object.__setattr__(self, "input_shape", (self.n,))
 
-    # -------------------------------------------------------------------------
     # Properties
-    # -------------------------------------------------------------------------
 
     @property
     def nnz(self) -> int:
@@ -90,9 +88,7 @@ class SparsityPattern:
             result[int(row)].append(int(col))
         return dict(result)
 
-    # -------------------------------------------------------------------------
     # Constructors
-    # -------------------------------------------------------------------------
 
     @classmethod
     def from_coordinates(
@@ -150,9 +146,7 @@ class SparsityPattern:
             shape=(dense.shape[0], dense.shape[1]),
         )
 
-    # -------------------------------------------------------------------------
     # Conversion methods
-    # -------------------------------------------------------------------------
 
     @cached_property
     def _bcoo_indices(self) -> jnp.ndarray:
@@ -183,9 +177,7 @@ class SparsityPattern:
             result[self.rows, self.cols] = 1
         return result
 
-    # -------------------------------------------------------------------------
     # Display
-    # -------------------------------------------------------------------------
 
     def __str__(self) -> str:
         """Render sparsity pattern with header and dot/braille grid."""
@@ -222,9 +214,7 @@ class ColoredPattern:
         """Whether coloring compresses columns (JVP/HVP) or rows (VJP)."""
         return self.mode in ("JVP", "HVP")
 
-    # -------------------------------------------------------------------------
     # Cached arrays for fast decompression
-    # -------------------------------------------------------------------------
 
     @cached_property
     def _extraction_indices(
@@ -311,9 +301,7 @@ class ColoredPattern:
             seeds[c] = self.colors == c
         return seeds
 
-    # -------------------------------------------------------------------------
     # Display
-    # -------------------------------------------------------------------------
 
     def __repr__(self) -> str:
         """Return compact single-line representation."""

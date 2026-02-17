@@ -11,9 +11,7 @@ import pytest
 
 from asdex import jacobian_sparsity
 
-# =============================================================================
 # dynamic_slice
-# =============================================================================
 
 
 @pytest.mark.array_ops
@@ -75,9 +73,7 @@ def test_dynamic_slice_swap_halves():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # dynamic_update_slice
-# =============================================================================
 
 
 @pytest.mark.array_ops

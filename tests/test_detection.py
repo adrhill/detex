@@ -7,9 +7,7 @@ import pytest
 
 from asdex import hessian_sparsity, jacobian_sparsity
 
-# =============================================================================
 # Core API tests
-# =============================================================================
 
 
 @pytest.mark.elementwise
@@ -24,9 +22,7 @@ def test_simple_dependencies():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Hessian sparsity tests
-# =============================================================================
 
 
 @pytest.mark.hessian
@@ -135,9 +131,7 @@ def test_readme_example():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Identity and constant functions
-# =============================================================================
 
 
 @pytest.mark.elementwise
@@ -164,9 +158,7 @@ def test_constant():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Zero derivative operations
-# =============================================================================
 
 
 @pytest.mark.elementwise
@@ -227,9 +219,7 @@ def test_comparison_ops():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Type conversion
-# =============================================================================
 
 
 @pytest.mark.elementwise
@@ -244,9 +234,7 @@ def test_type_conversion():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Power operations
-# =============================================================================
 
 
 @pytest.mark.elementwise
@@ -273,9 +261,7 @@ def test_integer_pow_zero():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Clamp operations
-# =============================================================================
 
 
 @pytest.mark.elementwise
@@ -302,9 +288,7 @@ def test_clamp_variable_bounds():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Binary operations
-# =============================================================================
 
 
 @pytest.mark.elementwise
@@ -349,9 +333,7 @@ def test_binary_min_max():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Unary functions
-# =============================================================================
 
 
 @pytest.mark.elementwise
@@ -460,9 +442,7 @@ def test_binary_atan2_rem():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Multi-output Jacobian patterns
-# =============================================================================
 
 
 @pytest.mark.elementwise
@@ -502,9 +482,7 @@ def test_vector_index_arithmetic():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Composite functions
-# =============================================================================
 
 
 @pytest.mark.elementwise
@@ -557,9 +535,7 @@ def test_ampgo07_jacobian():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Multi-variable Hessian patterns
-# =============================================================================
 
 
 @pytest.mark.hessian

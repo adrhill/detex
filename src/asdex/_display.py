@@ -18,9 +18,7 @@ _SMALL_ROWS = 16
 _SMALL_COLS = 40
 
 
-# =========================================================================
 # SparsityPattern display
-# =========================================================================
 
 
 def sparsity_str(pattern: SparsityPattern) -> str:
@@ -37,9 +35,7 @@ def sparsity_repr(pattern: SparsityPattern) -> str:
     return f"SparsityPattern(shape={pattern.shape}, nnz={pattern.nnz})"
 
 
-# =========================================================================
 # ColoredPattern display
-# =========================================================================
 
 
 def colored_repr(colored: ColoredPattern) -> str:
@@ -125,9 +121,7 @@ def _compressed_pattern(colored: ColoredPattern) -> SparsityPattern:
     return cls.from_coordinates(comp_rows, comp_cols, shape)
 
 
-# =========================================================================
 # Rendering helpers
-# =========================================================================
 
 
 def _render(pattern: SparsityPattern) -> str:

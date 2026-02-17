@@ -18,9 +18,7 @@ from asdex import (
 
 N = 200  # Problem size for benchmarks
 
-# -----------------------------------------------------------------------------
 # Test functions
-# -----------------------------------------------------------------------------
 
 
 # 1. Heat equation RHS (tridiagonal Jacobian, ~3 colors)
@@ -65,9 +63,7 @@ def rosenbrock(x):
     return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
 
 
-# -----------------------------------------------------------------------------
 # Heat Equation benchmarks (Jacobian)
-# -----------------------------------------------------------------------------
 
 
 @pytest.mark.dashboard
@@ -106,9 +102,7 @@ def test_heat_end_to_end(benchmark):
     benchmark(jac_fn, x)
 
 
-# -----------------------------------------------------------------------------
 # ConvNet benchmarks (Jacobian)
-# -----------------------------------------------------------------------------
 
 
 @pytest.mark.dashboard
@@ -145,9 +139,7 @@ def test_convnet_end_to_end(benchmark):
     benchmark(jac_fn, x)
 
 
-# -----------------------------------------------------------------------------
 # Rosenbrock benchmarks (Hessian)
-# -----------------------------------------------------------------------------
 
 
 @pytest.mark.dashboard

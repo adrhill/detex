@@ -19,9 +19,7 @@ from asdex import (
     jacobian_sparsity,
 )
 
-# =============================================================================
 # Sparsity detection with tuple input_shape
-# =============================================================================
 
 
 @pytest.mark.array_ops
@@ -98,9 +96,7 @@ def test_hessian_matrix_input_sparsity():
     np.testing.assert_array_equal(dense, np.eye(9, dtype=int))
 
 
-# =============================================================================
 # Sparsity detection with multi-dimensional outputs
-# =============================================================================
 
 
 @pytest.mark.array_ops
@@ -156,9 +152,7 @@ def test_multidim_input_and_output_sparsity():
     np.testing.assert_array_equal(dense, expected)
 
 
-# =============================================================================
 # Sparse Jacobian computation with multi-dimensional inputs and outputs
-# =============================================================================
 
 
 @pytest.mark.jacobian
@@ -231,9 +225,7 @@ def test_hessian_matrix_input():
     assert_allclose(result, expected, rtol=1e-5)
 
 
-# =============================================================================
 # LeNet-style ConvNet taking a 2D image input
-# =============================================================================
 
 
 class _TinyLeNet(nn.Module):

@@ -13,9 +13,8 @@ import pytest
 
 from asdex import jacobian_sparsity
 
-# ── Direct platform_dependent tests ──────────────────────────────────
 
-
+# Direct platform_dependent tests
 @pytest.mark.control_flow
 def test_platform_dependent_elementwise():
     """platform_dependent with element-wise branches gives identity pattern."""
@@ -40,9 +39,7 @@ def test_platform_dependent_scalar():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── High-level ops that use platform_dependent ───────────────────────
-
-
+# High-level ops that use platform_dependent
 @pytest.mark.control_flow
 def test_diag_1d():
     """jnp.diag on a 1D input uses platform_dependent internally.

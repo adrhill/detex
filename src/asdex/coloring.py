@@ -22,9 +22,7 @@ from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_jacobian_sparsity
 from asdex.pattern import ColoredPattern, SparsityPattern
 
-# =========================================================================
 # Public API: high-level convenience functions
-# =========================================================================
 
 
 def jacobian_coloring(
@@ -67,9 +65,7 @@ def hessian_coloring(
     return color_hessian_pattern(sparsity)
 
 
-# =========================================================================
 # Public API: pattern coloring
-# =========================================================================
 
 
 def color_jacobian_pattern(
@@ -146,9 +142,7 @@ def color_hessian_pattern(sparsity: SparsityPattern) -> ColoredPattern:
     return ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="HVP")
 
 
-# =========================================================================
 # Public API: low-level coloring algorithms
-# =========================================================================
 
 
 def color_rows(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
@@ -300,9 +294,7 @@ def color_symmetric(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
     return colors, num_colors
 
 
-# =========================================================================
 # Private helpers
-# =========================================================================
 
 
 def _greedy_color(

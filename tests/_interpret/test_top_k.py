@@ -34,9 +34,7 @@ def _top_k_values_jacobian(in_shape: tuple[int, ...], k: int) -> np.ndarray:
     return expected
 
 
-# ── Core shape tests ─────────────────────────────────────────────────
-
-
+# Core shape tests
 _SHAPES_AND_K = [
     pytest.param((5,), 1, id="1d_k1"),
     pytest.param((5,), 3, id="1d_k3"),
@@ -83,9 +81,7 @@ def test_top_k_indices_zero_derivative(in_shape, k):
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Compositions ─────────────────────────────────────────────────────
-
-
+# Compositions
 @pytest.mark.array_ops
 def test_top_k_after_broadcast():
     """top_k after broadcast: non-contiguous input dependencies."""
@@ -140,9 +136,7 @@ def test_top_k_then_reduce():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── High-level API ───────────────────────────────────────────────────
-
-
+# High-level API
 @pytest.mark.array_ops
 def test_jnp_top_k_1d():
     """jnp.lax.top_k on a 1D input."""

@@ -80,9 +80,7 @@ def test_select_n_mixed_deps():
     np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Hessian sparsity for select_n / jnp.where
-# =============================================================================
 
 
 @pytest.mark.hessian

@@ -33,9 +33,7 @@ def _reduction_jacobian(in_shape: tuple[int, ...], axes: tuple[int, ...]) -> np.
     return expected
 
 
-# ── Reduce function wrappers (unified interface) ────────────────────────
-
-
+# Reduce function wrappers (unified interface)
 def _reduce_sum(x, axes):
     return jnp.sum(x, axis=axes)
 
@@ -74,9 +72,7 @@ _SHAPES_AND_AXES = [
 ]
 
 
-# ── Core reduction tests ───────────────────────────────────────────────
-
-
+# Core reduction tests
 @pytest.mark.reduction
 @pytest.mark.parametrize(("in_shape", "axes"), _SHAPES_AND_AXES)
 @pytest.mark.parametrize("reduce_fn", _REDUCES)
@@ -92,9 +88,7 @@ def test_reduce(reduce_fn, in_shape, axes):
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Compositions ────────────────────────────────────────────────────────
-
-
+# Compositions
 @pytest.mark.reduction
 @pytest.mark.parametrize("reduce_fn", _REDUCES)
 def test_reduce_chained(reduce_fn):
@@ -138,9 +132,7 @@ def test_reduce_after_reduce_sum(reduce_fn):
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Edge cases ──────────────────────────────────────────────────────────
-
-
+# Edge cases
 @pytest.mark.reduction
 def test_reduce_sum_zero_size_input():
     """Zero-size input exercises empty union edge case."""
@@ -153,9 +145,7 @@ def test_reduce_sum_zero_size_input():
     assert result.nnz == 0
 
 
-# ── High-level API ──────────────────────────────────────────────────────
-
-
+# High-level API
 @pytest.mark.reduction
 def test_jnp_max_no_axis():
     """jnp.max without axis lowers to reduce_max over all axes."""
@@ -257,9 +247,7 @@ def test_jnp_prod_with_axis():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── argmax / argmin (zero derivative) ───────────────────────────────────
-
-
+# argmax / argmin (zero derivative)
 @pytest.mark.reduction
 def test_argmax():
     """Argmax has zero derivative (returns integer index, not differentiable).

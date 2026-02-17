@@ -385,9 +385,7 @@ class TestSympyEdgeCases:
         np.testing.assert_array_equal(result, expected)
 
 
-# =============================================================================
 # Hessian sparsity tests
-# =============================================================================
 
 
 def sympy_to_jax_scalar_fn(

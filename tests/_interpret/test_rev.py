@@ -33,9 +33,7 @@ def _rev_jacobian(shape: tuple[int, ...], dimensions: tuple[int, ...]):
     return expected
 
 
-# ── 1D ──────────────────────────────────────────────────────────────────
-
-
+# 1D
 @pytest.mark.array_ops
 def test_rev_1d():
     """1D reversal: output[i] = input[n-1-i]."""
@@ -62,9 +60,7 @@ def test_rev_1d_size_one():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── 2D ──────────────────────────────────────────────────────────────────
-
-
+# 2D
 @pytest.mark.array_ops
 def test_rev_2d_dim0():
     """Reverse along dim 0 (flip rows)."""
@@ -117,9 +113,7 @@ def test_rev_2d_size_one_dim():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── 3D ──────────────────────────────────────────────────────────────────
-
-
+# 3D
 @pytest.mark.array_ops
 def test_rev_3d_single_dim():
     """Reverse a single dimension of a 3D array."""
@@ -159,9 +153,7 @@ def test_rev_3d_all_dims():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── 4D ──────────────────────────────────────────────────────────────────
-
-
+# 4D
 @pytest.mark.array_ops
 def test_rev_4d():
     """Reverse selected dimensions of a 4D array."""
@@ -175,9 +167,7 @@ def test_rev_4d():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── High-level functions ────────────────────────────────────────────────
-
-
+# High-level functions
 @pytest.mark.array_ops
 def test_jnp_flip():
     """jnp.flip lowers to rev; verify end-to-end."""
@@ -229,9 +219,7 @@ def test_jnp_fliplr():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Edge cases ──────────────────────────────────────────────────────────
-
-
+# Edge cases
 @pytest.mark.array_ops
 def test_rev_empty_dimensions():
     """Reversing no dimensions is the identity."""
@@ -258,9 +246,7 @@ def test_rev_2d_square():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Double reverse (involution) ─────────────────────────────────────────
-
-
+# Double reverse (involution)
 @pytest.mark.array_ops
 def test_double_rev_is_identity():
     """Reversing twice along the same dimensions gives the identity."""

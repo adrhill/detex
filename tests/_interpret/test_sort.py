@@ -38,9 +38,7 @@ def _sort_jacobian(in_shape: tuple[int, ...], dimension: int) -> np.ndarray:
     return expected
 
 
-# ── 1D sort ──────────────────────────────────────────────────────────
-
-
+# 1D sort
 @pytest.mark.array_ops
 def test_sort_1d():
     """1D sort: all outputs depend on all inputs."""
@@ -65,9 +63,7 @@ def test_sort_1d_size_one():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── 2D sort ──────────────────────────────────────────────────────────
-
-
+# 2D sort
 @pytest.mark.array_ops
 def test_sort_2d_axis1():
     """Sort (2, 3) along axis=1: two 3x3 blocks."""
@@ -116,9 +112,7 @@ def test_sort_2d_size_one_sort_dim():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── 3D sort ──────────────────────────────────────────────────────────
-
-
+# 3D sort
 @pytest.mark.array_ops
 @pytest.mark.parametrize("dimension", [0, 1, 2])
 def test_sort_3d(dimension):
@@ -134,9 +128,7 @@ def test_sort_3d(dimension):
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Multi-operand sort ───────────────────────────────────────────────
-
-
+# Multi-operand sort
 @pytest.mark.array_ops
 def test_sort_multi_operand():
     """Multi-key sort: deps from all operands are unioned per slice.
@@ -173,9 +165,7 @@ def test_sort_multi_operand():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── High-level API ───────────────────────────────────────────────────
-
-
+# High-level API
 @pytest.mark.array_ops
 @pytest.mark.fallback
 def test_argsort():
@@ -197,9 +187,7 @@ def test_argsort():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Compositions ─────────────────────────────────────────────────────
-
-
+# Compositions
 @pytest.mark.array_ops
 def test_sort_then_reduce():
     """Sort followed by sum along sort axis collapses to reduction pattern."""

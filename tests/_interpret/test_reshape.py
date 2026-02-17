@@ -11,9 +11,8 @@ import pytest
 
 from asdex import jacobian_sparsity
 
-# ── Identity reshape (no dimensions param) ────────────────────────────
 
-
+# Identity reshape (no dimensions param)
 @pytest.mark.array_ops
 def test_reshape_1d_to_2d():
     """Reshaping 1D to 2D without permutation is the identity on flat indices."""
@@ -98,9 +97,7 @@ def test_reshape_4d():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Reshape with dimensions param ─────────────────────────────────────
-
-
+# Reshape with dimensions param
 @pytest.mark.array_ops
 def test_reshape_with_dimensions_2d():
     """Reshape with dimensions=(1,0) permutes a 2D array before flattening.
@@ -176,9 +173,7 @@ def test_reshape_with_dimensions_3d_partial_perm():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Constants ──────────────────────────────────────────────────────────
-
-
+# Constants
 @pytest.mark.array_ops
 def test_reshape_constant():
     """Reshaping a constant array produces zero sparsity."""
@@ -206,9 +201,7 @@ def test_reshape_then_slice_constant():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Chained reshapes ──────────────────────────────────────────────────
-
-
+# Chained reshapes
 @pytest.mark.array_ops
 def test_reshape_roundtrip():
     """Reshape to 2D and back to 1D is identity."""
@@ -233,9 +226,7 @@ def test_reshape_chain_different_shapes():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Non-contiguous input patterns ─────────────────────────────────────
-
-
+# Non-contiguous input patterns
 @pytest.mark.array_ops
 def test_reshape_after_broadcast():
     """Reshape following a broadcast preserves the broadcast's dep structure.
@@ -282,9 +273,7 @@ def test_reshape_after_slice():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── High-level functions ──────────────────────────────────────────────
-
-
+# High-level functions
 @pytest.mark.array_ops
 def test_jnp_reshape():
     """jnp.reshape lowers to lax.reshape."""
@@ -321,9 +310,7 @@ def test_jnp_flatten():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Edge cases ─────────────────────────────────────────────────────────
-
-
+# Edge cases
 @pytest.mark.array_ops
 def test_reshape_size_one_input():
     """Reshaping a single element to various shapes with size-1 dims."""
@@ -361,9 +348,7 @@ def test_reshape_with_dimensions_size_one():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Compositions with other ops ───────────────────────────────────────
-
-
+# Compositions with other ops
 @pytest.mark.array_ops
 def test_reshape_then_transpose():
     """Reshape to 2D then transpose: composition of two permutations."""

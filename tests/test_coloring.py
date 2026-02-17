@@ -129,9 +129,7 @@ def _is_valid_star_coloring(sparsity: SparsityPattern, colors: np.ndarray) -> bo
     return True
 
 
-# =============================================================================
 # Row coloring tests
-# =============================================================================
 
 
 @pytest.mark.coloring
@@ -388,9 +386,7 @@ def test_row_bidiagonal():
     assert _is_valid_row_coloring(sparsity, colors)
 
 
-# =============================================================================
 # Column coloring tests
-# =============================================================================
 
 
 @pytest.mark.coloring
@@ -568,9 +564,7 @@ def test_col_bidiagonal():
     assert _is_valid_col_coloring(sparsity, colors)
 
 
-# =============================================================================
 # Star coloring tests
-# =============================================================================
 
 
 @pytest.mark.coloring
@@ -743,9 +737,7 @@ def test_star_empty():
     assert len(colors) == 0
 
 
-# =============================================================================
 # Unified color_jacobian_pattern() tests
-# =============================================================================
 
 
 @pytest.mark.coloring
@@ -823,9 +815,7 @@ def test_color_force_column():
     assert _is_valid_col_coloring(sparsity, result.colors)
 
 
-# =============================================================================
 # jacobian_coloring / hessian_coloring tests
-# =============================================================================
 
 
 @pytest.mark.coloring
@@ -887,9 +877,7 @@ def test_hessian_coloring_coupled():
     assert result.num_colors <= 3
 
 
-# =============================================================================
 # _compressed_pattern tests
-# =============================================================================
 
 
 @pytest.mark.coloring
@@ -938,9 +926,7 @@ def test_compressed_pattern_row():
         assert has_orig == has_comp
 
 
-# =============================================================================
 # __str__ visualization tests
-# =============================================================================
 
 
 @pytest.mark.coloring
@@ -977,9 +963,7 @@ def test_str_row_contains_downarrow():
     assert "●" in s
 
 
-# =============================================================================
 # hessian with colored_pattern tests
-# =============================================================================
 
 
 @pytest.mark.hessian

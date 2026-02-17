@@ -11,9 +11,8 @@ import pytest
 
 from asdex import jacobian_sparsity
 
-# ── Reduce function wrappers (unified interface) ────────────────────────
 
-
+# Reduce function wrappers (unified interface)
 def _reduce_and(x, axes):
     return lax.reduce_and(x > 0, axes=axes)
 
@@ -42,9 +41,7 @@ _SHAPES_AND_AXES = [
 ]
 
 
-# ── Core tests ──────────────────────────────────────────────────────────
-
-
+# Core tests
 @pytest.mark.reduction
 @pytest.mark.parametrize(("in_shape", "axes"), _SHAPES_AND_AXES)
 @pytest.mark.parametrize("reduce_fn", _REDUCES)
@@ -62,9 +59,7 @@ def test_reduce_bitwise(reduce_fn, in_shape, axes):
     np.testing.assert_array_equal(result, expected)
 
 
-# ── High-level API ──────────────────────────────────────────────────────
-
-
+# High-level API
 @pytest.mark.reduction
 def test_jnp_all_no_axis():
     """jnp.all without axis lowers to reduce_and: zero Jacobian."""
@@ -113,9 +108,7 @@ def test_jnp_any_with_axis():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Compositions ────────────────────────────────────────────────────────
-
-
+# Compositions
 @pytest.mark.reduction
 def test_reduce_and_after_reduce_sum():
     """Threshold check after summation: reduce_and zeros out the sum deps."""

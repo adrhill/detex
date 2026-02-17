@@ -13,9 +13,7 @@ from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_sparsity
 from asdex.pattern import ColoredPattern
 
-# =========================================================================
 # Public API
-# =========================================================================
 
 
 def jacobian(
@@ -87,9 +85,7 @@ def hessian(
     return hess_fn
 
 
-# =========================================================================
 # Internal evaluation logic
-# =========================================================================
 
 
 def _eval_jacobian(
@@ -162,9 +158,7 @@ def _eval_hessian(
     return _decompress(colored_pattern, grads)
 
 
-# =========================================================================
 # Private helpers: Jacobian
-# =========================================================================
 
 
 def _jacobian_rows(
@@ -199,9 +193,7 @@ def _jacobian_cols(
     return _decompress(colored_pattern, jax.vmap(single_jvp)(seeds))
 
 
-# =========================================================================
 # Private helpers: Hessian
-# =========================================================================
 
 
 def _compute_hvps(
@@ -220,9 +212,7 @@ def _compute_hvps(
     return jax.vmap(single_hvp)(seeds)
 
 
-# =========================================================================
 # Private helpers: decompression
-# =========================================================================
 
 
 def _decompress(colored_pattern: ColoredPattern, compressed: jax.Array) -> BCOO:

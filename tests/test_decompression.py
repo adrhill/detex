@@ -16,9 +16,7 @@ from asdex import (
     jacobian_sparsity,
 )
 
-# =============================================================================
 # Reference tests against jax.jacobian (row coloring, default)
-# =============================================================================
 
 
 @pytest.mark.jacobian
@@ -248,9 +246,7 @@ def test_nonlinear_functions():
     assert_allclose(result, expected, rtol=1e-5)
 
 
-# =============================================================================
 # Edge cases
-# =============================================================================
 
 
 @pytest.mark.jacobian
@@ -307,9 +303,7 @@ def test_bcoo_format():
     assert isinstance(result, BCOO)
 
 
-# =============================================================================
 # Column coloring (JVP) Jacobian tests
-# =============================================================================
 
 
 @pytest.mark.jacobian
@@ -448,9 +442,7 @@ def test_precomputed_auto_coloring():
     assert_allclose(result, expected, rtol=1e-5)
 
 
-# =============================================================================
 # TypeError guard for old API
-# =============================================================================
 
 
 @pytest.mark.jacobian
@@ -477,9 +469,7 @@ def test_hessian_old_api_raises():
         hessian(f, x)  # type: ignore[arg-type]
 
 
-# =============================================================================
 # Input shape mismatch guard
-# =============================================================================
 
 
 @pytest.mark.jacobian
@@ -510,9 +500,7 @@ def test_hessian_shape_mismatch_raises():
         hessian(f, colored)(np.ones(6))
 
 
-# =============================================================================
 # Hessian tests
-# =============================================================================
 
 
 @pytest.mark.hessian

@@ -19,9 +19,7 @@ def _dot_general_jacobian(f, n):
     return (np.array(J).reshape(-1, n) != 0).astype(int)
 
 
-# ── Vector dot product ──────────────────────────────────────────────────────
-
-
+# Vector dot product
 @pytest.mark.array_ops
 def test_dot_1d():
     """Dot product of two copies of the same vector.
@@ -54,9 +52,7 @@ def test_dot_1d_separate():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Matrix-vector multiply ──────────────────────────────────────────────────
-
-
+# Matrix-vector multiply
 @pytest.mark.array_ops
 def test_matvec():
     """Matrix-vector multiply: out[i] = Σ_k A[i,k] * v[k].
@@ -82,9 +78,7 @@ def test_matvec():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Matrix-matrix multiply ──────────────────────────────────────────────────
-
-
+# Matrix-matrix multiply
 @pytest.mark.array_ops
 def test_matmul_2x3_3x2():
     """Matrix multiply A(2,3) @ B(3,2) → C(2,2).
@@ -135,9 +129,7 @@ def test_matmul_self():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Batched matrix multiply ─────────────────────────────────────────────────
-
-
+# Batched matrix multiply
 @pytest.mark.array_ops
 def test_batched_matmul():
     """Batched matmul: batch dim is preserved, each batch independent.
@@ -166,9 +158,7 @@ def test_batched_matmul():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Outer product ────────────────────────────────────────────────────────────
-
-
+# Outer product
 @pytest.mark.array_ops
 def test_outer_product_via_dot_general():
     """Outer product via dot_general with no contracting dimensions.
@@ -193,9 +183,7 @@ def test_outer_product_via_dot_general():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Size-1 dimensions ───────────────────────────────────────────────────────
-
-
+# Size-1 dimensions
 @pytest.mark.array_ops
 def test_matmul_size_1_row():
     """Matrix multiply with size-1 row: (1,3) @ (3,2) → (1,2)."""
@@ -243,9 +231,7 @@ def test_matmul_size_1_contract():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Higher-dimensional contractions ─────────────────────────────────────────
-
-
+# Higher-dimensional contractions
 @pytest.mark.array_ops
 def test_einsum_ij_jk():
     """Einstein summation ij,jk->ik (standard matmul via einsum)."""
@@ -302,9 +288,7 @@ def test_tensordot_axes_2():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Non-contiguous input deps ────────────────────────────────────────────────
-
-
+# Non-contiguous input deps
 @pytest.mark.array_ops
 def test_matmul_after_broadcast():
     """Matmul where inputs have non-trivial dep sets from a prior broadcast.
@@ -343,9 +327,7 @@ def test_matmul_with_constant():
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Verify against jax.jacobian ──────────────────────────────────────────────
-
-
+# Verify against jax.jacobian
 @pytest.mark.array_ops
 @pytest.mark.parametrize(
     ("desc", "f", "n"),
@@ -363,9 +345,7 @@ def test_against_jax_jacobian(desc, f, n):
     np.testing.assert_array_equal(result, expected)
 
 
-# ── Adversarial edge cases ───────────────────────────────────────────────────
-
-
+# Adversarial edge cases
 @pytest.mark.array_ops
 def test_multi_contract_dims():
     """Multiple contracting dimensions: contract on 2 axes simultaneously."""
