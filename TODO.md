@@ -11,7 +11,7 @@ These primitives in `_interpret/__init__.py` use the conservative fallback.
 - **`nonbatchable`**: Annotation from `jax.custom_batching.custom_vmap`
   marking non-batched args. Opaque custom batching rule.
 
-### Could be improved
+### Done
 
 - **`select_if_vmap`**: Vmapped `lax.cond` lowered to element-wise select.
-  Structurally similar to `select_n`, which already has a precise handler.
+  Precise handler added — structurally identical to `select_n`.
