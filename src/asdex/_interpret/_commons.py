@@ -103,7 +103,7 @@ def check_no_index_sets(deps: Deps, atom: Atom, primitive_name: str) -> None:
             f"'{primitive_name}' handler assumes an auxiliary input "
             "has no dependency on the function's inputs, "
             "but found non-empty index sets. "
-            "Please report this at https://github.com/adrhill/asdex/issues"
+            "Please help out asdex's development by reporting this at https://github.com/adrhill/asdex/issues"
         )
         raise ValueError(msg)
 
@@ -241,7 +241,8 @@ def fixed_point_loop(
         msg = (
             f"Fixed-point iteration did not converge after "
             f"{_MAX_FIXED_POINT_ITERS} iterations. "
-            "Please report this at https://github.com/adrhill/asdex/issues"
+            "Please help out asdex's development by reporting this at "
+            "https://github.com/adrhill/asdex/issues"
         )
         raise RuntimeError(msg)  # pragma: no cover
 

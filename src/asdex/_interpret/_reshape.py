@@ -37,7 +37,8 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
         msg = (
             f"Reshape size mismatch: input has {len(in_indices)} elements "
             f"but output expects {out_size}. "
-            "Please report this at https://github.com/adrhill/asdex/issues"
+            "Please help out asdex's development by reporting this at "
+            "https://github.com/adrhill/asdex/issues"
         )
         raise ValueError(msg)
 
