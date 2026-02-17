@@ -38,7 +38,7 @@ def prop_cond(
     """
     branches = eqn.params["branches"]
     operands = eqn.invars[1:]
-    operand_deps: list[IndexSets] = [index_sets(deps, v) for v in operands]
+    operand_indices: list[IndexSets] = [index_sets(deps, v) for v in operands]
 
     n_out = len(eqn.outvars)
 
@@ -47,7 +47,7 @@ def prop_cond(
     for branch in branches:
         seed_const_vals(const_vals, branch.jaxpr.constvars, branch.consts)
         forward_const_vals(const_vals, operands, branch.jaxpr.invars)
-        out = prop_jaxpr(branch.jaxpr, operand_deps, const_vals)
+        out = prop_jaxpr(branch.jaxpr, operand_indices, const_vals)
         branch_outputs.append(out)
 
     # Union across branches for each output variable

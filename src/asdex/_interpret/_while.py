@@ -54,16 +54,16 @@ def prop_while(
     forward_const_vals(const_vals, body_consts, body_jaxpr.invars[:body_nconsts])
 
     # Initialize carry deps from the initial values
-    carry_deps: list[IndexSets] = [index_sets(deps, v) for v in carry_init]
+    carry_indices: list[IndexSets] = [index_sets(deps, v) for v in carry_init]
 
     # body_jaxpr invars: [body_consts..., carry...]
-    const_input: list[IndexSets] = [index_sets(deps, v) for v in body_consts]
+    const_inputs: list[IndexSets] = [index_sets(deps, v) for v in body_consts]
 
     def iterate(carry: list[IndexSets]) -> list[IndexSets]:
-        return prop_jaxpr(body_jaxpr, const_input + carry, const_vals)
+        return prop_jaxpr(body_jaxpr, const_inputs + carry, const_vals)
 
-    fixed_point_loop(iterate, carry_deps, n_carry)
+    fixed_point_loop(iterate, carry_indices, n_carry)
 
     # Write final carry deps to outvars
-    for outvar, out_deps in zip(eqn.outvars, carry_deps, strict=True):
-        deps[outvar] = out_deps
+    for outvar, out_indices in zip(eqn.outvars, carry_indices, strict=True):
+        deps[outvar] = out_indices

@@ -48,13 +48,13 @@ def prop_top_k(eqn: JaxprEqn, deps: Deps) -> None:
     n_batches = math.prod(in_shape[:-1]) if len(in_shape) > 1 else 1
 
     # Union input deps within each batch slice (contiguous along last axis)
-    group_deps = [
+    group_indices = [
         union_all(in_indices[b * last_dim : (b + 1) * last_dim])
         for b in range(n_batches)
     ]
 
     # Each of the k value outputs per batch copies its group's deps
     deps[eqn.outvars[0]] = [
-        group_deps[b].copy() for b in range(n_batches) for _ in range(k)
+        group_indices[b].copy() for b in range(n_batches) for _ in range(k)
     ]
     deps[eqn.outvars[1]] = [set() for _ in range(atom_numel(eqn.outvars[1]))]

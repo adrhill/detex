@@ -43,23 +43,25 @@ def prop_sort(eqn: JaxprEqn, deps: Deps) -> None:
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.sort.html
     """
-    dimension = eqn.params["dimension"]
+    dim = eqn.params["dimension"]
     in_shape = atom_shape(eqn.invars[0])
     total = atom_numel(eqn.invars[0])
 
     # groups[b] holds the flat indices for batch slice b.
-    groups = np.moveaxis(np.arange(total).reshape(in_shape), dimension, -1).reshape(
-        -1, in_shape[dimension]
+    groups = np.moveaxis(np.arange(total).reshape(in_shape), dim, -1).reshape(
+        -1, in_shape[dim]
     )
 
     # Union deps from all operands within each batch slice.
     all_indices = [index_sets(deps, v) for v in eqn.invars]
-    group_deps = [union_all([ids[i] for ids in all_indices for i in g]) for g in groups]
+    group_indices = [
+        union_all([ids[i] for ids in all_indices for i in g]) for g in groups
+    ]
 
     # Broadcast each slice's deps back to every element in the slice.
     for outvar in eqn.outvars:
         out: list[set[int]] = [set()] * total
-        for gd, g in zip(group_deps, groups, strict=True):
+        for gd, g in zip(group_indices, groups, strict=True):
             for i in g:
                 out[i] = gd.copy()
         deps[outvar] = out

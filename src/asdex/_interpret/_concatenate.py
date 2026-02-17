@@ -31,14 +31,14 @@ def prop_concatenate(eqn: JaxprEqn, deps: Deps) -> None:
     # For each input, build a shaped array whose values are positions in that pool.
     # np.concatenate on these index arrays mirrors the real op's element shuffling,
     # giving a flat mapping from each output element to the pool position it came from.
-    all_deps: IndexSets = []
+    all_indices: IndexSets = []
     index_arrays = []
     for invar in eqn.invars:
-        in_deps = index_sets(deps, invar)
-        offset = len(all_deps)
-        all_deps.extend(in_deps)
+        in_indices = index_sets(deps, invar)
+        offset = len(all_indices)
+        all_indices.extend(in_indices)
         shape = atom_shape(invar)
-        index_arrays.append(np.arange(offset, offset + len(in_deps)).reshape(shape))
+        index_arrays.append(np.arange(offset, offset + len(in_indices)).reshape(shape))
 
-    mapping = np.concatenate(index_arrays, axis=dim).ravel()
-    deps[eqn.outvars[0]] = [all_deps[i] for i in mapping]
+    permutation_map = np.concatenate(index_arrays, axis=dim).ravel()
+    deps[eqn.outvars[0]] = [all_indices[i] for i in permutation_map]
