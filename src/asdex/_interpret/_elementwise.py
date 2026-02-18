@@ -122,11 +122,20 @@ def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     deps[eqn.outvars[0]] = [s.copy() for s in index_sets(deps, eqn.invars[0])]
 
 
-def prop_convert_element_type(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_convert_element_type(
+    eqn: JaxprEqn, deps: Deps, const_vals: ConstVals
+) -> None:
     """Type conversion (e.g., float32 → float64) changes dtype without changing values.
 
     Dependencies pass through unchanged.
     The Jacobian is the identity matrix.
+
+    Also propagates const values with the new dtype
+    so downstream gather/scatter can resolve static indices.
+    JAX inserts ``convert_element_type`` for index dtype changes
+    (e.g. int64 → int32) before gather/scatter;
+    without const propagation here the chain breaks
+    and gathers fall back to conservative.
 
     Example: y = x.astype(float64) where x = [a, b, c]
         Input deps:  [{0}, {1}, {2}]
@@ -139,3 +148,12 @@ def prop_convert_element_type(eqn: JaxprEqn, deps: Deps) -> None:
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.convert_element_type.html
     """
     deps[eqn.outvars[0]] = [s.copy() for s in index_sets(deps, eqn.invars[0])]
+
+    in_val = atom_const_val(eqn.invars[0], const_vals)
+    if in_val is not None:
+        new_dtype = eqn.params.get("new_dtype")
+        if new_dtype is not None:
+            const_vals[eqn.outvars[0]] = in_val.astype(new_dtype)
+        else:
+            # stop_gradient, bitcast_convert_type, etc. — pass through as-is.
+            const_vals[eqn.outvars[0]] = in_val

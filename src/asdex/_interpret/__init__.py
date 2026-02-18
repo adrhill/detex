@@ -273,9 +273,9 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         case "reduce_sum" | "reduce_max" | "reduce_min" | "reduce_prod":
             prop_reduce(eqn, deps)
         case "convert_element_type" | "bitcast_convert_type" | "reduce_precision":
-            prop_convert_element_type(eqn, deps)
+            prop_convert_element_type(eqn, deps, const_vals)
         case "stop_gradient":
-            prop_convert_element_type(eqn, deps)
+            prop_convert_element_type(eqn, deps, const_vals)
         case "conv_general_dilated":
             prop_conv_general_dilated(eqn, deps)
         case "custom_jvp_call" | "custom_vjp_call":
