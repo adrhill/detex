@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771430956674,
+  "lastUpdate": 1771446594675,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -5118,6 +5118,142 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.012038228777319972",
             "extra": "mean: 53.33610099999856 msec\nrounds: 19"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "me@sirmarcel.com",
+            "name": "Marcel",
+            "username": "sirmarcel"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7abb59c29b919f8c5b5999431de9b8e1627db4c6",
+          "message": "fix(interpret): shape-aware broadcasting, multi-dim scatter, const propagation (#51)\n\n* fix(interpret): propagate const_vals through convert_element_type\n\nJAX inserts convert_element_type (e.g. int64 → int32) before every\ngather/scatter operation. Without const value propagation through\nthis primitive, the chain from closure-captured index arrays to\ngather/scatter handlers breaks, causing all gathers to fall back\nto conservative (fully dense) index sets.\n\nAlso handles stop_gradient and bitcast_convert_type, which share\nthe same handler but lack the new_dtype parameter.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix(interpret): handle multi-dimensional scatter patterns\n\nExtend the scatter handler beyond the 1D-only case to support two\nadditional patterns:\n\n1. Batched scatter along dim 0 with trailing window dims preserved.\n   This is the pattern produced by the backward of features[indices]\n   on multi-dimensional arrays (scatter-add with update_window_dims=(1,),\n   inserted_window_dims=(0,)).\n\n2. Full-window scatter along an arbitrary single dimension.\n   This is the pattern from x.at[:, idx, :].set(value) where all update\n   dims are window dims and the scatter targets one position along an\n   arbitrary dimension.\n\nWithout these patterns, any scatter on multi-dimensional arrays fell\nback to conservative (fully dense) index sets.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix(interpret): use shape-aware broadcasting in binary elementwise ops\n\nThe previous implementation used flat modular indexing (i % len) to\nhandle broadcasting, which only works correctly for scalar (len=1)\nbroadcast. For multi-dimensional broadcasting like (16,16) * (16,1),\nit incorrectly maps output element [p,d] to in2[d] instead of in2[p]\nvia (p*16 + d) % 16 = d.\n\nUse numpy coordinate mapping (np.indices + ravel_multi_index) when\ninput shapes differ, respecting numpy broadcasting rules where size-1\ndimensions always read index 0. The fast path with modular indexing\nis preserved for the common cases of same-shape or scalar inputs.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* style: fix lint and formatting\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(benchmarks): add SchNet-style GNN Hessian benchmark\n\nAdds a minimal message-passing GNN as a fourth benchmark group\nexercising gather (neighbor lookup), broadcast (cutoff weighting),\nand scatter-add (gradient of gather) — the patterns pathological\nfor sparsity detection in graph neural networks.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(interpret): strengthen broadcast and scatter test assertions\n\nAdd test_binary_broadcast_dependent_operands that catches the flat\nmodular indexing bug by using input-dependent operands on both sides.\nUpdate test_scatter_2d to assert the exact conservative pattern with\na TODO documenting the true sparse result.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>\nCo-authored-by: adrhill <adrian.hill@mailbox.org>",
+          "timestamp": "2026-02-18T21:29:10+01:00",
+          "tree_id": "e18f7f37836df89f9b2a856397ce8ef6a8b1bef2",
+          "url": "https://github.com/adrhill/asdex/commit/7abb59c29b919f8c5b5999431de9b8e1627db4c6"
+        },
+        "date": 1771446593490,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 801.3234340829583,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004473012612609976",
+            "extra": "mean: 1.247935549450652 msec\nrounds: 182"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3404.027838734071,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000013354211350070177",
+            "extra": "mean: 293.7696303834846 usec\nrounds: 2113"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 58.331140471314924,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00026886058424906796",
+            "extra": "mean: 17.14350160000322 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 85.81231966963263,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003430220766544421",
+            "extra": "mean: 11.653338400009261 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.22945221571928,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01911509782516312",
+            "extra": "mean: 47.10437131578709 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 264.3864074775911,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000034292143476003244",
+            "extra": "mean: 3.7823427064220696 msec\nrounds: 218"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 27.337477928258593,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0014302339892949402",
+            "extra": "mean: 36.57981920001134 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 9.942281555884037,
+            "unit": "iter/sec",
+            "range": "stddev: 0.036136918766337296",
+            "extra": "mean: 100.58053520000954 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 80.4429006992926,
+            "unit": "iter/sec",
+            "range": "stddev: 0.017362104570603294",
+            "extra": "mean: 12.431177783334135 msec\nrounds: 60"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3292.1814424296067,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000014272415786561456",
+            "extra": "mean: 303.74996563433854 usec\nrounds: 2066"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 25.580019393643322,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00039915045528182756",
+            "extra": "mean: 39.09301180000284 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 19.07715300592426,
+            "unit": "iter/sec",
+            "range": "stddev: 0.017346199813022725",
+            "extra": "mean: 52.418723049999016 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_detection",
+            "value": 25.354648248013756,
+            "unit": "iter/sec",
+            "range": "stddev: 0.034370453829108194",
+            "extra": "mean: 39.440499833332865 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_coloring",
+            "value": 665.2314066429499,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000012944767825113378",
+            "extra": "mean: 1.503236302456674 msec\nrounds: 529"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_materialization",
+            "value": 13.634560887117905,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000823160097955242",
+            "extra": "mean: 73.34302940000157 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
+            "value": 8.024289481464228,
+            "unit": "iter/sec",
+            "range": "stddev: 0.033669421102112594",
+            "extra": "mean: 124.62162566666596 msec\nrounds: 9"
           }
         ]
       }
