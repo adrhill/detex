@@ -79,5 +79,7 @@ uv run pytest -m hessian         # Run only Hessian tests
 ## Conventions
 
 - Tests documenting **expected future behavior** (TODOs) should use the `fallback` marker and include a `TODO(primitive)` comment explaining the precise expected behavior.
+- **Whenever you discover a conservative pattern** (the handler produces a correct but overly dense result), you **must** document it with a `TODO(primitive)` comment showing the true precise pattern.
+  Catching these is extremely valuable — each one is a concrete roadmap entry for improving sparsity detection.
 - Tests documenting **known bugs** should use the `bug` marker and `pytest.raises` to assert the current (broken) behavior.
 - Each test function should have a docstring explaining what it tests.
