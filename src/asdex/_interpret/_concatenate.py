@@ -3,10 +3,10 @@
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, IndexSets, atom_shape, index_sets
+from ._commons import ConstVals, Deps, IndexSets, atom_const_val, atom_shape, index_sets
 
 
-def prop_concatenate(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_concatenate(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Concatenate joins arrays along a specified axis.
 
     Each output element comes from exactly one input element.
@@ -42,3 +42,10 @@ def prop_concatenate(eqn: JaxprEqn, deps: Deps) -> None:
 
     permutation_map = np.concatenate(index_arrays, axis=dim).ravel()
     deps[eqn.outvars[0]] = [all_indices[i] for i in permutation_map]
+
+    # Propagate const_vals so downstream gather/scatter can resolve indices.
+    vals = [atom_const_val(v, const_vals) for v in eqn.invars]
+    if all(v is not None for v in vals):
+        const_vals[eqn.outvars[0]] = np.concatenate(
+            [v for v in vals if v is not None], axis=dim
+        )

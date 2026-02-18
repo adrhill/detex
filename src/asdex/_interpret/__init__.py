@@ -214,7 +214,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         case "broadcast_in_dim":
             prop_broadcast_in_dim(eqn, deps, const_vals)
         case "concatenate":
-            prop_concatenate(eqn, deps)
+            prop_concatenate(eqn, deps, const_vals)
         case "reshape":
             prop_reshape(eqn, deps)
         case "transpose":

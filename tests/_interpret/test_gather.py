@@ -3,12 +3,15 @@
 https://docs.jax.dev/en/latest/_autosummary/jax.lax.gather.html
 """
 
+import jax
 import jax.lax as lax
 import jax.numpy as jnp
 import numpy as np
 import pytest
 
 from asdex import jacobian_sparsity
+
+# Existing tests
 
 
 @pytest.mark.array_ops
@@ -94,3 +97,413 @@ def test_gather_2d_row_select():
         dtype=int,
     )
     np.testing.assert_array_equal(result, expected)
+
+
+# Helpers
+
+
+def _check_precision(f, input_size: int) -> None:
+    """Verify detected sparsity matches the actual Jacobian exactly.
+
+    Uses a random test point and compares the structural nonzero pattern
+    from ``jacobian_sparsity`` against ``jax.jacobian``.
+    Non-square shapes and avoiding local sparsity
+    ensure real nonzeros appear in the actual Jacobian.
+    """
+    sparsity = jacobian_sparsity(f, input_shape=input_size)
+    detected = sparsity.todense().astype(int)
+
+    x_test = jax.random.normal(jax.random.key(42), (input_size,))
+    actual_jac = jax.jacobian(f)(x_test)
+    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
+
+    np.testing.assert_array_equal(
+        detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
+    )
+
+
+def _check_strictly_sparser_than_conservative(f, input_size: int) -> None:
+    """Verify the detected pattern is strictly sparser than conservative.
+
+    Conservative means every output depends on every input (all ones).
+    The detected pattern must be a subset but not equal.
+    """
+    sparsity = jacobian_sparsity(f, input_shape=input_size)
+    detected = sparsity.todense().astype(int)
+    n_out, n_in = detected.shape
+
+    # Must be strictly sparser: fewer nonzeros than the full dense block.
+    assert detected.sum() < n_out * n_in, (
+        "Detected pattern is not strictly sparser than conservative. "
+        f"nnz={detected.sum()}, conservative={n_out * n_in}"
+    )
+
+    # Sanity: must have at least one nonzero.
+    assert detected.sum() > 0, "Detected pattern has no nonzeros at all"
+
+
+# Precision verification (compare against jax.jacobian)
+
+
+@pytest.mark.array_ops
+def test_gather_embedding_precision():
+    """Dim-0 gather on non-square operand matches actual Jacobian.
+
+    Embedding lookup: (5, 3)[indices] with non-square shape
+    so every dim has a unique size.
+    """
+
+    def f(x):
+        mat = x.reshape(5, 3)
+        indices = jnp.array([3, 0, 4])
+        return mat[indices].flatten()
+
+    _check_precision(f, input_size=15)
+
+
+@pytest.mark.array_ops
+def test_gather_dim1_precision():
+    """Gather along dim 1 on a (3, 4) matrix matches actual Jacobian.
+
+    ``x[:, indices]`` selects columns.
+    """
+
+    def f(x):
+        mat = x.reshape(3, 4)
+        indices = jnp.array([2, 0])
+        return mat[:, indices].flatten()
+
+    _check_precision(f, input_size=12)
+
+
+@pytest.mark.array_ops
+def test_gather_middle_dim_precision():
+    """Gather along the middle dim of a (2, 3, 4) tensor matches actual Jacobian.
+
+    ``x[:, indices, :]`` selects slices along dim 1.
+    """
+
+    def f(x):
+        t = x.reshape(2, 3, 4)
+        indices = jnp.array([2, 0])
+        return t[:, indices, :].flatten()
+
+    _check_precision(f, input_size=24)
+
+
+@pytest.mark.array_ops
+def test_gather_last_dim_precision():
+    """Gather along the last dim of a (2, 3, 4) tensor matches actual Jacobian.
+
+    ``x[:, :, indices]`` selects along the trailing axis.
+    """
+
+    def f(x):
+        t = x.reshape(2, 3, 4)
+        indices = jnp.array([3, 1, 0])
+        return t[:, :, indices].flatten()
+
+    _check_precision(f, input_size=24)
+
+
+@pytest.mark.array_ops
+def test_gather_multi_index_precision():
+    """Multi-index gather ``x[rows, cols]`` on (3, 4) matches actual Jacobian.
+
+    Advanced integer indexing with two index arrays
+    collapses both dims simultaneously.
+    """
+
+    def f(x):
+        mat = x.reshape(3, 4)
+        rows = jnp.array([0, 2, 1, 0])
+        cols = jnp.array([3, 1, 0, 2])
+        return mat[rows, cols]
+
+    _check_precision(f, input_size=12)
+
+
+# Asymmetric shapes (all dims unique)
+
+
+@pytest.mark.array_ops
+def test_gather_dim0_nonsquare():
+    """Dim-0 gather on (5, 3) tracks per-row dependencies precisely.
+
+    Non-square shape makes axis-ordering bugs visible.
+    """
+
+    def f(x):
+        mat = x.reshape(5, 3)
+        indices = jnp.array([4, 1])
+        return mat[indices].flatten()
+
+    _check_precision(f, input_size=15)
+
+
+@pytest.mark.array_ops
+def test_gather_dim1_nonsquare():
+    """Dim-1 gather on (2, 5) selects columns precisely.
+
+    Non-square shape where dim 0 < dim 1.
+    """
+
+    def f(x):
+        mat = x.reshape(2, 5)
+        indices = jnp.array([4, 0, 2])
+        return mat[:, indices].flatten()
+
+    _check_precision(f, input_size=10)
+
+
+@pytest.mark.array_ops
+def test_gather_3d_asymmetric():
+    """Gather along dim 1 of (2, 3, 5) — all dims have unique sizes.
+
+    Asymmetric shape exposes transposition bugs in offset_dims mapping.
+    """
+
+    def f(x):
+        t = x.reshape(2, 3, 5)
+        indices = jnp.array([2, 0])
+        return t[:, indices, :].flatten()
+
+    _check_precision(f, input_size=30)
+
+
+# Conservative audit
+
+
+@pytest.mark.array_ops
+def test_gather_dim0_sparser_than_conservative():
+    """Dim-0 gather result is strictly sparser than conservative."""
+
+    def f(x):
+        mat = x.reshape(5, 3)
+        indices = jnp.array([3, 0])
+        return mat[indices].flatten()
+
+    _check_strictly_sparser_than_conservative(f, input_size=15)
+
+
+@pytest.mark.array_ops
+def test_gather_dim1_sparser_than_conservative():
+    """Dim-1 gather result is strictly sparser than conservative."""
+
+    def f(x):
+        mat = x.reshape(2, 5)
+        indices = jnp.array([4, 1])
+        return mat[:, indices].flatten()
+
+    _check_strictly_sparser_than_conservative(f, input_size=10)
+
+
+@pytest.mark.array_ops
+def test_gather_middle_dim_sparser_than_conservative():
+    """Middle-dim gather on (2, 3, 5) is strictly sparser than conservative."""
+
+    def f(x):
+        t = x.reshape(2, 3, 5)
+        indices = jnp.array([1])
+        return t[:, indices, :].flatten()
+
+    _check_strictly_sparser_than_conservative(f, input_size=30)
+
+
+@pytest.mark.array_ops
+def test_gather_multi_index_sparser_than_conservative():
+    """Multi-index gather ``x[rows, cols]`` is strictly sparser than conservative."""
+
+    def f(x):
+        mat = x.reshape(3, 4)
+        rows = jnp.array([0, 2])
+        cols = jnp.array([3, 1])
+        return mat[rows, cols]
+
+    _check_strictly_sparser_than_conservative(f, input_size=12)
+
+
+# Const chain / composition
+
+
+@pytest.mark.array_ops
+def test_gather_indices_through_broadcast():
+    """Indices surviving broadcast_in_dim remain statically known.
+
+    A scalar index broadcast to a 1-element array
+    should still resolve precisely for gather.
+    """
+
+    def f(x):
+        # broadcast_in_dim is emitted when JAX broadcasts a scalar index.
+        idx = jnp.array(2)
+        idx_arr = jnp.broadcast_to(idx, (1,))
+        return x[idx_arr]
+
+    _check_precision(f, input_size=5)
+
+
+@pytest.mark.xfail(reason="TODO(reshape): const_vals not propagated through reshape")
+@pytest.mark.array_ops
+def test_gather_indices_through_reshape():
+    """Indices surviving reshape remain statically known.
+
+    A 2D index array reshaped to 1D
+    should still resolve precisely for gather.
+    Requires const_vals propagation through reshape.
+    """
+
+    def f(x):
+        idx = jnp.array([[1, 0], [2, 3]])
+        idx_flat = idx.reshape(4)
+        return x[idx_flat]
+
+    _check_precision(f, input_size=5)
+
+
+@pytest.mark.array_ops
+def test_gather_indices_through_convert_element_type():
+    """Indices surviving convert_element_type remain statically known.
+
+    JAX sometimes emits type conversions on index arrays
+    (e.g. int32 -> int64).
+    """
+
+    def f(x):
+        idx = jnp.array([2, 0, 1], dtype=jnp.int32)
+        # Force a type conversion via explicit cast.
+        idx64 = idx.astype(jnp.int64)
+        return x[idx64]
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0]], dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_gather_chained_two_gathers():
+    """Two gathers chained: ``x[idx1][:, idx2]``.
+
+    First gather selects rows (dim 0),
+    second gather selects columns (dim 1) from the result.
+    Both should resolve precisely.
+    """
+
+    def f(x):
+        mat = x.reshape(5, 3)
+        idx1 = jnp.array([4, 0, 2])
+        intermediate = mat[idx1]  # (3, 3) from rows 4, 0, 2
+        idx2 = jnp.array([2, 0])
+        return intermediate[:, idx2].flatten()
+
+    _check_precision(f, input_size=15)
+
+
+# Edge cases
+
+
+@pytest.mark.array_ops
+def test_gather_single_element():
+    """Gather of a single element produces a 1-output, single-dependency row."""
+
+    def f(x):
+        return x[jnp.array([2])]
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    expected = np.array([[0, 0, 1, 0, 0]], dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_gather_2d_index_array():
+    """2D index array gathers into a 2D output.
+
+    ``x[[[0, 2], [1, 3]]]`` produces shape (2, 2).
+    """
+
+    def f(x):
+        idx = jnp.array([[0, 3], [1, 2]])
+        return x[idx].flatten()
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # out[0] <- in[0], out[1] <- in[3], out[2] <- in[1], out[3] <- in[2]
+    expected = np.array(
+        [
+            [1, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 1, 0, 0],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_gather_repeated_indices():
+    """Repeated indices produce duplicate rows in the Jacobian.
+
+    ``x[[1, 1, 1]]`` selects the same element three times.
+    All three output rows should depend only on input[1].
+    """
+
+    def f(x):
+        idx = jnp.array([1, 1, 1])
+        return x[idx]
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 1, 0, 0],
+            [0, 1, 0, 0],
+            [0, 1, 0, 0],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_gather_identity_permutation():
+    """Identity permutation ``x[[0, 1, 2, 3]]`` produces an identity Jacobian."""
+
+    def f(x):
+        idx = jnp.array([0, 1, 2, 3])
+        return x[idx]
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.eye(4, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_gather_dim1_via_lax_gather():
+    """Gather along axis 1 using direct lax.gather matches actual Jacobian.
+
+    Uses lax.gather directly to avoid the jit wrapper
+    that ``jnp.take`` introduces.
+    """
+
+    def f(x):
+        mat = x.reshape(3, 4)
+        indices = jnp.array([3, 0])
+        return mat[:, indices].flatten()
+
+    _check_precision(f, input_size=12)
+
+
+@pytest.mark.array_ops
+def test_gather_3d_last_dim_direct():
+    """Gather along last dim of (2, 3, 5) via direct indexing.
+
+    All three dims have unique sizes to catch transposition errors.
+    Uses ``x[:, :, indices]`` instead of ``jnp.take``
+    to emit a bare gather without a jit wrapper.
+    """
+
+    def f(x):
+        t = x.reshape(2, 3, 5)
+        indices = jnp.array([4, 1, 0])
+        return t[:, :, indices].flatten()
+
+    _check_precision(f, input_size=30)

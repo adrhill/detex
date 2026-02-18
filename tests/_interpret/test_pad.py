@@ -44,26 +44,32 @@ def test_pad_1d_asymmetric():
 
 @pytest.mark.array_ops
 def test_pad_2d():
-    """2D padding preserves per-element structure."""
+    """2D non-square padding preserves per-element structure.
+
+    Uses non-square shape (2,3) to catch dimension-ordering bugs.
+    """
 
     def f(x):
-        mat = x.reshape(2, 2)
+        mat = x.reshape(2, 3)
         return jnp.pad(mat, ((1, 0), (0, 1)), constant_values=0).flatten()
 
-    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
-    # Input: [[x0, x1], [x2, x3]]
-    # Padded: [[0, 0, 0], [x0, x1, 0], [x2, x3, 0]]  (3x3 = 9 outputs)
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    # Input: [[x0, x1, x2], [x3, x4, x5]]
+    # Padded: [[0, 0, 0, 0], [x0, x1, x2, 0], [x3, x4, x5, 0]]  (3x4 = 12 outputs)
     expected = np.array(
         [
-            [0, 0, 0, 0],  # pad (0,0)
-            [0, 0, 0, 0],  # pad (0,1)
-            [0, 0, 0, 0],  # pad (0,2)
-            [1, 0, 0, 0],  # x0  (1,0)
-            [0, 1, 0, 0],  # x1  (1,1)
-            [0, 0, 0, 0],  # pad (1,2)
-            [0, 0, 1, 0],  # x2  (2,0)
-            [0, 0, 0, 1],  # x3  (2,1)
-            [0, 0, 0, 0],  # pad (2,2)
+            [0, 0, 0, 0, 0, 0],  # pad (0,0)
+            [0, 0, 0, 0, 0, 0],  # pad (0,1)
+            [0, 0, 0, 0, 0, 0],  # pad (0,2)
+            [0, 0, 0, 0, 0, 0],  # pad (0,3)
+            [1, 0, 0, 0, 0, 0],  # x0  (1,0)
+            [0, 1, 0, 0, 0, 0],  # x1  (1,1)
+            [0, 0, 1, 0, 0, 0],  # x2  (1,2)
+            [0, 0, 0, 0, 0, 0],  # pad (1,3)
+            [0, 0, 0, 1, 0, 0],  # x3  (2,0)
+            [0, 0, 0, 0, 1, 0],  # x4  (2,1)
+            [0, 0, 0, 0, 0, 1],  # x5  (2,2)
+            [0, 0, 0, 0, 0, 0],  # pad (2,3)
         ]
     )
     np.testing.assert_array_equal(result, expected)
@@ -194,30 +200,185 @@ def test_pad_value_with_deps():
 
 @pytest.mark.array_ops
 def test_pad_2d_interior():
-    """2D interior padding dilates both dimensions."""
+    """2D non-square interior padding dilates both dimensions.
+
+    Uses non-square shape (2,3) to catch dimension-ordering bugs.
+    """
 
     def f(x):
-        mat = x.reshape(2, 2)
+        mat = x.reshape(2, 3)
         # Interior padding of 1 in both dims
         return jax.lax.pad(mat, 0.0, [(0, 0, 1), (0, 0, 1)]).flatten()
 
-    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
-    # Input: [[a, b], [c, d]]
-    # Dilated: [[a, 0, b], [0, 0, 0], [c, 0, d]]  (3x3 = 9 elements)
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    # Input: [[a, b, c], [d, e, f]]
+    # Dilated (3x5):
+    # [[a, 0, b, 0, c],
+    #  [0, 0, 0, 0, 0],
+    #  [d, 0, e, 0, f]]
     expected = np.array(
         [
-            [1, 0, 0, 0],  # a
-            [0, 0, 0, 0],  # interior
-            [0, 1, 0, 0],  # b
-            [0, 0, 0, 0],  # interior
-            [0, 0, 0, 0],  # interior
-            [0, 0, 0, 0],  # interior
-            [0, 0, 1, 0],  # c
-            [0, 0, 0, 0],  # interior
-            [0, 0, 0, 1],  # d
+            [1, 0, 0, 0, 0, 0],  # a
+            [0, 0, 0, 0, 0, 0],  # interior
+            [0, 1, 0, 0, 0, 0],  # b
+            [0, 0, 0, 0, 0, 0],  # interior
+            [0, 0, 1, 0, 0, 0],  # c
+            [0, 0, 0, 0, 0, 0],  # interior row
+            [0, 0, 0, 0, 0, 0],  # interior row
+            [0, 0, 0, 0, 0, 0],  # interior row
+            [0, 0, 0, 0, 0, 0],  # interior row
+            [0, 0, 0, 0, 0, 0],  # interior row
+            [0, 0, 0, 1, 0, 0],  # d
+            [0, 0, 0, 0, 0, 0],  # interior
+            [0, 0, 0, 0, 1, 0],  # e
+            [0, 0, 0, 0, 0, 0],  # interior
+            [0, 0, 0, 0, 0, 1],  # f
         ]
     )
     np.testing.assert_array_equal(result, expected)
+
+
+# Precision verification (compare against jax.jacobian)
+
+
+@pytest.mark.array_ops
+def test_pad_1d_precision():
+    """1D pad with interior+border matches actual Jacobian exactly."""
+
+    def f(x):
+        return jax.lax.pad(x, 0.0, [(1, 2, 1)])
+
+    input_size = 5
+    detected = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
+
+    x_test = jax.random.normal(jax.random.key(0), (input_size,))
+    actual_jac = jax.jacobian(f)(x_test)
+    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
+
+    np.testing.assert_array_equal(
+        detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
+    )
+
+
+@pytest.mark.array_ops
+def test_pad_2d_nonsquare_precision():
+    """2D non-square pad with asymmetric config matches actual Jacobian exactly."""
+
+    def f(x):
+        mat = x.reshape(2, 3)
+        return jax.lax.pad(mat, 0.0, [(1, 0, 0), (0, 2, 1)]).flatten()
+
+    input_size = 6
+    detected = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
+
+    x_test = jax.random.normal(jax.random.key(1), (input_size,))
+    actual_jac = jax.jacobian(f)(x_test)
+    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
+
+    np.testing.assert_array_equal(
+        detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
+    )
+
+
+@pytest.mark.array_ops
+def test_pad_3d_precision():
+    """3D pad with mixed config matches actual Jacobian exactly."""
+
+    def f(x):
+        arr = x.reshape(2, 3, 2)
+        return jax.lax.pad(arr, 0.0, [(0, 1, 0), (1, 0, 1), (0, 0, 0)]).flatten()
+
+    input_size = 12
+    detected = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
+
+    x_test = jax.random.normal(jax.random.key(2), (input_size,))
+    actual_jac = jax.jacobian(f)(x_test)
+    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
+
+    np.testing.assert_array_equal(
+        detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
+    )
+
+
+# Conservative audit
+
+
+@pytest.mark.array_ops
+def test_pad_conservative_audit():
+    """Pad sparsity is strictly sparser than dense.
+
+    The detected pattern must have fewer nonzeros than n_outputs * n_inputs,
+    confirming the handler is not falling back to a conservative all-ones result.
+    """
+
+    def f(x):
+        mat = x.reshape(2, 3)
+        return jnp.pad(mat, ((1, 1), (1, 1)), constant_values=0).flatten()
+
+    n_inputs = 6
+    result = jacobian_sparsity(f, input_shape=n_inputs).todense().astype(int)
+    n_outputs = result.shape[0]
+
+    assert result.sum() < n_outputs * n_inputs
+
+
+# 3D + mixed interior/border
+
+
+@pytest.mark.array_ops
+def test_pad_3d_mixed():
+    """3D pad with mixed border and interior config.
+
+    Exercises multi-dimensional coordinate mapping
+    where each axis has a different padding configuration.
+    """
+
+    def f(x):
+        arr = x.reshape(2, 2, 3)
+        # dim 0: border only (low=1, high=0, interior=0)
+        # dim 1: interior only (low=0, high=0, interior=1)
+        # dim 2: border + interior (low=0, high=1, interior=1)
+        return jax.lax.pad(arr, 0.0, [(1, 0, 0), (0, 0, 1), (0, 1, 1)]).flatten()
+
+    input_size = 12
+    detected = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
+
+    # Verify against actual Jacobian
+    x_test = jax.random.normal(jax.random.key(3), (input_size,))
+    actual_jac = jax.jacobian(f)(x_test)
+    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
+
+    np.testing.assert_array_equal(
+        detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
+    )
+
+
+# Degenerate shapes
+
+
+@pytest.mark.array_ops
+def test_pad_size_one_dim():
+    """Pad a (1,3) array where one dimension has size 1.
+
+    Size-1 dimensions are an edge case for interior padding
+    since there are no gaps between elements to fill.
+    """
+
+    def f(x):
+        mat = x.reshape(1, 3)
+        # Interior padding on the size-1 dim has no effect.
+        return jax.lax.pad(mat, 0.0, [(1, 1, 1), (0, 0, 1)]).flatten()
+
+    input_size = 3
+    detected = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
+
+    x_test = jax.random.normal(jax.random.key(4), (input_size,))
+    actual_jac = jax.jacobian(f)(x_test)
+    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
+
+    np.testing.assert_array_equal(
+        detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
+    )
 
 
 @pytest.mark.hessian

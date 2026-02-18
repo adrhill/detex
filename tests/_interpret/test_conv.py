@@ -5,6 +5,7 @@ References:
 """
 
 import jax
+import jax.lax as lax
 import numpy as np
 import pytest
 from flax import nnx
@@ -48,6 +49,8 @@ def check_conv_sparsity(
 
     assert sparsity.shape == (expected_out_size, input_size)
     assert sparsity.nnz > 0
+    # Conservative audit: detected sparsity must be strictly sparser than dense.
+    assert sparsity.nnz < expected_out_size * input_size
 
     if verify_exact:
         x_test = jax.random.normal(jax.random.key(42), (input_size,))
@@ -178,4 +181,270 @@ def test_conv_transpose():
 
     np.testing.assert_array_equal(
         detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
+    )
+
+
+# Non-square shapes
+
+
+@pytest.mark.parametrize(
+    ("input_hw", "kernel_size", "channels"),
+    [
+        # Non-square input + square kernel
+        ((5, 7), (3, 3), (1, 1)),
+        # Non-square input + non-square kernel
+        ((6, 4), (2, 3), (1, 1)),
+        # Both non-square + multi-channel
+        ((5, 7), (3, 2), (2, 3)),
+    ],
+)
+def test_conv_non_square(input_hw, kernel_size, channels):
+    """Non-square spatial dimensions exercise asymmetric stride arithmetic."""
+    check_conv_sparsity(input_hw, kernel_size, channels, verify_exact=True)
+
+
+# 1D convolution
+
+
+def _check_conv1d_sparsity(
+    length: int,
+    kernel_size: int,
+    channels: tuple[int, int],
+    *,
+    strides: tuple[int] = (1,),
+    padding: str = "VALID",
+) -> None:
+    """Verify 1D conv sparsity via ``jax.lax.conv_general_dilated``.
+
+    Uses layout ``(N, C, L)`` to exercise the 1D code path.
+    """
+    C_in, C_out = channels
+    input_size = length * C_in
+    # Kernel layout IOH: (C_in, C_out, kernel_size)
+    kernel = jax.random.normal(jax.random.key(0), (C_in, C_out, kernel_size))
+
+    def f(x_flat):
+        # Layout: (N, C_in, L)
+        x = x_flat.reshape(1, C_in, length)
+        y = lax.conv_general_dilated(
+            x,
+            kernel,
+            window_strides=strides,
+            padding=padding,
+            dimension_numbers=("NCH", "IOH", "NCH"),
+        )
+        return y.flatten()
+
+    sparsity = jacobian_sparsity(f, input_shape=input_size)
+
+    assert sparsity.nnz > 0
+    out_size = sparsity.shape[0]
+    # Conservative audit
+    assert sparsity.nnz < out_size * input_size
+
+    x_test = jax.random.normal(jax.random.key(42), (input_size,))
+    actual_jac = jax.jacobian(f)(x_test)
+    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
+    detected = sparsity.todense().astype(int)
+
+    np.testing.assert_array_equal(
+        detected, actual_nonzero, "1D conv sparsity should match actual Jacobian"
+    )
+
+
+def test_conv1d_single_channel():
+    """1D convolution with a single input and output channel."""
+    _check_conv1d_sparsity(10, 3, (1, 1))
+
+
+def test_conv1d_multi_channel():
+    """1D convolution with multiple channels."""
+    _check_conv1d_sparsity(8, 3, (2, 3))
+
+
+# Grouped convolution
+
+
+def _check_grouped_conv_sparsity(
+    input_hw: tuple[int, int],
+    kernel_size: tuple[int, int],
+    channels: tuple[int, int],
+    feature_group_count: int,
+    *,
+    strides: tuple[int, int] = (1, 1),
+    padding: str = "VALID",
+) -> None:
+    """Verify grouped conv sparsity via ``jax.lax.conv_general_dilated``.
+
+    Checks exact match against ``jax.jacobian`` and verifies
+    the pattern is block-diagonal (sparser than ungrouped).
+    """
+    H, W = input_hw
+    C_in, C_out = channels
+    assert C_in % feature_group_count == 0
+    assert C_out % feature_group_count == 0
+
+    input_size = H * W * C_in
+    # Kernel layout IOHW: (C_in // groups, C_out, kH, kW)
+    kernel = jax.random.normal(
+        jax.random.key(0),
+        (C_in // feature_group_count, C_out, *kernel_size),
+    )
+
+    def f(x_flat):
+        # NCHW layout
+        x = x_flat.reshape(1, C_in, H, W)
+        y = lax.conv_general_dilated(
+            x,
+            kernel,
+            window_strides=strides,
+            padding=padding,
+            dimension_numbers=("NCHW", "IOHW", "NCHW"),
+            feature_group_count=feature_group_count,
+        )
+        return y.flatten()
+
+    sparsity = jacobian_sparsity(f, input_shape=input_size)
+
+    assert sparsity.nnz > 0
+    out_size = sparsity.shape[0]
+    # Conservative audit
+    assert sparsity.nnz < out_size * input_size
+
+    # Exact match against jax.jacobian
+    x_test = jax.random.normal(jax.random.key(42), (input_size,))
+    actual_jac = jax.jacobian(f)(x_test)
+    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
+    detected = sparsity.todense().astype(int)
+
+    np.testing.assert_array_equal(
+        detected,
+        actual_nonzero,
+        "Grouped conv sparsity should match actual Jacobian",
+    )
+
+
+def test_grouped_conv_2_groups():
+    """Grouped convolution with 2 groups shows block-diagonal sparsity."""
+    _check_grouped_conv_sparsity((4, 4), (3, 3), (4, 4), feature_group_count=2)
+
+
+def test_grouped_conv_3_groups():
+    """Grouped convolution with 3 groups."""
+    _check_grouped_conv_sparsity((4, 4), (3, 3), (6, 6), feature_group_count=3)
+
+
+def test_grouped_conv_asymmetric_channels():
+    """Grouped convolution with more output channels than input channels."""
+    _check_grouped_conv_sparsity((4, 4), (3, 3), (4, 8), feature_group_count=2)
+
+
+# Depthwise convolution
+
+
+def test_depthwise_conv():
+    """Depthwise convolution: ``feature_group_count == C_in``, kernel input dim = 1.
+
+    Each output channel depends only on the corresponding input channel,
+    producing a clear block-diagonal pattern.
+    """
+    H, W = 5, 5
+    C_in = 3
+    C_out = 3  # Same as C_in for standard depthwise
+    input_size = H * W * C_in
+
+    # Depthwise: groups == C_in, kernel layout IOHW: (1, C_out, kH, kW)
+    kernel = jax.random.normal(jax.random.key(0), (1, C_out, 3, 3))
+
+    def f(x_flat):
+        x = x_flat.reshape(1, C_in, H, W)
+        y = lax.conv_general_dilated(
+            x,
+            kernel,
+            window_strides=(1, 1),
+            padding="VALID",
+            dimension_numbers=("NCHW", "IOHW", "NCHW"),
+            feature_group_count=C_in,
+        )
+        return y.flatten()
+
+    sparsity = jacobian_sparsity(f, input_shape=input_size)
+
+    assert sparsity.nnz > 0
+    out_size = sparsity.shape[0]
+    assert sparsity.nnz < out_size * input_size
+
+    # Exact match
+    x_test = jax.random.normal(jax.random.key(42), (input_size,))
+    actual_jac = jax.jacobian(f)(x_test)
+    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
+    detected = sparsity.todense().astype(int)
+
+    np.testing.assert_array_equal(
+        detected,
+        actual_nonzero,
+        "Depthwise conv sparsity should match actual Jacobian",
+    )
+
+
+# Combinations
+
+
+def test_grouped_conv_with_strides():
+    """Grouped convolution combined with stride > 1."""
+    _check_grouped_conv_sparsity(
+        (6, 6), (3, 3), (4, 4), feature_group_count=2, strides=(2, 2)
+    )
+
+
+def test_grouped_conv_with_same_padding():
+    """Grouped convolution combined with SAME padding."""
+    _check_grouped_conv_sparsity(
+        (5, 5), (3, 3), (4, 4), feature_group_count=2, padding="SAME"
+    )
+
+
+# Dilated kernel (rhs_dilation)
+
+
+def test_rhs_dilation():
+    """Direct rhs_dilation test exercises dilated (atrous) convolution.
+
+    Previously only tested indirectly via ConvTranspose (which uses lhs_dilation).
+    """
+    H, W = 7, 7
+    C_in, C_out = 1, 1
+    input_size = H * W * C_in
+
+    # Kernel layout IOHW: (C_in, C_out, kH, kW)
+    kernel = jax.random.normal(jax.random.key(0), (C_in, C_out, 3, 3))
+
+    def f(x_flat):
+        x = x_flat.reshape(1, C_in, H, W)
+        y = lax.conv_general_dilated(
+            x,
+            kernel,
+            window_strides=(1, 1),
+            padding="VALID",
+            dimension_numbers=("NCHW", "IOHW", "NCHW"),
+            rhs_dilation=(2, 2),
+        )
+        return y.flatten()
+
+    sparsity = jacobian_sparsity(f, input_shape=input_size)
+
+    assert sparsity.nnz > 0
+    out_size = sparsity.shape[0]
+    assert sparsity.nnz < out_size * input_size
+
+    # Exact match
+    x_test = jax.random.normal(jax.random.key(42), (input_size,))
+    actual_jac = jax.jacobian(f)(x_test)
+    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
+    detected = sparsity.todense().astype(int)
+
+    np.testing.assert_array_equal(
+        detected,
+        actual_nonzero,
+        "Dilated kernel conv sparsity should match actual Jacobian",
     )

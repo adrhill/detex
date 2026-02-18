@@ -335,8 +335,44 @@ def test_matmul_with_constant():
         ("vecvec", lambda x: jnp.dot(x[:2], x[2:]).reshape(1), 4),
         ("matvec", lambda x: x[:6].reshape(2, 3) @ x[6:], 9),
         ("matmat", lambda x: (x[:6].reshape(2, 3) @ x[6:].reshape(3, 2)).flatten(), 12),
+        (
+            "outer",
+            lambda x: jax.lax.dot_general(
+                x[:3], x[3:], dimension_numbers=(([], []), ([], []))
+            ).flatten(),
+            5,
+        ),
+        (
+            "batched_matmul",
+            lambda x: jnp.matmul(
+                x[:24].reshape(2, 3, 4), x[24:].reshape(2, 4, 5)
+            ).flatten(),
+            64,
+        ),
+        (
+            "size_1_contract",
+            lambda x: (x[:2].reshape(2, 1) @ x[2:].reshape(1, 3)).flatten(),
+            5,
+        ),
+        (
+            "multi_contract",
+            lambda x: jax.lax.dot_general(
+                x[:24].reshape(2, 3, 4),
+                x[24:].reshape(3, 4, 5),
+                dimension_numbers=(((1, 2), (0, 1)), ((), ())),
+            ).flatten(),
+            84,
+        ),
     ],
-    ids=["vecvec", "matvec", "matmat"],
+    ids=[
+        "vecvec",
+        "matvec",
+        "matmat",
+        "outer",
+        "batched_matmul",
+        "size_1_contract",
+        "multi_contract",
+    ],
 )
 def test_against_jax_jacobian(desc, f, n):
     """Sparsity pattern matches the nonzero pattern of jax.jacobian."""
@@ -440,4 +476,157 @@ def test_vecdot():
 
     result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
     expected = np.ones((1, 12), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+# Conservative audit
+#
+# The handler should produce strictly sparser patterns than conservative
+# (where every output depends on the union of all inputs).
+
+
+def _conservative_pattern(f, n):
+    """Build the conservative pattern: every output depends on all inputs."""
+    x = jnp.ones(n)
+    out = f(x)
+    out_size = np.array(out).size
+    return np.ones((out_size, n), dtype=int)
+
+
+@pytest.mark.array_ops
+@pytest.mark.parametrize(
+    ("desc", "f", "n"),
+    [
+        (
+            "matmul",
+            lambda x: (x[:6].reshape(2, 3) @ x[6:].reshape(3, 2)).flatten(),
+            12,
+        ),
+        (
+            "batched_matmul",
+            lambda x: jnp.matmul(
+                x[:24].reshape(2, 3, 4), x[24:].reshape(2, 4, 5)
+            ).flatten(),
+            64,
+        ),
+        (
+            "size_1_contract",
+            lambda x: (x[:2].reshape(2, 1) @ x[2:].reshape(1, 3)).flatten(),
+            5,
+        ),
+    ],
+    ids=["matmul", "batched_matmul", "size_1_contract"],
+)
+def test_strictly_sparser_than_conservative(desc, f, n):
+    """Handler produces a strictly sparser pattern than conservative.
+
+    Conservative makes every output depend on all inputs.
+    The handler should have fewer nonzeros while still being a superset
+    of the true Jacobian nonzero pattern.
+    """
+    result = jacobian_sparsity(f, input_shape=n).todense().astype(int)
+    conservative = _conservative_pattern(f, n)
+    true_jac = _dot_general_jacobian(f, n)
+
+    # Handler is a superset of the true pattern.
+    assert np.all(result >= true_jac), "Handler missed a true nonzero"
+
+    # Handler is a subset of conservative.
+    assert np.all(result <= conservative), "Handler exceeds conservative"
+
+    # Handler is strictly sparser (fewer total nonzeros).
+    assert result.sum() < conservative.sum(), (
+        f"Handler ({result.sum()}) is not strictly sparser "
+        f"than conservative ({conservative.sum()})"
+    )
+
+
+# Asymmetric shapes
+#
+# All dimensions are unique to catch any axis-confusion bugs.
+
+
+@pytest.mark.array_ops
+def test_asymmetric_matmul_2x5_5x7():
+    """Matmul (2,5) @ (5,7) with all unique dimension sizes."""
+
+    def f(x):
+        A = x[:10].reshape(2, 5)
+        B = x[10:].reshape(5, 7)
+        return (A @ B).flatten()
+
+    n = 10 + 35
+    result = jacobian_sparsity(f, input_shape=n).todense().astype(int)
+    expected = _dot_general_jacobian(f, n)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_asymmetric_batched_matmul_3x2x5_3x5x7():
+    """Batched matmul (3,2,5) @ (3,5,7) with all unique dimension sizes."""
+
+    def f(x):
+        A = x[:30].reshape(3, 2, 5)
+        B = x[30:].reshape(3, 5, 7)
+        return jnp.matmul(A, B).flatten()
+
+    n = 30 + 105
+    result = jacobian_sparsity(f, input_shape=n).todense().astype(int)
+    expected = _dot_general_jacobian(f, n)
+    np.testing.assert_array_equal(result, expected)
+
+
+# Batch broadcasting
+#
+# jnp.matmul broadcasts leading dimensions,
+# which lowers to broadcast_in_dim + dot_general.
+
+
+@pytest.mark.array_ops
+def test_batch_broadcast_matmul():
+    """jnp.matmul with batch broadcasting: (2,3) matmul (3,2,3,4).
+
+    The lhs (2,3) is broadcast to (3,2,2,3) before contraction.
+    Each batch slice contracts independently.
+    """
+
+    def f(x):
+        A = x[:6].reshape(2, 3)
+        B = x[6:].reshape(3, 2, 3, 4)
+        return jnp.matmul(A, B).flatten()
+
+    n = 6 + 72
+    result = jacobian_sparsity(f, input_shape=n).todense().astype(int)
+    expected = _dot_general_jacobian(f, n)
+    np.testing.assert_array_equal(result, expected)
+
+
+# Composition
+#
+# Elementwise → matmul → elementwise chain.
+# Verifies that sparsity is preserved through multiple operations.
+
+
+@pytest.mark.array_ops
+def test_elementwise_matmul_elementwise_chain():
+    """Elementwise → matmul → elementwise composition.
+
+    Applies sin to inputs, matmul, then tanh to outputs.
+    The sparsity structure should match a plain matmul
+    since elementwise ops preserve sparsity.
+    """
+
+    def f(x):
+        A = jnp.sin(x[:6].reshape(2, 3))
+        B = jnp.sin(x[6:].reshape(3, 2))
+        return jnp.tanh((A @ B).flatten())
+
+    def f_plain(x):
+        A = x[:6].reshape(2, 3)
+        B = x[6:].reshape(3, 2)
+        return (A @ B).flatten()
+
+    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    # Elementwise ops don't change sparsity structure.
+    expected = jacobian_sparsity(f_plain, input_shape=12).todense().astype(int)
     np.testing.assert_array_equal(result, expected)

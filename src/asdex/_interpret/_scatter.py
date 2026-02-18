@@ -25,7 +25,7 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     operand vs which receive scattered updates.
     For dynamic scatter_indices, we fall back to conservative.
 
-    Two precise patterns are handled:
+    Three precise patterns are handled:
 
     1. **Batched scatter along dim 0**: each update row targets a different operand row.
        Pattern: ``inserted_window_dims=(0,)``, ``scatter_dims_to_operand_dims=(0,)``,
@@ -38,6 +38,11 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
        Pattern: ``inserted_window_dims=(d,)``, ``scatter_dims_to_operand_dims=(d,)``,
        all update dims are window dims.
        This is the pattern JAX emits for ``arr.at[:, idx, :].set(val)``.
+
+    3. **Multi-index scatter**: each update is a scalar written at a multi-dim coordinate.
+       Pattern: ``update_window_dims=()``, all dims inserted, ``scatter_dims_to_operand_dims``
+       matches ``inserted_window_dims``, indices shape is ``(N, ndim)``.
+       This is the pattern JAX emits for ``mat.at[rows, cols].set(vals)``.
 
     For scatter (replace): out[idx[i]] = updates[i], else out[j] = operand[j]
         Positions NOT in idx: depend on corresponding operand element.
@@ -194,6 +199,55 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 
                 deps[eqn.outvars[0]] = out_indices
                 return
+
+        # Pattern 3: Multi-index scatter where each update is a scalar
+        # written at a multi-dimensional coordinate.
+        #
+        # Example: mat.at[rows, cols].set(vals) with mat shape (3, 5):
+        #   update_window_dims=(), inserted_window_dims=(0, 1),
+        #   scatter_dims_to_operand_dims=(0, 1),
+        #   scatter_indices shape (N, 2)
+        ndim = len(operand_shape)
+        if (
+            dim_nums.update_window_dims == ()
+            and dim_nums.inserted_window_dims == tuple(range(ndim))
+            and dim_nums.scatter_dims_to_operand_dims == dim_nums.inserted_window_dims
+            and concrete_indices.ndim == 2
+            and concrete_indices.shape[1] == ndim
+        ):
+            # Build mapping from flat output position
+            # to list of update indices that scatter into it.
+            # Skip OOB indices (JAX drops them in FILL_OR_DROP mode).
+            scatter_positions: dict[int, list[int]] = {}
+            for update_idx in range(concrete_indices.shape[0]):
+                coords = concrete_indices[update_idx]
+                if any(
+                    coords[d] < 0 or coords[d] >= operand_shape[d] for d in range(ndim)
+                ):
+                    continue
+                flat_pos = int(np.ravel_multi_index(coords, operand_shape))
+                if flat_pos not in scatter_positions:
+                    scatter_positions[flat_pos] = []
+                scatter_positions[flat_pos].append(update_idx)
+
+            out_indices: IndexSets = []
+            for i in range(out_size):
+                if i in scatter_positions:
+                    if is_combine:
+                        # Union operand and all updates targeting this position.
+                        combined = operand_indices[i].copy()
+                        for u_idx in scatter_positions[i]:
+                            combined |= updates_indices[u_idx]
+                        out_indices.append(combined)
+                    else:
+                        # Replace: last-write-wins.
+                        last_u = scatter_positions[i][-1]
+                        out_indices.append(updates_indices[last_u].copy())
+                else:
+                    out_indices.append(operand_indices[i].copy())
+
+            deps[eqn.outvars[0]] = out_indices
+            return
 
         # For more complex scatter patterns, fall through to conservative
 
