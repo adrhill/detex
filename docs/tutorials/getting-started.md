@@ -79,6 +79,10 @@ J_dense = jax.jacobian(f)(x)
 np.testing.assert_allclose(J.todense(), J_dense, atol=1e-6)
 ```
 
+`asdex` also provides [`check_jacobian_correctness`][asdex.check_jacobian_correctness]
+as a convenience for this comparison —
+see [Verifying Results](../how-to/jacobians.md#verifying-results).
+
 On larger problems, the speedup from coloring becomes significant.
 Let's benchmark on a 5000-dimensional input
 (note that timings may vary as part of the doc-building process):

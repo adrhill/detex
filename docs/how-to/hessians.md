@@ -17,6 +17,15 @@ H = hessian(f)(x)
 This detects sparsity, colors the pattern symmetrically, and decompresses.
 The result is a JAX [BCOO](https://docs.jax.dev/en/latest/jax.experimental.sparse.html) sparse matrix.
 
+!!! tip "Verify correctness at least once"
+
+    asdex's sparsity patterns should always be conservative,
+    i.e., they may contain extra nonzeros but should never miss any.
+    A bug in sparsity detection could cause missing nonzeros,
+    leading to incorrect Hessians.
+    Always verify against JAX's dense Hessian at least once on a new function.
+    See [Verifying Results](#verifying-results) below.
+
 !!! warning "Precompute the colored pattern"
 
     Without a precomputed colored pattern,
@@ -137,6 +146,35 @@ colored_pattern = color_hessian_pattern(sparsity)
 hess_fn = hessian(f, colored_pattern)
 H = hess_fn(x)
 ```
+
+## Verifying Results
+
+Use [`check_hessian_correctness`][asdex.check_hessian_correctness]
+to verify that the sparse Hessian matches JAX's dense reference:
+
+```python
+from asdex import check_hessian_correctness
+
+check_hessian_correctness(g, x)
+```
+
+This compares `asdex.hessian(g)(x)` against `jax.hessian(g)(x)`.
+If the results match, the function returns silently.
+If they disagree, it raises a [`VerificationError`][asdex.VerificationError].
+
+You can also pass a pre-computed colored pattern
+and custom tolerances:
+
+```python
+check_hessian_correctness(g, x, colored_pattern=colored_pattern, rtol=1e-5, atol=1e-5)
+```
+
+!!! warning "Dense computation"
+
+    Verification computes the full dense Hessian using JAX,
+    which scales as \(O(n^2)\).
+    Use this for debugging and initial setup,
+    not in production loops.
 
 ## Multi-Dimensional Inputs
 

@@ -13,6 +13,15 @@ J = jacobian(f)(x)
 This detects sparsity, colors the pattern, and decompresses — all in one call.
 The result is a JAX [BCOO](https://docs.jax.dev/en/latest/jax.experimental.sparse.html) sparse matrix.
 
+!!! tip "Verify correctness at least once"
+
+    asdex's sparsity patterns should always be conservative,
+    i.e., they may contain extra nonzeros but should never miss any.
+    A bug in sparsity detection could cause missing nonzeros,
+    leading to incorrect Jacobians.
+    Always verify against JAX's dense Jacobian at least once on a new function.
+    See [Verifying Results](#verifying-results) below.
+
 !!! warning "Precompute the colored pattern"
 
     Without a precomputed colored pattern,
@@ -138,6 +147,35 @@ colored_pattern = color_jacobian_pattern(sparsity)
 jac_fn = jacobian(f, colored_pattern)
 J = jac_fn(x)
 ```
+
+## Verifying Results
+
+Use [`check_jacobian_correctness`][asdex.check_jacobian_correctness]
+to verify that the sparse Jacobian matches JAX's dense reference:
+
+```python
+from asdex import check_jacobian_correctness
+
+check_jacobian_correctness(f, x)
+```
+
+This compares `asdex.jacobian(f)(x)` against `jax.jacobian(f)(x)`.
+If the results match, the function returns silently.
+If they disagree, it raises a [`VerificationError`][asdex.VerificationError].
+
+You can also pass a pre-computed colored pattern
+and custom tolerances:
+
+```python
+check_jacobian_correctness(f, x, colored_pattern=colored_pattern, rtol=1e-5, atol=1e-5)
+```
+
+!!! warning "Dense computation"
+
+    Verification computes the full dense Jacobian using JAX,
+    which scales as \(O(mn)\).
+    Use this for debugging and initial setup,
+    not in production loops.
 
 ## Multi-Dimensional Inputs
 
