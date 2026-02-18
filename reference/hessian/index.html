@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -913,6 +913,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#asdex.check_hessian_correctness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        check_hessian_correctness
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1104,6 +1115,17 @@
     <span class="md-ellipsis">
       
         color_hessian_pattern
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asdex.check_hessian_correctness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        check_hessian_correctness
       
     </span>
   </a>
@@ -1519,6 +1541,150 @@ which exploits Hessian symmetry for fewer colors than row coloring.</p>
   
       dataclass
   " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None)" href="#asdex.hessian"><code>hessian</code></a>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="asdex.check_hessian_correctness" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">check_hessian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-07</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-07</span><span class="p">)</span></code>
+
+<a href="#asdex.check_hessian_correctness" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+        <p>Verify asdex's sparse Hessian against <code>jax.hessian</code> at a given input.</p>
+<p>Computes the sparse Hessian using asdex and the dense Hessian using JAX,
+then checks that all entries match within the given tolerances.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>f</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="numpy.typing.ArrayLike">ArrayLike</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scalar-valued function taking an array.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>x</code>
+            </td>
+            <td>
+                  <code><span title="numpy.typing.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Input at which to evaluate the Hessian.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>colored_pattern</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoredPattern
+
+
+  
+      dataclass
+   (asdex.pattern.ColoredPattern)" href="../#asdex.ColoredPattern">ColoredPattern</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional pre-computed colored pattern.
+If None, sparsity is detected and colored automatically.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>rtol</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Relative tolerance for comparison.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1e-07</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>atol</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Absolute tolerance for comparison.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1e-07</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.VerificationError (asdex.verify.VerificationError)" href="../jacobian/#asdex.VerificationError">VerificationError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the sparse and dense Hessians disagree.</p>
               </div>
             </td>
           </tr>

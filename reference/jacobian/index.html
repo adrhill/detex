@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -885,6 +885,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#asdex.check_jacobian_correctness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        check_jacobian_correctness
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asdex.VerificationError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VerificationError
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1104,6 +1126,28 @@
     <span class="md-ellipsis">
       
         color_jacobian_pattern
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asdex.check_jacobian_correctness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        check_jacobian_correctness
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asdex.VerificationError" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VerificationError
       
     </span>
   </a>
@@ -1555,6 +1599,187 @@ computed together in a single VJP (or JVP).</p>
           </tr>
       </tbody>
     </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="asdex.check_jacobian_correctness" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-07</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-07</span><span class="p">)</span></code>
+
+<a href="#asdex.check_jacobian_correctness" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+        <p>Verify asdex's sparse Jacobian against <code>jax.jacobian</code> at a given input.</p>
+<p>Computes the sparse Jacobian using asdex and the dense Jacobian using JAX,
+then checks that all entries match within the given tolerances.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>f</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="numpy.typing.ArrayLike">ArrayLike</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Function taking an array and returning an array.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>x</code>
+            </td>
+            <td>
+                  <code><span title="numpy.typing.ArrayLike">ArrayLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Input at which to evaluate the Jacobian.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>colored_pattern</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoredPattern
+
+
+  
+      dataclass
+   (asdex.pattern.ColoredPattern)" href="../#asdex.ColoredPattern">ColoredPattern</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional pre-computed colored pattern.
+If None, sparsity is detected and colored automatically.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>rtol</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Relative tolerance for comparison.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1e-07</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>atol</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Absolute tolerance for comparison.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1e-07</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.VerificationError (asdex.verify.VerificationError)" href="#asdex.VerificationError">VerificationError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the sparse and dense Jacobians disagree.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="asdex.VerificationError" class="doc doc-heading">
+            <code>asdex.VerificationError</code>
+
+
+<a href="#asdex.VerificationError" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="AssertionError">AssertionError</span></code></p>
+
+
+
+        <p>Raised when asdex's sparse result does not match JAX's dense reference.</p>
+<p>This indicates that the detected sparsity pattern is missing nonzeros,
+which is a bug — asdex's patterns should always be conservative
+(i.e., contain at least all true nonzeros).
+If you encounter this error,
+please help out asdex's development by reporting this at
+https://github.com/adrhill/asdex/issues.</p>
+
+
+
+
+
+
+
 
 
     </div>
