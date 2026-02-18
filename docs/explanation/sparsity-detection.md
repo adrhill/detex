@@ -39,8 +39,10 @@ correctness comes first.
 
 ## How asdex Detects Sparsity
 
-`asdex` traces the function into JAX's intermediate representation (jaxpr),
-then propagates **index sets** forward through the computation graph.
+`asdex` uses a form of [abstract interpretation](https://en.wikipedia.org/wiki/Abstract_interpretation):
+instead of evaluating the function on real numbers,
+it traces the function into JAX's intermediate representation (jaxpr)
+and propagates **index sets** forward through the computation graph.
 Each input element \(x_j\) starts with the singleton set \(\{j\}\),
 and each primitive operation propagates these sets
 according to its mathematical structure:

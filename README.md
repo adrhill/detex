@@ -7,9 +7,10 @@
 
 [Automatic Sparse Differentiation](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) in JAX.
 
-`asdex` (rumored to be pronounced _Aztecs_) exploits sparsity structure to efficiently compute sparse Jacobians and Hessians.
+`asdex` (pronounced _Aztecs_) exploits sparsity structure to efficiently compute sparse Jacobians and Hessians.
 It implements a custom [Jaxpr](https://docs.jax.dev/en/latest/jaxpr.html) interpreter
-that detects sparsity patterns from the computation graph,
+that uses [abstract interpretation](https://en.wikipedia.org/wiki/Abstract_interpretation)
+to detect sparsity patterns from the computation graph,
 then uses graph coloring to minimize the number of AD passes needed.
 
 > [!WARNING]
