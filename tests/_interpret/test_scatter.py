@@ -102,10 +102,13 @@ def test_scatter_dynamic_indices():
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_scatter_2d():
-    """2D scatter falls back to conservative.
+    """2D scatter with non-batched multi-index falls back to conservative.
 
-    Multi-dimensional scatter patterns don't match the optimized 1D path.
+    TODO(scatter): ``mat.at[0, :2].set(updates)`` could track precise
+    per-element dependencies, but the current handler unions operand
+    and update deps across all outputs.
     """
 
     def f(x):
@@ -114,9 +117,26 @@ def test_scatter_2d():
         return mat.at[0, :2].set(updates.flatten()).flatten()
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # At minimum, updated positions depend on x[0] and x[1]
-    assert result[0, 0] == 1
-    assert result[1, 1] == 1
+    # Conservative: all outputs depend on all update inputs.
+    # TODO(scatter): the true pattern is:
+    #   [[1, 0, 0],   out[0] = mat[0,0] <- x[0]
+    #    [0, 1, 0],   out[1] = mat[0,1] <- x[1]
+    #    [0, 0, 0],   out[2] = mat[0,2] <- constant 0
+    #    [0, 0, 0],   out[3] = mat[1,0] <- constant 0
+    #    [0, 0, 0],   out[4] = mat[1,1] <- constant 0
+    #    [0, 0, 0]]   out[5] = mat[1,2] <- constant 0
+    expected = np.array(
+        [
+            [1, 1, 0],
+            [1, 1, 0],
+            [1, 1, 0],
+            [1, 1, 0],
+            [1, 1, 0],
+            [1, 1, 0],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.array_ops
@@ -165,4 +185,78 @@ def test_segment_sum():
         ],
         dtype=int,
     )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_scatter_2d_batched_dim0():
+    """2D scatter-add along dim 0 tracks per-column dependencies precisely.
+
+    The backward of ``features[indices]`` on 2D arrays produces scatter-add
+    with ``update_window_dims=(1,)``, ``inserted_window_dims=(0,)``.
+    Each update row targets an operand row,
+    with trailing dimensions passed through element-wise.
+    """
+    indices = jnp.array([2, 0, 1])
+
+    def f(x):
+        mat = x.reshape(3, 4)
+        gathered = mat[indices]  # [3, 4]: rows reordered
+        return gathered.reshape(-1)
+
+    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    # gathered[0] = mat[2], gathered[1] = mat[0], gathered[2] = mat[1]
+    # Each output element depends on exactly one input element.
+    expected = np.zeros((12, 12), dtype=int)
+    for i in range(3):
+        for j in range(4):
+            out_flat = i * 4 + j
+            in_flat = indices[i] * 4 + j
+            expected[out_flat, in_flat] = 1
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_scatter_set_middle_dim():
+    """Scatter along a middle dimension tracks precise dependencies.
+
+    ``arr.at[:, idx, :].set(value)`` writes a 2D slice at one position
+    along dim 1. Non-target positions keep their original dependencies.
+    """
+
+    def f(x):
+        arr = x.reshape(2, 3, 4)
+        # Zero out the last neighbor slot (dim 1 = 2).
+        arr = arr.at[:, 2, :].set(0.0)
+        return arr.reshape(-1)
+
+    result = jacobian_sparsity(f, input_shape=24).todense().astype(int)
+    expected = np.zeros((24, 24), dtype=int)
+    for i in range(24):
+        # Flat index i corresponds to (a, n, h) = (i//12, (i//4)%3, i%4)
+        n = (i // 4) % 3
+        if n != 2:
+            # Non-target positions keep identity dependency.
+            expected[i, i] = 1
+        # Target positions (n == 2) are set to constant 0, no dependencies.
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_scatter_add_middle_dim():
+    """Scatter-add along a middle dimension unions operand and update deps.
+
+    ``arr.at[:, idx, :].add(value)`` adds a 2D slice at one position
+    along dim 1. Target positions depend on both operand and updates.
+    """
+    values = jnp.ones((2, 4))
+
+    def f(x):
+        arr = x.reshape(2, 3, 4)
+        arr = arr.at[:, 1, :].add(values)
+        return arr.reshape(-1)
+
+    result = jacobian_sparsity(f, input_shape=24).todense().astype(int)
+    # All positions keep identity since updates are constant.
+    expected = np.eye(24, dtype=int)
     np.testing.assert_array_equal(result, expected)

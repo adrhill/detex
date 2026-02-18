@@ -3,7 +3,15 @@
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import ConstVals, Deps, atom_const_val, atom_numel, index_sets
+from ._commons import (
+    ConstVals,
+    Deps,
+    atom_const_val,
+    atom_numel,
+    atom_shape,
+    index_sets,
+    numel,
+)
 
 
 def propagate_const_binary(
@@ -75,7 +83,8 @@ def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     """Binary element-wise ops (add, mul, etc.) combine two arrays element-wise.
 
     Each output element depends on the corresponding elements from both inputs.
-    Broadcasting is handled: scalars contribute to all output elements.
+    Broadcasting is handled via numpy rules:
+    size-1 dimensions are broadcast, same-size dimensions pair element-wise.
 
     For f(x, y) element-wise:
         ∂f/∂x[i] and ∂f/∂y[i] are generally nonzero
@@ -91,15 +100,41 @@ def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     """
     in1 = index_sets(deps, eqn.invars[0])
     in2 = index_sets(deps, eqn.invars[1])
-    # Broadcasting via modular indexing.
-    # JAX element-wise ops only broadcast scalars (len 1) against arrays.
-    # i % len gives 0 for scalars (i % 1 == 0 for all i),
-    # and i for same-sized arrays,
-    # so it naturally selects the right element without branching.
-    # Size-0 arrays propagate to size-0 output (no elements to combine).
     out_size = 0 if len(in1) == 0 or len(in2) == 0 else max(len(in1), len(in2))
+
+    in1_shape = atom_shape(eqn.invars[0])
+    in2_shape = atom_shape(eqn.invars[1])
+
+    # Fast path: same shape or scalar.
+    # Modular indexing handles both correctly:
+    # i % len == i for same size, i % 1 == 0 for scalar.
+    if in1_shape == in2_shape or len(in1) <= 1 or len(in2) <= 1:
+        deps[eqn.outvars[0]] = [
+            in1[i % len(in1)] | in2[i % len(in2)] for i in range(out_size)
+        ]
+        return
+
+    # General broadcast: map output coordinates to input coordinates
+    # respecting numpy-style broadcasting (size-1 dims read index 0).
+    # Example: mul of (16,16) * (16,1) → (16,16).
+    # out[p,d] depends on in1[p,d] and in2[p,0], not in2[d].
+    out_shape = atom_shape(eqn.outvars[0])
+    out_size = numel(out_shape)
+    out_coords = np.indices(out_shape)
+    ndim = len(out_shape)
+
+    def _broadcast_flat(in_shape: tuple[int, ...]) -> np.ndarray:
+        # Left-pad with 1s to match output ndim (numpy broadcasting rule).
+        pad = ndim - len(in_shape)
+        padded = (1,) * pad + in_shape
+        coords = tuple(out_coords[d] if padded[d] > 1 else 0 for d in range(ndim))
+        return np.ravel_multi_index(coords, padded).ravel()
+
+    in1_flat = _broadcast_flat(in1_shape)
+    in2_flat = _broadcast_flat(in2_shape)
+
     deps[eqn.outvars[0]] = [
-        in1[i % len(in1)] | in2[i % len(in2)] for i in range(out_size)
+        in1[in1_flat[i]] | in2[in2_flat[i]] for i in range(out_size)
     ]
 
 
@@ -122,11 +157,18 @@ def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     deps[eqn.outvars[0]] = [s.copy() for s in index_sets(deps, eqn.invars[0])]
 
 
-def prop_convert_element_type(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_convert_element_type(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Type conversion (e.g., float32 → float64) changes dtype without changing values.
 
     Dependencies pass through unchanged.
     The Jacobian is the identity matrix.
+
+    Also propagates const values with the new dtype
+    so downstream gather/scatter can resolve static indices.
+    JAX inserts ``convert_element_type`` for index dtype changes
+    (e.g. int64 → int32) before gather/scatter;
+    without const propagation here the chain breaks
+    and gathers fall back to conservative.
 
     Example: y = x.astype(float64) where x = [a, b, c]
         Input deps:  [{0}, {1}, {2}]
@@ -139,3 +181,12 @@ def prop_convert_element_type(eqn: JaxprEqn, deps: Deps) -> None:
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.convert_element_type.html
     """
     deps[eqn.outvars[0]] = [s.copy() for s in index_sets(deps, eqn.invars[0])]
+
+    in_val = atom_const_val(eqn.invars[0], const_vals)
+    if in_val is not None:
+        new_dtype = eqn.params.get("new_dtype")
+        if new_dtype is not None:
+            const_vals[eqn.outvars[0]] = in_val.astype(new_dtype)
+        else:
+            # stop_gradient, bitcast_convert_type, etc. — pass through as-is.
+            const_vals[eqn.outvars[0]] = in_val
