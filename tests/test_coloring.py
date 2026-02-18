@@ -6,6 +6,8 @@ https://github.com/gdalle/SparseMatrixColorings.jl
 See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
 """
 
+import warnings
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -14,8 +16,10 @@ from numpy.testing import assert_allclose
 
 from asdex import (
     ColoredPattern,
+    DenseColoringWarning,
     SparsityPattern,
     color_cols,
+    color_hessian_pattern,
     color_jacobian_pattern,
     color_rows,
     color_symmetric,
@@ -754,6 +758,7 @@ def test_color_returns_coloring_result():
 
 
 @pytest.mark.coloring
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_color_auto_picks_column_for_tall():
     """Auto picks column coloring for tall-skinny patterns.
 
@@ -773,6 +778,7 @@ def test_color_auto_picks_column_for_tall():
 
 
 @pytest.mark.coloring
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_color_auto_picks_row_for_wide():
     """Auto picks row coloring for wide patterns.
 
@@ -1068,3 +1074,50 @@ def test_hessian_star_decompression_non_unique_branch():
     result = hessian(f, cp)(x).todense()
 
     assert_allclose(result, expected, rtol=1e-5)
+
+
+# DenseColoringWarning tests
+
+
+@pytest.mark.coloring
+def test_dense_jacobian_warns():
+    """color_jacobian_pattern warns when coloring is as expensive as dense."""
+    rows, cols = [], []
+    for i in range(4):
+        for j in range(4):
+            rows.append(i)
+            cols.append(j)
+    sparsity = _make_pattern(rows, cols, (4, 4))
+
+    with pytest.warns(DenseColoringWarning, match="same as the dense case"):
+        color_jacobian_pattern(sparsity)
+
+
+@pytest.mark.coloring
+def test_dense_hessian_warns():
+    """color_hessian_pattern warns when coloring is as expensive as dense."""
+    rows, cols = [], []
+    for i in range(4):
+        for j in range(4):
+            rows.append(i)
+            cols.append(j)
+    sparsity = _make_pattern(rows, cols, (4, 4))
+
+    with pytest.warns(DenseColoringWarning, match="same as the dense case"):
+        color_hessian_pattern(sparsity)
+
+
+@pytest.mark.coloring
+def test_dense_warning_suppressible():
+    """DenseColoringWarning can be suppressed with filterwarnings."""
+    rows, cols = [], []
+    for i in range(4):
+        for j in range(4):
+            rows.append(i)
+            cols.append(j)
+    sparsity = _make_pattern(rows, cols, (4, 4))
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DenseColoringWarning)
+        # Should not raise any warning
+        color_jacobian_pattern(sparsity)

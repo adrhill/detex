@@ -5,6 +5,7 @@ structure without evaluating derivatives, so results are valid for all inputs.
 """
 
 from asdex.coloring import (
+    DenseColoringWarning,
     color_cols,
     color_hessian_pattern,
     color_jacobian_pattern,
@@ -24,6 +25,7 @@ from asdex.verify import (
 
 __all__ = [
     "ColoredPattern",
+    "DenseColoringWarning",
     "SparsityPattern",
     "VerificationError",
     "check_hessian_correctness",

@@ -12,6 +12,7 @@ https://github.com/gdalle/SparseMatrixColorings.jl
 See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
 """
 
+import warnings
 from collections.abc import Callable
 from typing import Literal
 
@@ -21,6 +22,14 @@ from numpy.typing import NDArray
 from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_jacobian_sparsity
 from asdex.pattern import ColoredPattern, SparsityPattern
+
+
+class DenseColoringWarning(UserWarning):
+    """Coloring uses as many colors as the dense baseline.
+
+    Raised when sparse differentiation offers no speedup over dense differentiation.
+    """
+
 
 # Public API: high-level convenience functions
 
@@ -101,11 +110,15 @@ def color_jacobian_pattern(
 
     if partition == "row":
         colors_arr, num = color_rows(sparsity)
-        return ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="VJP")
+        result = ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="VJP")
+        _check_dense(num, sparsity.m, "Jacobian", sparsity.shape)
+        return result
 
     if partition == "column":
         colors_arr, num = color_cols(sparsity)
-        return ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="JVP")
+        result = ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="JVP")
+        _check_dense(num, sparsity.n, "Jacobian", sparsity.shape)
+        return result
 
     # Auto: pick whichever uses fewer colors.
     # Ties go to column coloring (JVPs are cheaper than VJPs).
@@ -113,10 +126,14 @@ def color_jacobian_pattern(
     col_colors, num_col = color_cols(sparsity)
 
     if num_col <= num_row:
-        return ColoredPattern(
+        result = ColoredPattern(
             sparsity, colors=col_colors, num_colors=num_col, mode="JVP"
         )
-    return ColoredPattern(sparsity, colors=row_colors, num_colors=num_row, mode="VJP")
+        _check_dense(num_col, sparsity.n, "Jacobian", sparsity.shape)
+        return result
+    result = ColoredPattern(sparsity, colors=row_colors, num_colors=num_row, mode="VJP")
+    _check_dense(num_row, sparsity.m, "Jacobian", sparsity.shape)
+    return result
 
 
 def color_hessian_pattern(sparsity: SparsityPattern) -> ColoredPattern:
@@ -139,7 +156,9 @@ def color_hessian_pattern(sparsity: SparsityPattern) -> ColoredPattern:
             mode="HVP",
         )
     colors_arr, num = color_symmetric(sparsity)
-    return ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="HVP")
+    result = ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="HVP")
+    _check_dense(num, sparsity.n, "Hessian", sparsity.shape)
+    return result
 
 
 # Public API: low-level coloring algorithms
@@ -295,6 +314,27 @@ def color_symmetric(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
 
 
 # Private helpers
+
+
+def _check_dense(
+    num_colors: int,
+    dense_baseline: int,
+    kind: str,
+    shape: tuple[int, int],
+) -> None:
+    """Warn if coloring uses as many colors as the dense baseline."""
+    if num_colors >= dense_baseline:
+        m, n = shape
+        warnings.warn(
+            f"Coloring used {num_colors} colors for a {m}\u00d7{n} {kind}"
+            f" (same as the dense case).\n"
+            f"No speedup over dense differentiation.\n"
+            f"Suppress this warning with:"
+            f' warnings.filterwarnings("ignore",'
+            f" category=asdex.DenseColoringWarning)",
+            category=DenseColoringWarning,
+            stacklevel=3,
+        )
 
 
 def _greedy_color(
