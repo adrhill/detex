@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771455396127,
+  "lastUpdate": 1771456474111,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -5526,6 +5526,142 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.04621227336892932",
             "extra": "mean: 150.42145112499927 msec\nrounds: 8"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e8dbf8d1a5c6256c132aba7d643536eca9dc9f38",
+          "message": "feat(coloring): warn when coloring yields no speedup over dense AD (#54)\n\nEmit a DenseColoringWarning when color_jacobian_pattern or\ncolor_hessian_pattern produces as many colors as the dense baseline,\nsince sparse differentiation offers no performance benefit in that case.\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-19T00:13:50+01:00",
+          "tree_id": "9ef80f0beeb4d6e7a0df654ed472657b97ce2b48",
+          "url": "https://github.com/adrhill/asdex/commit/e8dbf8d1a5c6256c132aba7d643536eca9dc9f38"
+        },
+        "date": 1771456473444,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 884.4956460172849,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0026486268575055547",
+            "extra": "mean: 1.130587815217417 msec\nrounds: 184"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3297.9303940879768,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000008832199711216914",
+            "extra": "mean: 303.2204687499307 usec\nrounds: 1952"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 40.77742952312364,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0170371099112675",
+            "extra": "mean: 24.523370200000727 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 83.34650624865192,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004214410016286995",
+            "extra": "mean: 11.998103399999138 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.922371688811516,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012930276512139398",
+            "extra": "mean: 45.61550247368392 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 248.94822186966275,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004339211380217952",
+            "extra": "mean: 4.01689954838702 msec\nrounds: 217"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 30.40473321427657,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008342170834765767",
+            "extra": "mean: 32.88961599999993 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 10.463897999060581,
+            "unit": "iter/sec",
+            "range": "stddev: 0.02287484335432458",
+            "extra": "mean: 95.56668080000179 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 94.45369400194704,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010573741783773957",
+            "extra": "mean: 10.587198421052609 msec\nrounds: 57"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3269.446607711375,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00000878377379941122",
+            "extra": "mean: 305.86215955978065 usec\nrounds: 2181"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 24.587115091848887,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003198796690569107",
+            "extra": "mean: 40.67170939999869 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 19.081877646435583,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012468107953978656",
+            "extra": "mean: 52.40574426315934 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_detection",
+            "value": 32.98239825996214,
+            "unit": "iter/sec",
+            "range": "stddev: 0.019653108606372933",
+            "extra": "mean: 30.31920214285679 msec\nrounds: 7"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_coloring",
+            "value": 603.9639304280827,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00011444141287707304",
+            "extra": "mean: 1.6557280155641272 msec\nrounds: 514"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_materialization",
+            "value": 12.303169314377662,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009685446589474871",
+            "extra": "mean: 81.2798698000023 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
+            "value": 7.803688416451637,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025012463058482603",
+            "extra": "mean: 128.14453199999795 msec\nrounds: 6"
           }
         ]
       }
