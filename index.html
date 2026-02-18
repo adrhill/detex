@@ -1133,9 +1133,10 @@
 <a href="https://codecov.io/gh/adrhill/asdex"><img alt="codecov" src="https://codecov.io/gh/adrhill/asdex/graph/badge.svg" /></a>
 <a href="https://adrianhill.de/asdex/dev/bench/"><img alt="Benchmarks" src="https://img.shields.io/badge/benchmarks-view-blue" /></a></p>
 <p><strong>Automatic Sparse Differentiation in JAX.</strong></p>
-<p><code>asdex</code> (rumored to be pronounced <em>Aztecs</em>) exploits sparsity structure to efficiently compute sparse Jacobians and Hessians.
+<p><code>asdex</code> (pronounced <em>Aztecs</em>) exploits sparsity structure to efficiently compute sparse Jacobians and Hessians.
 It implements a custom <a href="https://docs.jax.dev/en/latest/jaxpr.html">Jaxpr</a> interpreter
-that detects sparsity patterns from the computation graph,
+that uses <a href="https://en.wikipedia.org/wiki/Abstract_interpretation">abstract interpretation</a>
+to detect sparsity patterns from the computation graph,
 then uses graph coloring to minimize the number of AD passes needed.
 Refer to our <a href="https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/"><em>Illustrated Guide to Automatic Sparse Differentiation</em></a> for more information.</p>
 <div class="admonition warning">

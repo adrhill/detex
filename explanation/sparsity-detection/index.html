@@ -1183,8 +1183,10 @@ it just uses more colors than strictly necessary.
 This is why <code>asdex</code> errs on the side of conservatism:
 correctness comes first.</p>
 <h2 id="how-asdex-detects-sparsity">How asdex Detects Sparsity<a class="headerlink" href="#how-asdex-detects-sparsity" title="Permanent link">&para;</a></h2>
-<p><code>asdex</code> traces the function into JAX's intermediate representation (jaxpr),
-then propagates <strong>index sets</strong> forward through the computation graph.
+<p><code>asdex</code> uses a form of <a href="https://en.wikipedia.org/wiki/Abstract_interpretation">abstract interpretation</a>:
+instead of evaluating the function on real numbers,
+it traces the function into JAX's intermediate representation (jaxpr)
+and propagates <strong>index sets</strong> forward through the computation graph.
 Each input element <span class="arithmatex">\(x_j\)</span> starts with the singleton set <span class="arithmatex">\(\{j\}\)</span>,
 and each primitive operation propagates these sets
 according to its mathematical structure:</p>
