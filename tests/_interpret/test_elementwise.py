@@ -47,7 +47,6 @@ def test_binary_broadcast_size1_dim():
     The flat modular indexing ``i % len`` gives wrong results here
     because it maps ``(i*4 + j) % 3`` instead of projecting coordinates.
     """
-
     weights = jnp.ones((3, 1))
 
     def f(x):
@@ -67,7 +66,6 @@ def test_binary_broadcast_leading_dim():
     For mul of (4,3) * (1,3) → (4,3),
     out[i,j] depends on in1[i,j] and in2[0,j].
     """
-
     scale = jnp.ones((1, 3))
 
     def f(x):
@@ -86,7 +84,6 @@ def test_convert_element_type_propagates_const():
     JAX inserts convert_element_type (int64 → int32) before gather.
     Without const propagation, the gather falls back to conservative.
     """
-
     indices = jnp.array([2, 0, 1])
 
     def f(x):

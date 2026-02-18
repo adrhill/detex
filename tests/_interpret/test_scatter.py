@@ -177,7 +177,6 @@ def test_scatter_2d_batched_dim0():
     Each update row targets an operand row,
     with trailing dimensions passed through element-wise.
     """
-
     indices = jnp.array([2, 0, 1])
 
     def f(x):
@@ -230,7 +229,6 @@ def test_scatter_add_middle_dim():
     ``arr.at[:, idx, :].add(value)`` adds a 2D slice at one position
     along dim 1. Target positions depend on both operand and updates.
     """
-
     values = jnp.ones((2, 4))
 
     def f(x):

@@ -161,11 +161,9 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             )
             if updates_shape == expected_updates:
                 flat_idx = concrete_indices.flatten()
-                target_set = set(
-                    int(k)
-                    for k in flat_idx
-                    if 0 <= int(k) < operand_shape[scatter_dim]
-                )
+                target_set = {
+                    int(k) for k in flat_idx if 0 <= int(k) < operand_shape[scatter_dim]
+                }
 
                 # Identify which output positions are scatter targets
                 # and map them to the corresponding updates flat index.

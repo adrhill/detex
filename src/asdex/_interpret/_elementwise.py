@@ -3,7 +3,15 @@
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import ConstVals, Deps, atom_const_val, atom_numel, atom_shape, index_sets, numel
+from ._commons import (
+    ConstVals,
+    Deps,
+    atom_const_val,
+    atom_numel,
+    atom_shape,
+    index_sets,
+    numel,
+)
 
 
 def propagate_const_binary(
@@ -119,10 +127,7 @@ def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
         # Left-pad with 1s to match output ndim (numpy broadcasting rule).
         pad = ndim - len(in_shape)
         padded = (1,) * pad + in_shape
-        coords = tuple(
-            out_coords[d] if padded[d] > 1 else 0
-            for d in range(ndim)
-        )
+        coords = tuple(out_coords[d] if padded[d] > 1 else 0 for d in range(ndim))
         return np.ravel_multi_index(coords, padded).ravel()
 
     in1_flat = _broadcast_flat(in1_shape)
@@ -152,9 +157,7 @@ def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     deps[eqn.outvars[0]] = [s.copy() for s in index_sets(deps, eqn.invars[0])]
 
 
-def prop_convert_element_type(
-    eqn: JaxprEqn, deps: Deps, const_vals: ConstVals
-) -> None:
+def prop_convert_element_type(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Type conversion (e.g., float32 → float64) changes dtype without changing values.
 
     Dependencies pass through unchanged.
