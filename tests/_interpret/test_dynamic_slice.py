@@ -38,8 +38,15 @@ def test_dynamic_slice_static_start():
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_dynamic_slice_dynamic_start():
-    """dynamic_slice with runtime-dependent start falls back to conservative."""
+    """dynamic_slice with runtime-dependent start falls back to conservative.
+
+    TODO(dynamic_slice): precise pattern is
+    [[1,1,0,0,0],[0,1,1,0,0],[0,0,1,1,0]]
+    since idx can only be 0 or 1,
+    so the slice window covers x[0:3] or x[1:4].
+    """
 
     def f(x):
         # Start index depends on input → dynamic
@@ -100,8 +107,15 @@ def test_dynamic_update_slice_static_start():
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_dynamic_update_slice_dynamic_start():
-    """dynamic_update_slice with runtime start falls back to conservative."""
+    """dynamic_update_slice with runtime start falls back to conservative.
+
+    TODO(dynamic_update_slice): precise pattern is
+    [[1,0,1,0],[0,0,1,1],[0,0,1,1],[0,0,0,1]]
+    since idx can only be 0 or 1,
+    and the update replaces a 2-element window with x[2:4].
+    """
 
     def f(x):
         idx = jnp.argmax(x[:2])

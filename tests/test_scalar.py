@@ -199,8 +199,15 @@ def test_composition_zero_of_nonlinear():
 
 
 @pytest.mark.hessian
+@pytest.mark.fallback
 def test_multiply_by_zero_hessian():
-    """Multiplying by zero still tracks structural Hessian: 0*x^2."""
+    """Multiplying by zero still tracks structural Hessian: 0*x^2.
+
+    TODO(primitive): multiply-by-zero should propagate emptiness.
+    The true Hessian of ``0.0 * x**2`` is ``[[0]]``,
+    but sparsity detection cannot see through the zero constant
+    and reports ``[[1]]``.
+    """
 
     def f1(x):
         return 0.0 * x**2

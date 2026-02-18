@@ -310,11 +310,16 @@ def test_matmul_after_broadcast():
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_matmul_with_constant():
     """Matmul where one operand is a constant (no input deps).
 
     out[i] = const @ x, so out[i] depends on all of x
     (handler unions over all contracting positions).
+
+    TODO(dot_general): precise pattern is [[1,0,0],[0,1,0]]
+    since W has value-level zeros that make out[0] depend only on x[0]
+    and out[1] depend only on x[1].
     """
 
     def f(x):

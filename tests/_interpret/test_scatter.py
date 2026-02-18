@@ -75,6 +75,7 @@ def test_scatter_multiple():
     np.testing.assert_array_equal(result, expected)
 
 
+@pytest.mark.fallback
 @pytest.mark.array_ops
 def test_scatter_dynamic_indices():
     """Scatter with dynamic (traced) indices uses conservative fallback.
@@ -82,6 +83,11 @@ def test_scatter_dynamic_indices():
     When scatter indices depend on input,
     we cannot determine targets at trace time.
     The conservative path unions operand and updates deps across all outputs.
+
+    TODO(scatter): the true structural pattern is sparser.
+    idx = argmax(x[3:]) can only be 0 or 1 (two elements), so idx is never 2.
+    out[i] = x[i] when idx != i, or x[3] when idx == i.
+    Precise result: expected = np.array([[1,0,0,1,0],[0,1,0,1,0],[0,0,1,0,0]])
     """
 
     def f(x):

@@ -260,6 +260,7 @@ def test_matmul():
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_iota_eye():
     """Eye @ x: dot_general unions over all contracting positions.
 
@@ -267,6 +268,9 @@ def test_iota_eye():
     exploit value-level zeros in the eye matrix.
     Each output unions all x elements along the contracting axis,
     so the result is dense (every output depends on all inputs).
+
+    TODO(dot_general): precise pattern is np.eye(3)
+    since the identity matrix selects each input element independently.
     """
 
     def f(x):

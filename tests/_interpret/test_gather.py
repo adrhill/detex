@@ -53,12 +53,17 @@ def test_gather_indices_through_select_n():
     np.testing.assert_array_equal(result, expected)
 
 
+@pytest.mark.fallback
 @pytest.mark.array_ops
 def test_gather_dynamic_indices_fallback():
     """Gather with dynamic (traced) indices uses conservative fallback.
 
     When indices depend on input,
     we cannot determine dependencies at trace time.
+
+    TODO(gather): the true structural pattern is sparser.
+    idx = argmax(x[:2]) can only be 0 or 1, so indices are [0,1] or [1,2].
+    Precise result: expected = np.array([[1,1,0,0],[0,1,1,0]])
     """
 
     def f(x):

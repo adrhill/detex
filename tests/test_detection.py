@@ -304,8 +304,15 @@ def test_dot_product():
 
 
 @pytest.mark.elementwise
+@pytest.mark.fallback
 def test_multiply_by_zero():
-    """Multiplying by zero still tracks structural dependency."""
+    """Multiplying by zero still tracks structural dependency.
+
+    TODO(elementwise): The zero is a known constant via const_vals,
+    so the mul handler could special-case multiplication by zero
+    to propagate an empty index set.
+    Precise result: expected = np.array([[0]])
+    """
 
     def f1(x):
         return jnp.array([0 * x[0]])
@@ -313,7 +320,6 @@ def test_multiply_by_zero():
     def f2(x):
         return jnp.array([x[0] * 0])
 
-    # Global sparsity: we can't know at compile time that result is zero
     result1 = jacobian_sparsity(f1, input_shape=1).todense().astype(int)
     result2 = jacobian_sparsity(f2, input_shape=1).todense().astype(int)
     expected = np.array([[1]])
