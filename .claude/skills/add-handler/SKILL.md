@@ -32,6 +32,8 @@ What is the Jacobian structure (permutation, selection, block-diagonal, etc.)?
 
 - Create `src/asdex/_interpret/_$ARGUMENTS.py` with `prop_$ARGUMENTS(eqn, deps)`.
 - Follow the handler docstring style from `_interpret/CLAUDE.md`.
+- If the primitive preserves or predictably transforms input values,
+  propagate `const_vals` so downstream handlers can stay precise.
 
 ### 3. Wire up dispatch
 
@@ -48,8 +50,14 @@ In `tests/_interpret/test_internals.py`:
 
 Create `tests/_interpret/test_$ARGUMENTS.py` with thorough tests:
 - Multiple dimensionalities (1D, 2D, 3D, 4D where applicable)
-- Edge cases (size-1 dimensions, identity/trivial parameters)
+- Broadcasting shapes: size-1 dimensions that broadcast (e.g. `(3,4)` op `(3,1)`)
+- Non-square shapes (e.g. `(3,4)` not `(4,4)`) so dimension mix-ups are caught
+- Edge cases (size-0 dimensions, identity/trivial parameters)
 - Real-world usage patterns (e.g. `jnp` functions that lower to this primitive)
+- For at least one test per dimensionality, verify precision by comparing the detected
+  pattern against `(np.abs(jax.jacobian(f)(x)) > 1e-10)` using `assert_array_equal`.
+  Choose test functions that avoid local sparsity (e.g. multiply by zero) so the
+  numerical Jacobian matches the structural pattern.
 
 ### 5. Verify
 
@@ -68,10 +76,13 @@ Reread the JAX docs for the primitive: fetch `https://docs.jax.dev/en/latest/_au
 Try to break the implementation by testing inputs the handler might not expect:
 
 - **Dimensionality**: 1D, 2D, 3D, and higher — if any are missing, add them.
+- **Asymmetric shapes**: always use non-square shapes (e.g. `(3,4)` not `(4,4)`) so that dimension transposition bugs are caught.
 - **Degenerate shapes**: size-0 dimensions, size-1 dimensions, scalar inputs (where the primitive supports them).
 - **Boundary parameters**: empty parameter lists, all-dimensions, single-dimension, negative indices (if applicable).
 - **Compositions**: the primitive chained with itself (e.g. double-reverse, transpose-of-transpose) or with related ops.
 - **Non-contiguous patterns**: inputs where dependencies are not simply `{i}` per element (e.g. from a prior broadcast or reduction) to verify `.copy()` and set merging behave correctly.
+- **Conservative audit**: for each test case, verify the result is strictly sparser than what `conservative_indices()` would produce. If the handler silently falls back on any shape the primitive supports, investigate.
+- **Const chain**: if the primitive can appear between a literal and a downstream consumer (e.g. type conversions, reshapes, broadcasts on index arrays), write a test composing it with a downstream gather and verify the gather resolves precisely.
 
 For each new test, verify the expected output by hand or against `jax.jacobian`.
 Update and re-verify the handler if any test reveals a bug.
