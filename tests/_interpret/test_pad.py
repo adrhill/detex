@@ -331,16 +331,17 @@ def test_pad_3d_mixed():
 
     Exercises multi-dimensional coordinate mapping
     where each axis has a different padding configuration.
+    Uses all-unique dimension sizes (2, 3, 4) to catch transposition bugs.
     """
 
     def f(x):
-        arr = x.reshape(2, 2, 3)
+        arr = x.reshape(2, 3, 4)
         # dim 0: border only (low=1, high=0, interior=0)
         # dim 1: interior only (low=0, high=0, interior=1)
         # dim 2: border + interior (low=0, high=1, interior=1)
         return jax.lax.pad(arr, 0.0, [(1, 0, 0), (0, 0, 1), (0, 1, 1)]).flatten()
 
-    input_size = 12
+    input_size = 24
     detected = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
 
     # Verify against actual Jacobian

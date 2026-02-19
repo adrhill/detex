@@ -106,17 +106,17 @@ def test_split_3d_axis0():
     """Splitting a 3D array along axis 0 tracks per-element dependencies."""
 
     def f(x):
-        arr = x.reshape(4, 2, 2)
+        arr = x.reshape(4, 2, 3)
         top, bottom = jnp.split(arr, 2, axis=0)
         return jnp.concatenate([bottom, top], axis=0).flatten()
 
-    result = jacobian_sparsity(f, input_shape=16).todense().astype(int)
-    # top = arr[:2], bottom = arr[2:]
-    # concat swaps: [bottom, top] -> indices 8..15, 0..7
-    expected = np.zeros((16, 16), dtype=int)
-    for i in range(8):
-        expected[i, i + 8] = 1
-        expected[i + 8, i] = 1
+    result = jacobian_sparsity(f, input_shape=24).todense().astype(int)
+    # top = arr[:2] (12 elements), bottom = arr[2:] (12 elements)
+    # concat swaps: [bottom, top] -> indices 12..23, 0..11
+    expected = np.zeros((24, 24), dtype=int)
+    for i in range(12):
+        expected[i, i + 12] = 1
+        expected[i + 12, i] = 1
     np.testing.assert_array_equal(result, expected)
 
 

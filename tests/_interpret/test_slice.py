@@ -19,18 +19,18 @@ def test_multidim_slice():
 
     def f(x):
         # Reshape to 2D and slice in multiple dimensions
-        mat = x.reshape(3, 3)
-        sliced = mat[0:2, 0:2]  # 2D slice extracts 2x2 submatrix
+        mat = x.reshape(3, 4)
+        sliced = mat[0:2, 1:3]  # 2D slice extracts 2x2 submatrix
         return sliced.flatten()
 
-    result = jacobian_sparsity(f, input_shape=9).todense().astype(int)
-    # Input (3x3): indices 0-8 in row-major order
-    # Slice [0:2, 0:2] extracts: [0,0]=0, [0,1]=1, [1,0]=3, [1,1]=4
-    expected = np.zeros((4, 9), dtype=int)
-    expected[0, 0] = 1  # out[0] <- in[0]
-    expected[1, 1] = 1  # out[1] <- in[1]
-    expected[2, 3] = 1  # out[2] <- in[3]
-    expected[3, 4] = 1  # out[3] <- in[4]
+    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    # Input (3x4): indices 0-11 in row-major order
+    # Slice [0:2, 1:3] extracts: [0,1]=1, [0,2]=2, [1,1]=5, [1,2]=6
+    expected = np.zeros((4, 12), dtype=int)
+    expected[0, 1] = 1  # out[0] <- in[1]
+    expected[1, 2] = 1  # out[1] <- in[2]
+    expected[2, 5] = 1  # out[2] <- in[5]
+    expected[3, 6] = 1  # out[3] <- in[6]
     np.testing.assert_array_equal(result, expected)
 
 
