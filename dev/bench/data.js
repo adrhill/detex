@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771497182644,
+  "lastUpdate": 1771511471019,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -5798,6 +5798,142 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.02669602381178236",
             "extra": "mean: 127.62484962500054 msec\nrounds: 8"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed9d21b04d55f13a05bc74c61e55846e6dce753d",
+          "message": "test(interpret): harden non-symmetric shape coverage and inline expected patterns (#55)\n\n* test(interpret): use non-square shapes to catch dimension transposition bugs\n\nReplace square and repeated-size dimensions in handler tests with\nasymmetric shapes so that axis-confusion bugs cannot hide behind\nmatching dimension sizes.\n\nAlso add \"Writing handler tests\" section to tests/CLAUDE.md\ndocumenting the non-square shape guideline and other test conventions.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: suppress `DenseColoringWarning` in small Jacobian-value tests\n\nThese tests intentionally use small inputs where coloring cannot\nbeat dense AD. The warning is expected, not a sign of conservatism.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(gather): add fallback tests for `const_vals` through `slice`, `transpose`, `tile`\n\nCover all four shape-transforming ops from TODO #1 that don't propagate\n`const_vals` (`reshape`, `slice`, `transpose`, `tile`). Convert the existing\n`reshape` xfail test to assert the conservative pattern directly, avoiding\nunnecessary Jacobian computation at test time.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(interpret): replace `_check_precision` helpers with explicit patterns\n\nInline all `_check_precision` and `_check_sparser_than_conservative`\ncalls in `test_gather.py` and `test_scatter.py` with pre-computed\nexpected sparsity patterns, avoiding runtime Jacobian computation.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-19T15:30:26+01:00",
+          "tree_id": "e3c2d692eea9aae41aa3c1471e132d2af8eee0f6",
+          "url": "https://github.com/adrhill/asdex/commit/ed9d21b04d55f13a05bc74c61e55846e6dce753d"
+        },
+        "date": 1771511469857,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 849.7821333284803,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0031610397775889924",
+            "extra": "mean: 1.176772211111496 msec\nrounds: 180"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3317.5394962346672,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001288833276385827",
+            "extra": "mean: 301.42821242519574 usec\nrounds: 1996"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 57.90704617338086,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005250805392087143",
+            "extra": "mean: 17.269055600002048 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 83.95340337609102,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004045805496032268",
+            "extra": "mean: 11.911369400002059 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 23.692004637998284,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007522056222313504",
+            "extra": "mean: 42.20833210526035 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 247.83505731755147,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015950712656648698",
+            "extra": "mean: 4.034941669768286 msec\nrounds: 215"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 29.890910015248863,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000917704085936548",
+            "extra": "mean: 33.45498679999537 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 10.18143506663311,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025774078515908308",
+            "extra": "mean: 98.21798140001192 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 93.33815689646414,
+            "unit": "iter/sec",
+            "range": "stddev: 0.011331668815909409",
+            "extra": "mean: 10.71373201754193 msec\nrounds: 57"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3233.095414329105,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004977156727196325",
+            "extra": "mean: 309.3011098800215 usec\nrounds: 2166"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 22.682100293533715,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011372360346340676",
+            "extra": "mean: 44.08762799999977 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 17.29457246209902,
+            "unit": "iter/sec",
+            "range": "stddev: 0.019756210719187612",
+            "extra": "mean: 57.82160861111171 msec\nrounds: 18"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_detection",
+            "value": 28.2012447594309,
+            "unit": "iter/sec",
+            "range": "stddev: 0.02879956911574239",
+            "extra": "mean: 35.459427714288594 msec\nrounds: 7"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_coloring",
+            "value": 608.7868585590378,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000021405188880432788",
+            "extra": "mean: 1.6426110155645284 msec\nrounds: 514"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_materialization",
+            "value": 11.931356671519021,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0020571361844035343",
+            "extra": "mean: 83.81276559999833 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
+            "value": 8.421310327222193,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008628335372278161",
+            "extra": "mean: 118.74636619998 msec\nrounds: 5"
           }
         ]
       }
