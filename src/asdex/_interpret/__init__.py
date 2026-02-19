@@ -37,6 +37,7 @@ from ._elementwise import (
 )
 from ._equinox._select_if_vmap import prop_select_if_vmap
 from ._gather import prop_gather
+from ._mul import prop_mul
 from ._pad import prop_pad
 from ._platform_index import prop_platform_index
 from ._reduce import prop_reduce
@@ -206,7 +207,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         case "jit" | "pjit" | "xla_call" | "named_call":
             prop_nested_jaxpr(eqn, deps, const_vals)
         case "slice":
-            prop_slice(eqn, deps)
+            prop_slice(eqn, deps, const_vals)
         case "pad":
             prop_pad(eqn, deps)
         case "squeeze":
@@ -216,17 +217,19 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         case "concatenate":
             prop_concatenate(eqn, deps, const_vals)
         case "reshape":
-            prop_reshape(eqn, deps)
+            prop_reshape(eqn, deps, const_vals)
         case "transpose":
-            prop_transpose(eqn, deps)
+            prop_transpose(eqn, deps, const_vals)
         case "rev":
             prop_rev(eqn, deps)
         case "integer_pow":
             prop_integer_pow(eqn, deps)
+        case "mul":
+            prop_mul(eqn, deps, const_vals)
+            propagate_const_binary(eqn, const_vals, _ARITHMETIC_UFUNCS)
         case (
             "add"
             | "sub"
-            | "mul"
             | "div"
             | "pow"
             | "max"
@@ -309,11 +312,11 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         case "scan":
             prop_scan(eqn, deps, const_vals, prop_jaxpr)
         case "dot_general":
-            prop_dot_general(eqn, deps)
+            prop_dot_general(eqn, deps, const_vals)
         case "split":
             prop_split(eqn, deps)
         case "tile":
-            prop_tile(eqn, deps)
+            prop_tile(eqn, deps, const_vals)
         case "sort":
             prop_sort(eqn, deps)
         # Conservative fallback: all outputs depend on all inputs.

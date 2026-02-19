@@ -28,6 +28,10 @@ through primitives to determine Jacobian sparsity patterns.
 **Variable names** — use these consistently across handlers:
 - `in_indices`: input index sets (from `index_sets(deps, atom)`)
 - `in_shape`: input array shape (from `atom_shape(atom)`)
+- `in_val`: const value for a unary input (from `atom_const_val(atom, const_vals)`)
+- `in1_val` / `in2_val`: const values for binary inputs.
+  Use descriptive prefixes when roles differ:
+  `lhs_val` / `rhs_val` (dot_general), `pred_val` / `which_val` (select), etc.
 - `permutation_map`: the flat integer array passed to `permute_indices()`
 - `in_position_map`: when a `position_map()` result is stored
   (e.g., reused across loop iterations in `_split.py`)

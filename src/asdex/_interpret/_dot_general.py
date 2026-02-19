@@ -4,15 +4,16 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
+    ConstVals,
     Deps,
     IndexSets,
+    atom_const_val,
     atom_shape,
     index_sets,
-    union_all,
 )
 
 
-def prop_dot_general(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Dot_general contracts and batches two arrays.
 
     Each output element is a sum of products over the contracting dimensions,
@@ -66,9 +67,26 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps) -> None:
         + tuple(rhs_shape[d] for d in rhs_free)
     )
 
+    # Get constant values for zero-skipping.
+    # When an operand is a known constant with zeros,
+    # those contracting positions contribute nothing to the derivative.
+    lhs_val = atom_const_val(eqn.invars[0], const_vals)
+    rhs_val = atom_const_val(eqn.invars[1], const_vals)
+    lhs_val_flat = np.atleast_1d(lhs_val).ravel() if lhs_val is not None else None
+    rhs_val_flat = np.atleast_1d(rhs_val).ravel() if rhs_val is not None else None
+
     if not out_shape:
         # Scalar output (e.g., vector dot product).
-        deps[eqn.outvars[0]] = [union_all(lhs_indices) | union_all(rhs_indices)]
+        # Skip terms where either factor is a known zero.
+        result: set[int] = set()
+        for i in range(len(lhs_indices)):
+            lhs_zero = lhs_val_flat is not None and lhs_val_flat[i] == 0
+            rhs_zero = rhs_val_flat is not None and rhs_val_flat[i] == 0
+            if lhs_zero or rhs_zero:
+                continue
+            result |= lhs_indices[i]
+            result |= rhs_indices[i]
+        deps[eqn.outvars[0]] = [result]
         return
 
     n_batch = len(lhs_batch)
@@ -118,6 +136,12 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps) -> None:
         rhs_flat = np.ravel_multi_index(rhs_coord, rhs_shape).ravel()
 
         for o in range(out_size):
+            # Skip this contraction term if either factor is a known zero,
+            # since the product contributes nothing to the derivative.
+            lhs_zero = lhs_val_flat is not None and lhs_val_flat[lhs_flat[o]] == 0
+            rhs_zero = rhs_val_flat is not None and rhs_val_flat[rhs_flat[o]] == 0
+            if lhs_zero or rhs_zero:
+                continue
             out_indices[o] |= lhs_indices[lhs_flat[o]]
             out_indices[o] |= rhs_indices[rhs_flat[o]]
 

@@ -305,16 +305,12 @@ def test_matmul_after_broadcast():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_matmul_with_constant():
-    """Matmul where one operand is a constant (no input deps).
+    """Matmul where one operand is a constant with value-level zeros.
 
-    out[i] = const @ x, so out[i] depends on all of x
-    (handler unions over all contracting positions).
-
-    TODO(dot_general): precise pattern is [[1,0,0],[0,1,0]]
-    since W has value-level zeros that make out[0] depend only on x[0]
-    and out[1] depend only on x[1].
+    W = [[1,0,0],[0,1,0]], so out[0] depends only on x[0]
+    and out[1] depends only on x[1].
+    The handler skips contracting positions where the constant is zero.
     """
 
     def f(x):
@@ -322,8 +318,7 @@ def test_matmul_with_constant():
         return W @ x
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # Dense because handler can't exploit value-level zeros.
-    expected = np.ones((2, 3), dtype=int)
+    expected = np.array([[1, 0, 0], [0, 1, 0]])
     np.testing.assert_array_equal(result, expected)
 
 

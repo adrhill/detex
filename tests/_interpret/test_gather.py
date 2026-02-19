@@ -352,14 +352,12 @@ def test_gather_indices_through_broadcast():
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.array_ops
 def test_gather_indices_through_reshape():
-    """Reshaping a constant index array loses static tracking.
+    """Reshaping a constant index array preserves static tracking.
 
-    TODO(reshape): precise pattern is permutation —
-    out[0]=x[1], out[1]=x[0], out[2]=x[2], out[3]=x[3].
-    Currently falls back to all-ones because const_vals aren't propagated through reshape.
+    idx = [[1,0],[2,3]] reshaped to [1,0,2,3],
+    so out[i] = x[idx_flat[i]] is a permutation matrix.
     """
 
     def f(x):
@@ -368,19 +366,23 @@ def test_gather_indices_through_reshape():
         return x[idx_flat]
 
     result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
-    # Conservative: all-ones because indices are lost
-    expected = np.ones((4, 5), dtype=int)
+    expected = np.array(
+        [
+            [0, 1, 0, 0, 0],
+            [1, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 0],
+        ]
+    )
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.array_ops
 def test_gather_indices_through_slice():
-    """Slicing a constant index array loses static tracking.
+    """Slicing a constant index array preserves static tracking.
 
-    TODO(slice): precise pattern is permutation —
-    out[0]=x[3], out[1]=x[0], out[2]=x[2].
-    Currently falls back to all-ones because const_vals aren't propagated through slice.
+    idx = [3,0,2,1] sliced to [3,0,2],
+    so out[0]=x[3], out[1]=x[0], out[2]=x[2].
     """
 
     def f(x):
@@ -389,19 +391,22 @@ def test_gather_indices_through_slice():
         return x[idx_sub]
 
     result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
-    # Conservative: all-ones because indices are lost
-    expected = np.ones((3, 5), dtype=int)
+    expected = np.array(
+        [
+            [0, 0, 0, 1, 0],
+            [1, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.array_ops
 def test_gather_indices_through_transpose():
-    """Transposing a constant index array loses static tracking.
+    """Transposing a constant index array preserves static tracking.
 
-    TODO(transpose): precise pattern is permutation —
-    out[0]=x[1], out[1]=x[3], out[2]=x[0], out[3]=x[2].
-    Currently falls back to all-ones because const_vals aren't propagated through transpose.
+    idx = [[1,0],[3,2]] transposed to [[1,3],[0,2]], flattened to [1,3,0,2],
+    so out[0]=x[1], out[1]=x[3], out[2]=x[0], out[3]=x[2].
     """
 
     def f(x):
@@ -410,18 +415,23 @@ def test_gather_indices_through_transpose():
         return x[idx_t.flatten()]  # [1, 3, 0, 2]
 
     result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
-    # Conservative: all-ones because indices are lost
-    expected = np.ones((4, 5), dtype=int)
+    expected = np.array(
+        [
+            [0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0],
+            [1, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.array_ops
 def test_gather_indices_through_tile():
-    """Tiling a constant index array loses static tracking.
+    """Tiling a constant index array preserves static tracking.
 
-    TODO(tile): precise pattern has out[0],out[2]=x[2] and out[1],out[3]=x[0].
-    Currently falls back to all-ones because const_vals aren't propagated through tile.
+    idx = [2,0] tiled to [2,0,2,0],
+    so out[0],out[2]=x[2] and out[1],out[3]=x[0].
     """
 
     def f(x):
@@ -430,8 +440,14 @@ def test_gather_indices_through_tile():
         return x[idx_rep]
 
     result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
-    # Conservative: all-ones because indices are lost
-    expected = np.ones((4, 4), dtype=int)
+    expected = np.array(
+        [
+            [0, 0, 1, 0],
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [1, 0, 0, 0],
+        ]
+    )
     np.testing.assert_array_equal(result, expected)
 
 
