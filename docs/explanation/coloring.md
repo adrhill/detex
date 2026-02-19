@@ -1,45 +1,14 @@
 # Graph Coloring
 
-Graph coloring is the key technique that makes sparse differentiation efficient.
-This page explains why coloring reduces the cost of computing sparse Jacobians and Hessians,
-how rows or columns are grouped to share AD passes,
-and how the results are compressed and decompressed.
-
-## Why Coloring Helps
-
-Consider a Jacobian with \(m\) rows and \(n\) columns.
-Without exploiting sparsity, computing it requires \(m\) VJPs (one per row)
-or \(n\) JVPs (one per column).
-But if two columns have no nonzero rows in common
-— that is, they are **structurally orthogonal** —
-their JVPs can be combined into a single pass.
-We simply add their seed vectors together
-and decompose the result afterward,
-which works because the nonzeros don't overlap.
-The same idea applies symmetrically to rows and VJPs.
-
-To see this concretely,
-consider a \(4 \times 6\) Jacobian with the following sparsity pattern
-(\(\times\) marks a structural nonzero):
-
-\[
-J = \begin{pmatrix}
-\times & \times & & & & \\
-& & \times & \times & & \\
-& & & & \times & \times \\
-\times & & & \times & & \\
-\end{pmatrix}
-\]
-
-Computing \(J\) by forward-mode AD would naively require 6 JVPs, one per column.
-But inspecting the sparsity pattern reveals two groups of structurally orthogonal columns:
-\(\{1, 3, 5\}\) and \(\{2, 4, 6\}\).
-Assigning one color per group reduces 6 JVPs to just 2.
+Graph coloring is the key technique that makes [automatic sparse differentiation](asd.md) efficient.
+This page explains how the conflict graph is built,
+the coloring variants `asdex` supports,
+and the algorithm used to find colorings.
 
 ## The Conflict Graph
 
-Graph coloring formalizes this idea.
-We build a **conflict graph** whose vertices are the rows (or columns) of the matrix
+Given a [sparsity pattern](global-sparsity.md),
+we build a **conflict graph** whose vertices are the rows (or columns) of the matrix
 and whose edges connect pairs that share a nonzero column (or row).
 A **proper coloring** of this graph assigns colors to vertices
 so that no two adjacent vertices share a color.
@@ -56,30 +25,6 @@ same-colored columns are evaluated together using JVPs (forward-mode AD).
 By default, `asdex` tries both and picks whichever needs fewer colors.
 When tied, it prefers column coloring
 since JVPs are generally cheaper in JAX.
-
-## Compression and Decompression
-
-Coloring defines not just how many AD passes to perform,
-but also how to set up each pass and how to extract the sparse matrix from the results.
-
-The coloring assigns each column (or row) a color,
-and from this we build a **seed matrix** \(S\) with one column per color.
-The seed for color \(c\) is the sum of the standard basis vectors
-for all columns assigned that color.
-In the example above, the two seeds are \(e_1 + e_3 + e_5\) and \(e_2 + e_4 + e_6\).
-Running one JVP per seed produces the **compressed matrix** \(B = JS\),
-which has only `num_colors` columns instead of \(n\).
-
-Recovering the sparse Jacobian from \(B\) is called **decompression**.
-Because same-colored columns are structurally orthogonal,
-each nonzero \(J_{ij}\) appears unambiguously in exactly one entry of \(B\):
-row \(i\), column \(\text{color}(j)\).
-We simply read off each nonzero from the compressed matrix
-using the known color assignments — this is **direct decompression**.
-`asdex` uses direct decompression exclusively.
-An alternative family of methods (substitution-based decompression)
-solves small triangular systems to recover entries from denser colorings,
-but `asdex` does not implement these.
 
 ## Symmetric Coloring for Hessians
 
