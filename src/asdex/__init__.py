@@ -14,7 +14,7 @@ from asdex.coloring import (
     hessian_coloring,
     jacobian_coloring,
 )
-from asdex.decompression import hessian, jacobian
+from asdex.decompression import HvpMode, hessian, jacobian
 from asdex.detection import hessian_sparsity, jacobian_sparsity
 from asdex.pattern import ColoredPattern, SparsityPattern
 from asdex.verify import (
@@ -26,6 +26,7 @@ from asdex.verify import (
 __all__ = [
     "ColoredPattern",
     "DenseColoringWarning",
+    "HvpMode",
     "SparsityPattern",
     "VerificationError",
     "check_hessian_correctness",
