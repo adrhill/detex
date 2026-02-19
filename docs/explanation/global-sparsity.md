@@ -38,7 +38,7 @@ correctness comes first.
 
 ## Why Global Over Local
 
-Sparsity detection and graph coloring are preprocessing steps
+[Sparsity detection](sparsity-detection.md) and [graph coloring](coloring.md) are preprocessing steps
 that happen before any Jacobian is actually computed.
 Both are expensive enough that we want their results to be **reusable**
 across many evaluations at different input points.

@@ -4,6 +4,13 @@
 \(f: \mathbb{R}^n \to \mathbb{R}\)
 using symmetric coloring and forward-over-reverse AD.
 
+!!! tip "Verify correctness at least once"
+
+    asdex's [sparsity patterns](../explanation/global-sparsity.md) should always be conservative,
+    but a bug in [sparsity detection](../explanation/sparsity-detection.md) could cause missing nonzeros.
+    Always verify against JAX's dense Hessian at least once on a new function.
+    See [Verifying Results](#verifying-results) below.
+
 ## One-Call API
 
 The simplest way to compute a sparse Hessian:
@@ -17,14 +24,6 @@ H = hessian(f)(x)
 This detects sparsity, colors the pattern symmetrically, and decompresses.
 The result is a JAX [BCOO](https://docs.jax.dev/en/latest/jax.experimental.sparse.html) sparse matrix.
 
-!!! tip "Verify correctness at least once"
-
-    asdex's sparsity patterns should always be conservative,
-    i.e., they may contain extra nonzeros but should never miss any.
-    A bug in sparsity detection could cause missing nonzeros,
-    leading to incorrect Hessians.
-    Always verify against JAX's dense Hessian at least once on a new function.
-    See [Verifying Results](#verifying-results) below.
 
 !!! warning "Precompute the colored pattern"
 
@@ -52,6 +51,14 @@ for x in inputs:
 The colored pattern depends only on the function structure,
 not the input values,
 so it can be reused across evaluations.
+
+!!! tip
+
+    If your `colored_pattern` looks wrong or overly dense,
+    please help out `asdex`'s development by
+    [reporting it](https://github.com/adrhill/asdex/issues).
+    These reports directly drive improvements
+    and are one of the most impactful ways to contribute.
 
 ## Symmetric Coloring
 
@@ -97,7 +104,7 @@ before deciding on a coloring strategy.
 
 Since the Hessian is the Jacobian of the gradient,
 `hessian_sparsity` simply calls `jacobian_sparsity(jax.grad(f), input_shape)`.
-The sparsity interpreter composes naturally with JAX's autodiff transforms.
+The [sparsity interpreter](../explanation/sparsity-detection.md) composes naturally with JAX's autodiff transforms.
 
 ## Manually Providing a Sparsity Pattern
 

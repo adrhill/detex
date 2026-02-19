@@ -1,5 +1,16 @@
 # Computing Sparse Jacobians
 
+`asdex` computes sparse Jacobians for functions
+\(f: \mathbb{R}^n \to \mathbb{R}^m\)
+using [row or column coloring](../explanation/coloring.md) with forward- or reverse-mode AD.
+
+!!! tip "Verify correctness at least once"
+
+    asdex's [sparsity patterns](../explanation/global-sparsity.md) should always be conservative,
+    but a bug in [sparsity detection](../explanation/sparsity-detection.md) could cause missing nonzeros.
+    Always verify against JAX's dense Jacobian at least once on a new function.
+    See [Verifying Results](#verifying-results) below.
+
 ## One-Call API
 
 The simplest way to compute a sparse Jacobian:
@@ -12,15 +23,6 @@ J = jacobian(f)(x)
 
 This detects sparsity, colors the pattern, and decompresses — all in one call.
 The result is a JAX [BCOO](https://docs.jax.dev/en/latest/jax.experimental.sparse.html) sparse matrix.
-
-!!! tip "Verify correctness at least once"
-
-    asdex's sparsity patterns should always be conservative,
-    i.e., they may contain extra nonzeros but should never miss any.
-    A bug in sparsity detection could cause missing nonzeros,
-    leading to incorrect Jacobians.
-    Always verify against JAX's dense Jacobian at least once on a new function.
-    See [Verifying Results](#verifying-results) below.
 
 !!! warning "Precompute the colored pattern"
 
@@ -48,6 +50,14 @@ for x in inputs:
 The colored pattern depends only on the function structure,
 not the input values,
 so it can be reused across evaluations.
+
+!!! tip
+
+    If your `colored_pattern` looks wrong or overly dense,
+    please help out `asdex`'s development by
+    [reporting it](https://github.com/adrhill/asdex/issues).
+    These reports directly drive improvements
+    and are one of the most impactful ways to contribute.
 
 ## Choosing Row vs Column Coloring
 

@@ -113,8 +113,8 @@ This means they can be computed once and reused
 across arbitrarily many evaluations at different inputs.
 
 In a typical workflow,
-a user calls `jacobian_coloring` (or `hessian_coloring`) once during setup
-and passes the result to `jacobian` (or `hessian`) in a loop.
+a user calls [`jacobian_coloring`](../reference/index.md#asdex.jacobian_coloring) (or [`hessian_coloring`](../reference/index.md#asdex.hessian_coloring)) once during setup
+and passes the result to [`jacobian`](../reference/index.md#asdex.jacobian) (or [`hessian`](../reference/index.md#asdex.hessian)) in a loop.
 The per-evaluation cost is then just the decompression step:
 \(c\) AD passes plus a cheap index lookup,
 where \(c\) is the number of colors.
@@ -124,7 +124,7 @@ the preprocessing cost becomes negligible.
 
 This amortization assumption also guides design decisions in `asdex`:
 it is worth spending more time on [detection](sparsity-detection.md)
-if it produces [sparser patterns](global-sparsity.md#precision-over-speed),
+if it produces [sparser patterns](global-sparsity.md),
 because fewer nonzeros lead to fewer colors
 and fewer AD passes on every subsequent evaluation.
 
@@ -139,7 +139,7 @@ sparsity detection reduces to Jacobian detection:
 This works because `jax.grad` produces a jaxpr like any other function,
 so the same [interpreter](sparsity-detection.md) handles both cases with no extra machinery.
 And because the Hessian is symmetric,
-coloring can exploit this via [star coloring](coloring.md#symmetric-coloring-for-hessians),
+coloring can exploit this via [star coloring](coloring.md),
 which typically needs far fewer colors than treating the Hessian as a general matrix.
 
 Each color corresponds to one Hessian-vector product (HVP),

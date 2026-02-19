@@ -79,8 +79,8 @@ in the compressed product.
 The star coloring guarantee ensures that at least one direction is always unambiguous.
 
 See the API reference for
-[`jacobian_coloring`](../reference/jacobian.md#asdex.jacobian_coloring) and
-[`hessian_coloring`](../reference/hessian.md#asdex.hessian_coloring).
+[`jacobian_coloring`](../reference/index.md#asdex.jacobian_coloring) and
+[`hessian_coloring`](../reference/index.md#asdex.hessian_coloring).
 
 ## References
 
