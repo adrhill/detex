@@ -650,10 +650,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#verifying-results" class="md-nav__link">
+  <a href="#choosing-an-hvp-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verifying Results
+        Choosing an HVP Mode
       
     </span>
   </a>
@@ -665,6 +665,17 @@
     <span class="md-ellipsis">
       
         Multi-Dimensional Inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifying-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying Results
       
     </span>
   </a>
@@ -1233,10 +1244,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#verifying-results" class="md-nav__link">
+  <a href="#choosing-an-hvp-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verifying Results
+        Choosing an HVP Mode
       
     </span>
   </a>
@@ -1248,6 +1259,17 @@
     <span class="md-ellipsis">
       
         Multi-Dimensional Inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifying-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying Results
       
     </span>
   </a>
@@ -1429,26 +1451,30 @@ Create a <code>SparsityPattern</code> from coordinate arrays, a dense matrix, or
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">hess_fn</span> <span class="o">=</span> <span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="p">)</span>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">H</span> <span class="o">=</span> <span class="n">hess_fn</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 </code></pre></div></p>
-<h2 id="verifying-results">Verifying Results<a class="headerlink" href="#verifying-results" title="Permanent link">&para;</a></h2>
-<p>Use <a class="autorefs autorefs-internal" title="asdex.check_hessian_correctness(f, x, *, colored_pattern=None, rtol=1e-07, atol=1e-07)" href="../../reference/hessian/#asdex.check_hessian_correctness"><code>check_hessian_correctness</code></a>
-to verify that the sparse Hessian matches JAX's dense reference:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_hessian_correctness</span>
+<h2 id="choosing-an-hvp-mode">Choosing an HVP Mode<a class="headerlink" href="#choosing-an-hvp-mode" title="Permanent link">&para;</a></h2>
+<p>By default, <code>hessian</code> uses forward-over-reverse AD to compute Hessian-vector products.
+You can select a different AD composition strategy via the <code>hvp_mode</code> parameter:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">hessian</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">check_hessian_correctness</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">h_for</span> <span class="o">=</span> <span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">hvp_mode</span><span class="o">=</span><span class="s2">&quot;fwd_over_rev&quot;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># default</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">h_rof</span> <span class="o">=</span> <span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">hvp_mode</span><span class="o">=</span><span class="s2">&quot;rev_over_fwd&quot;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">h_ror</span> <span class="o">=</span> <span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">hvp_mode</span><span class="o">=</span><span class="s2">&quot;rev_over_rev&quot;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
 </code></pre></div>
-<p>This compares <code>asdex.hessian(g)(x)</code> against <code>jax.hessian(g)(x)</code>.
-If the results match, the function returns silently.
-If they disagree, it raises a <a class="autorefs autorefs-internal" title="asdex.VerificationError" href="../../reference/jacobian/#asdex.VerificationError"><code>VerificationError</code></a>.</p>
-<p>You can also pass a pre-computed colored pattern
-and custom tolerances:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">check_hessian_correctness</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="n">colored_pattern</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
-</code></pre></div>
-<div class="admonition warning">
-<p class="admonition-title">Dense computation</p>
-<p>Verification computes the full dense Hessian using JAX,
-which scales as <span class="arithmatex">\(O(n^2)\)</span>.
-Use this for debugging and initial setup,
-not in production loops.</p>
+<p>All three modes produce the same mathematical result.
+They differ in how JAX's AD primitives are composed:</p>
+<ul>
+<li><strong><code>fwd_over_rev</code></strong> (default): <code>jvp(grad(f), ...)</code>.
+    Generally the fastest under JIT.</li>
+<li><strong><code>rev_over_fwd</code></strong>: <code>grad(lambda p: jvp(f, (p,), (v,))[1])</code>.
+    Can use less memory than forward-over-reverse for functions with many intermediates.</li>
+<li><strong><code>rev_over_rev</code></strong>: <code>grad(lambda y: dot(grad(f)(y), v))</code>.
+    Avoids forward-mode entirely;
+    useful when forward-mode is expensive or unsupported.</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>When in doubt, stick with the default <code>"fwd_over_rev"</code>.
+It is the most widely used and typically the most efficient under <code>jax.jit</code>.</p>
 </div>
 <h2 id="multi-dimensional-inputs">Multi-Dimensional Inputs<a class="headerlink" href="#multi-dimensional-inputs" title="Permanent link">&para;</a></h2>
 <p><code>asdex</code> supports multi-dimensional input arrays.
@@ -1486,6 +1512,27 @@ of shape <span class="arithmatex">\((n, n)\)</span> where <span class="arithmate
 <a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⠀⠀⎥   ⎢⡇⎥
 <a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⎦   ⎣⡇⎦
 </code></pre></div>
+<h2 id="verifying-results">Verifying Results<a class="headerlink" href="#verifying-results" title="Permanent link">&para;</a></h2>
+<p>Use <a class="autorefs autorefs-internal" title="asdex.check_hessian_correctness(f, x, *, colored_pattern=None, rtol=1e-07, atol=1e-07)" href="../../reference/hessian/#asdex.check_hessian_correctness"><code>check_hessian_correctness</code></a>
+to verify that the sparse Hessian matches JAX's dense reference:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_hessian_correctness</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">check_hessian_correctness</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+</code></pre></div>
+<p>This compares <code>asdex.hessian(g)(x)</code> against <code>jax.hessian(g)(x)</code>.
+If the results match, the function returns silently.
+If they disagree, it raises a <a class="autorefs autorefs-internal" title="asdex.VerificationError" href="../../reference/jacobian/#asdex.VerificationError"><code>VerificationError</code></a>.</p>
+<p>You can also pass a pre-computed colored pattern
+and custom tolerances:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">check_hessian_correctness</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="n">colored_pattern</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Dense computation</p>
+<p>Verification computes the full dense Hessian using JAX,
+which scales as <span class="arithmatex">\(O(n^2)\)</span>.
+Use this for debugging and initial setup,
+not in production loops.</p>
+</div>
 
 
 

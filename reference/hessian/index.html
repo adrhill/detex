@@ -1215,7 +1215,7 @@
 
 
 <h2 id="asdex.hessian" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hvp_mode</span><span class="o">=</span><span class="s1">&#39;fwd_over_rev&#39;</span><span class="p">)</span></code>
 
 <a href="#asdex.hessian" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1223,8 +1223,7 @@
     <div class="doc doc-contents first">
 
         <p>Build a sparse Hessian function using coloring and HVPs.</p>
-<p>Uses symmetric (star) coloring and forward-over-reverse
-Hessian-vector products for efficiency.</p>
+<p>Uses symmetric (star) coloring and Hessian-vector products.</p>
 <p>If <code>f</code> returns a squeezable shape like <code>(1,)</code> or <code>(1, 1)</code>,
 it is automatically squeezed to scalar.</p>
 
@@ -1283,6 +1282,27 @@ If None, sparsity is detected and colored automatically on each call.</p>
             </td>
             <td>
                   <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>hvp_mode</code>
+            </td>
+            <td>
+                  <code><span title="asdex.decompression.HvpMode">HvpMode</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>AD composition strategy for Hessian-vector products.
+<code>"fwd_over_rev"</code> (default) uses forward-over-reverse,
+<code>"rev_over_fwd"</code> uses reverse-over-forward,
+and <code>"rev_over_rev"</code> uses reverse-over-reverse.
+All three produce the same result;
+they differ in memory and performance characteristics.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;fwd_over_rev&#39;</code>
             </td>
           </tr>
       </tbody>
@@ -1406,7 +1426,7 @@ which exploits Hessian symmetry for fewer colors.</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None)" href="#asdex.hessian"><code>hessian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None, *, hvp_mode='fwd_over_rev')" href="#asdex.hessian"><code>hessian</code></a>.</p>
               </div>
             </td>
           </tr>
@@ -1596,7 +1616,7 @@ which exploits Hessian symmetry for fewer colors than row coloring.</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None)" href="#asdex.hessian"><code>hessian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None, *, hvp_mode='fwd_over_rev')" href="#asdex.hessian"><code>hessian</code></a>.</p>
               </div>
             </td>
           </tr>

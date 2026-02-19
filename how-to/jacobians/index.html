@@ -622,10 +622,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#verifying-results" class="md-nav__link">
+  <a href="#multi-dimensional-inputs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verifying Results
+        Multi-Dimensional Inputs
       
     </span>
   </a>
@@ -633,10 +633,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#multi-dimensional-inputs" class="md-nav__link">
+  <a href="#verifying-results" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multi-Dimensional Inputs
+        Verifying Results
       
     </span>
   </a>
@@ -1233,10 +1233,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#verifying-results" class="md-nav__link">
+  <a href="#multi-dimensional-inputs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Verifying Results
+        Multi-Dimensional Inputs
       
     </span>
   </a>
@@ -1244,10 +1244,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#multi-dimensional-inputs" class="md-nav__link">
+  <a href="#verifying-results" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multi-Dimensional Inputs
+        Verifying Results
       
     </span>
   </a>
@@ -1452,27 +1452,6 @@ Create a <code>SparsityPattern</code> from coordinate arrays, a dense matrix, or
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">jac_fn</span> <span class="o">=</span> <span class="n">jacobian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="p">)</span>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">J</span> <span class="o">=</span> <span class="n">jac_fn</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 </code></pre></div></p>
-<h2 id="verifying-results">Verifying Results<a class="headerlink" href="#verifying-results" title="Permanent link">&para;</a></h2>
-<p>Use <a class="autorefs autorefs-internal" title="asdex.check_jacobian_correctness(f, x, *, colored_pattern=None, rtol=1e-07, atol=1e-07)" href="../../reference/jacobian/#asdex.check_jacobian_correctness"><code>check_jacobian_correctness</code></a>
-to verify that the sparse Jacobian matches JAX's dense reference:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_jacobian_correctness</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
-</code></pre></div>
-<p>This compares <code>asdex.jacobian(f)(x)</code> against <code>jax.jacobian(f)(x)</code>.
-If the results match, the function returns silently.
-If they disagree, it raises a <a class="autorefs autorefs-internal" title="asdex.VerificationError" href="../../reference/jacobian/#asdex.VerificationError"><code>VerificationError</code></a>.</p>
-<p>You can also pass a pre-computed colored pattern
-and custom tolerances:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="n">colored_pattern</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
-</code></pre></div>
-<div class="admonition warning">
-<p class="admonition-title">Dense computation</p>
-<p>Verification computes the full dense Jacobian using JAX,
-which scales as <span class="arithmatex">\(O(mn)\)</span>.
-Use this for debugging and initial setup,
-not in production loops.</p>
-</div>
 <h2 id="multi-dimensional-inputs">Multi-Dimensional Inputs<a class="headerlink" href="#multi-dimensional-inputs" title="Permanent link">&para;</a></h2>
 <p><code>asdex</code> supports multi-dimensional input and output arrays.
 The Jacobian is always returned as a 2D matrix
@@ -1509,6 +1488,27 @@ and <span class="arithmatex">\(m\)</span> is the total number of output elements
 <a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢄⡀⠀⠘⢄⡀⠀⎥   ⎢⣿⎥
 <a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢄⠀⠀⠘⢄⎦   ⎣⣿⎦
 </code></pre></div>
+<h2 id="verifying-results">Verifying Results<a class="headerlink" href="#verifying-results" title="Permanent link">&para;</a></h2>
+<p>Use <a class="autorefs autorefs-internal" title="asdex.check_jacobian_correctness(f, x, *, colored_pattern=None, rtol=1e-07, atol=1e-07)" href="../../reference/jacobian/#asdex.check_jacobian_correctness"><code>check_jacobian_correctness</code></a>
+to verify that the sparse Jacobian matches JAX's dense reference:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_jacobian_correctness</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+</code></pre></div>
+<p>This compares <code>asdex.jacobian(f)(x)</code> against <code>jax.jacobian(f)(x)</code>.
+If the results match, the function returns silently.
+If they disagree, it raises a <a class="autorefs autorefs-internal" title="asdex.VerificationError" href="../../reference/jacobian/#asdex.VerificationError"><code>VerificationError</code></a>.</p>
+<p>You can also pass a pre-computed colored pattern
+and custom tolerances:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="n">colored_pattern</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Dense computation</p>
+<p>Verification computes the full dense Jacobian using JAX,
+which scales as <span class="arithmatex">\(O(mn)\)</span>.
+Use this for debugging and initial setup,
+not in production loops.</p>
+</div>
 
 
 
