@@ -340,6 +340,7 @@ def test_scan_vs_jax_jacobian():
 
 
 @pytest.mark.control_flow
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_scan_jacobian_values():
     """Verify sparse Jacobian values match dense jax.jacobian."""
 
@@ -617,6 +618,7 @@ def test_scan_with_cond_inside():
 
 
 @pytest.mark.control_flow
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_scan_jacobian_values_pytree_xs():
     """Verify sparse Jacobian values match dense jax.jacobian with pytree xs."""
 
