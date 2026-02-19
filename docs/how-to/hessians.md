@@ -172,6 +172,56 @@ hess_fn = hessian(f, colored_pattern)
 H = hess_fn(x)
 ```
 
+## Choosing an HVP Mode
+
+By default, `hessian` uses forward-over-reverse AD to compute Hessian-vector products.
+You can select a different AD composition strategy via the `hvp_mode` parameter:
+
+```python
+from asdex import hessian
+
+h_for = hessian(f, hvp_mode="fwd_over_rev")(x)  # default
+h_rof = hessian(f, hvp_mode="rev_over_fwd")(x)
+h_ror = hessian(f, hvp_mode="rev_over_rev")(x)
+```
+
+All three modes produce the same mathematical result.
+They differ in how JAX's AD primitives are composed:
+
+- **`fwd_over_rev`** (default): `jvp(grad(f), ...)`.
+    Generally the fastest under JIT.
+- **`rev_over_fwd`**: `grad(lambda p: jvp(f, (p,), (v,))[1])`.
+    Can use less memory than forward-over-reverse for functions with many intermediates.
+- **`rev_over_rev`**: `grad(lambda y: dot(grad(f)(y), v))`.
+    Avoids forward-mode entirely;
+    useful when forward-mode is expensive or unsupported.
+
+!!! tip
+
+    When in doubt, stick with the default `"fwd_over_rev"`.
+    It is the most widely used and typically the most efficient under `jax.jit`.
+
+## Multi-Dimensional Inputs
+
+`asdex` supports multi-dimensional input arrays.
+The Hessian is always returned as a 2D matrix
+of shape \((n, n)\) where \(n\) is the total number of input elements:
+
+```python exec="true" session="hess-multi" source="above"
+import jax.numpy as jnp
+from asdex import hessian_coloring
+
+def g(x):
+    # x has shape (5, 20)
+    return jnp.sum(x ** 3)
+
+colored_pattern = hessian_coloring(g, input_shape=(5, 20))
+```
+
+```python exec="true" session="hess-multi"
+print(f"```\n{colored_pattern}\n```")
+```
+
 ## Verifying Results
 
 Use [`check_hessian_correctness`][asdex.check_hessian_correctness]
@@ -200,24 +250,3 @@ check_hessian_correctness(g, x, colored_pattern=colored_pattern, rtol=1e-5, atol
     which scales as \(O(n^2)\).
     Use this for debugging and initial setup,
     not in production loops.
-
-## Multi-Dimensional Inputs
-
-`asdex` supports multi-dimensional input arrays.
-The Hessian is always returned as a 2D matrix
-of shape \((n, n)\) where \(n\) is the total number of input elements:
-
-```python exec="true" session="hess-multi" source="above"
-import jax.numpy as jnp
-from asdex import hessian_coloring
-
-def g(x):
-    # x has shape (5, 20)
-    return jnp.sum(x ** 3)
-
-colored_pattern = hessian_coloring(g, input_shape=(5, 20))
-```
-
-```python exec="true" session="hess-multi"
-print(f"```\n{colored_pattern}\n```")
-```

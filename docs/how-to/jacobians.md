@@ -176,6 +176,27 @@ jac_fn = jacobian(f, colored_pattern)
 J = jac_fn(x)
 ```
 
+## Multi-Dimensional Inputs
+
+`asdex` supports multi-dimensional input and output arrays.
+The Jacobian is always returned as a 2D matrix
+of shape \((m, n)\) where \(n\) is the total number of input elements
+and \(m\) is the total number of output elements:
+
+```python exec="true" session="jac-multi" source="above"
+from asdex import jacobian_coloring
+
+def f(x):
+    # x has shape (10, 10), output has shape (9, 10)
+    return x[1:, :] - x[:-1, :]
+
+colored_pattern = jacobian_coloring(f, input_shape=(10, 10))
+```
+
+```python exec="true" session="jac-multi"
+print(f"```\n{colored_pattern}\n```")
+```
+
 ## Verifying Results
 
 Use [`check_jacobian_correctness`][asdex.check_jacobian_correctness]
@@ -204,24 +225,3 @@ check_jacobian_correctness(f, x, colored_pattern=colored_pattern, rtol=1e-5, ato
     which scales as \(O(mn)\).
     Use this for debugging and initial setup,
     not in production loops.
-
-## Multi-Dimensional Inputs
-
-`asdex` supports multi-dimensional input and output arrays.
-The Jacobian is always returned as a 2D matrix
-of shape \((m, n)\) where \(n\) is the total number of input elements
-and \(m\) is the total number of output elements:
-
-```python exec="true" session="jac-multi" source="above"
-from asdex import jacobian_coloring
-
-def f(x):
-    # x has shape (10, 10), output has shape (9, 10)
-    return x[1:, :] - x[:-1, :]
-
-colored_pattern = jacobian_coloring(f, input_shape=(10, 10))
-```
-
-```python exec="true" session="jac-multi"
-print(f"```\n{colored_pattern}\n```")
-```

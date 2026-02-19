@@ -648,3 +648,21 @@ def test_hessian_arrow_pattern():
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
+
+
+# HVP mode tests
+
+
+@pytest.mark.hessian
+@pytest.mark.parametrize("hvp_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_hessian_hvp_modes(hvp_mode):
+    """All three HVP modes produce the same sparse Hessian on Rosenbrock."""
+
+    def f(x):
+        return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
+
+    x = np.array([1.0, 2.0, 0.5, -1.0])
+    result = hessian(f, hvp_mode=hvp_mode)(x).todense()
+    expected = jax.hessian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
