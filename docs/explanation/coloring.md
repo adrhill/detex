@@ -17,6 +17,8 @@ meaning they can share an AD pass.
 The total number of passes equals the number of colors,
 which is often dramatically fewer than the matrix dimension.
 
+## Row and Column Coloring
+
 There are two variants.
 **Row coloring** treats rows as vertices and connects rows that share a nonzero column;
 same-colored rows are evaluated together using VJPs (reverse-mode AD).
@@ -58,6 +60,28 @@ but it is fast — \(O(|V| + |E|)\) in the size of the conflict graph —
 and produces good results for the sparsity patterns
 typically encountered in scientific computing.
 
+## From Coloring to Decompression
+
+The coloring result is materialized as a **seed matrix**
+whose columns are indicator vectors — one per color group
+(see [Seed Matrices and Compression](asd.md#seed-matrices-and-compression)).
+Multiplying the seed matrix by the Jacobian (or evaluating the corresponding JVPs/VJPs)
+produces a **compressed matrix** with one row or column per color.
+
+Recovering the sparse matrix from the compressed product is called **decompression**.
+Because same-colored rows or columns are structurally orthogonal,
+each nonzero appears in exactly one position of the compressed matrix
+and can be read off directly — no linear systems need to be solved.
+
+For symmetric Hessians the story is similar,
+but each off-diagonal entry \(H_{ij}\) can be recovered from either the row of \(i\) or the row of \(j\)
+in the compressed product.
+The star coloring guarantee ensures that at least one direction is always unambiguous.
+
+See the API reference for
+[`jacobian_coloring`](../reference/jacobian.md#asdex.jacobian_coloring) and
+[`hessian_coloring`](../reference/hessian.md#asdex.hessian_coloring).
+
 ## References
 
 - [_Revisiting Sparse Matrix Coloring and Bicoloring_](https://arxiv.org/abs/2505.07308), Montoison et al. (2025)
@@ -65,3 +89,4 @@ typically encountered in scientific computing.
 - [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007)
 - [_Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation_](https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286), Gebremedhin et al. (2009)
 - [_ColPack: Software for graph coloring and related problems in scientific computing_](https://dl.acm.org/doi/10.1145/2513109.2513110), Gebremedhin et al. (2013)
+- [_SparseMatrixColorings.jl_](https://github.com/gdalle/SparseMatrixColorings.jl), Dalle & Montoison (2025) — the Julia library from which the `asdex` coloring implementation is adapted
