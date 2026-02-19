@@ -1,16 +1,17 @@
 """Propagation rule for slice operations."""
 
-import numpy as np
+from operator import itemgetter
+
 from jax._src.core import JaxprEqn
 
 from ._commons import (
     ConstVals,
     Deps,
-    atom_const_val,
     atom_shape,
     index_sets,
     permute_indices,
     position_map,
+    propagate_const_unary,
 )
 
 
@@ -49,8 +50,4 @@ def prop_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 
     deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)
 
-    in_val = atom_const_val(eqn.invars[0], const_vals)
-    if in_val is not None:
-        const_vals[eqn.outvars[0]] = (
-            np.asarray(in_val).reshape(in_shape)[slices].ravel()
-        )
+    propagate_const_unary(eqn, const_vals, itemgetter(slices))

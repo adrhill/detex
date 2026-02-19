@@ -20,6 +20,7 @@ from ._commons import (
     conservative_indices,
     forward_const_vals,
     index_sets,
+    propagate_const_binary,
     seed_const_vals,
 )
 from ._concatenate import prop_concatenate
@@ -33,7 +34,6 @@ from ._elementwise import (
     prop_integer_pow,
     prop_unary_elementwise,
     prop_zero_derivative,
-    propagate_const_binary,
 )
 from ._equinox._select_if_vmap import prop_select_if_vmap
 from ._gather import prop_gather
@@ -355,7 +355,7 @@ def _prop_iota(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             [shape[dim] if i == dim else 1 for i in range(len(shape))]
         ),
         shape,
-    ).ravel()
+    )
 
 
 def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:

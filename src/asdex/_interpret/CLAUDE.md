@@ -51,6 +51,9 @@ through primitives to determine Jacobian sparsity patterns.
 - **`fixed_point_loop(iterate_fn, carry, n_carry)`** —
   runs a body function on carry index sets until they stabilize.
   Used by `while_loop` and `scan`.
+- **`propagate_const_unary(eqn, const_vals, transform)`** —
+  propagates a const value through a unary op by applying `transform`.
+  Mirrors `propagate_const_binary` for the single-input case.
 - **`conservative_indices(all_indices, out_size)`** —
   conservative fallback where every output element depends on the union of all inputs.
 

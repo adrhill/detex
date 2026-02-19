@@ -14,27 +14,6 @@ from ._commons import (
 )
 
 
-def propagate_const_binary(
-    eqn: JaxprEqn, const_vals: ConstVals, ufuncs: dict[str, np.ufunc]
-) -> None:
-    """Propagate constant values through a binary op.
-
-    If both inputs are statically known and a matching ufunc exists,
-    the output value is computed and stored.
-    Used for tracking static indices through arithmetic to gather/scatter.
-
-    Example: z = x + y where x = [1, 2], y = [3, 4]
-        const_vals before: {x: [1, 2], y: [3, 4]}
-        const_vals after:  {x: [1, 2], y: [3, 4], z: [4, 6]}
-    """
-    in1 = atom_const_val(eqn.invars[0], const_vals)
-    in2 = atom_const_val(eqn.invars[1], const_vals)
-    if in1 is not None and in2 is not None:
-        ufunc = ufuncs.get(eqn.primitive.name)
-        if ufunc is not None:
-            const_vals[eqn.outvars[0]] = ufunc(in1, in2)
-
-
 def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
     """Propagate dependencies through zero-derivative primitives.
 

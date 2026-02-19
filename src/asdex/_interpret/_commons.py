@@ -4,7 +4,7 @@ import math
 from collections.abc import Callable, Sequence
 
 import numpy as np
-from jax._src.core import Jaxpr, Literal, Var
+from jax._src.core import Jaxpr, JaxprEqn, Literal, Var
 
 IndexSets = list[set[int]]
 """Per-element dependency index sets for an array."""
@@ -74,6 +74,43 @@ def atom_const_val(atom: Atom, const_vals: ConstVals) -> np.ndarray | None:
     if isinstance(atom, Var) and atom in const_vals:
         return const_vals[atom]
     return None
+
+
+def propagate_const_unary(
+    eqn: JaxprEqn,
+    const_vals: ConstVals,
+    transform: Callable[[np.ndarray], np.ndarray],
+) -> None:
+    """Propagate a const value through a unary op.
+
+    If the input is statically known,
+    apply ``transform`` and store the result.
+    Mirrors ``propagate_const_binary`` for the single-input case.
+    """
+    in_val = atom_const_val(eqn.invars[0], const_vals)
+    if in_val is not None:
+        const_vals[eqn.outvars[0]] = transform(in_val)
+
+
+def propagate_const_binary(
+    eqn: JaxprEqn, const_vals: ConstVals, ufuncs: dict[str, np.ufunc]
+) -> None:
+    """Propagate constant values through a binary op.
+
+    If both inputs are statically known and a matching ufunc exists,
+    the output value is computed and stored.
+    Used for tracking static indices through arithmetic to gather/scatter.
+
+    Example: z = x + y where x = [1, 2], y = [3, 4]
+        const_vals before: {x: [1, 2], y: [3, 4]}
+        const_vals after:  {x: [1, 2], y: [3, 4], z: [4, 6]}
+    """
+    in1 = atom_const_val(eqn.invars[0], const_vals)
+    in2 = atom_const_val(eqn.invars[1], const_vals)
+    if in1 is not None and in2 is not None:
+        ufunc = ufuncs.get(eqn.primitive.name)
+        if ufunc is not None:
+            const_vals[eqn.outvars[0]] = ufunc(in1, in2)
 
 
 # Index set operations

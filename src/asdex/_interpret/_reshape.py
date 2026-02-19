@@ -6,12 +6,12 @@ from jax._src.core import JaxprEqn
 from ._commons import (
     ConstVals,
     Deps,
-    atom_const_val,
     atom_shape,
     index_sets,
     numel,
     permute_indices,
     position_map,
+    propagate_const_unary,
 )
 
 
@@ -63,11 +63,11 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     else:
         deps[eqn.outvars[0]] = in_indices
 
-    in_val = atom_const_val(eqn.invars[0], const_vals)
-    if in_val is not None:
-        new_sizes = eqn.params["new_sizes"]
-        val = np.asarray(in_val)
+    new_sizes = eqn.params["new_sizes"]
+
+    def _reshape_val(v: np.ndarray) -> np.ndarray:
         if dimensions is not None:
-            in_shape = atom_shape(eqn.invars[0])
-            val = val.reshape(in_shape).transpose(dimensions)
-        const_vals[eqn.outvars[0]] = val.reshape(new_sizes).ravel()
+            return v.transpose(dimensions).reshape(new_sizes)
+        return v.reshape(new_sizes)
+
+    propagate_const_unary(eqn, const_vals, _reshape_val)
