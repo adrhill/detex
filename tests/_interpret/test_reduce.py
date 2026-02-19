@@ -68,7 +68,7 @@ _SHAPES_AND_AXES = [
     pytest.param((2, 3, 4), (1,), id="3d_single_axis"),
     pytest.param((2, 3, 4), (0, 2), id="3d_two_axes"),
     pytest.param((2, 3, 4), (0, 1, 2), id="3d_full"),
-    pytest.param((2, 2, 3, 2), (1, 3), id="4d"),
+    pytest.param((2, 3, 4, 5), (1, 3), id="4d"),
 ]
 
 

@@ -157,12 +157,12 @@ def test_rev_3d_all_dims():
 @pytest.mark.array_ops
 def test_rev_4d():
     """Reverse selected dimensions of a 4D array."""
-    shape = (2, 2, 3, 2)
+    shape = (2, 3, 2, 4)
 
     def f(x):
         return lax.rev(x.reshape(shape), dimensions=(1, 3)).flatten()
 
-    result = jacobian_sparsity(f, input_shape=24).todense().astype(int)
+    result = jacobian_sparsity(f, input_shape=48).todense().astype(int)
     expected = _rev_jacobian(shape, (1, 3))
     np.testing.assert_array_equal(result, expected)
 

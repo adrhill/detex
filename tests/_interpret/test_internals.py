@@ -239,21 +239,22 @@ def test_split():
 def test_matmul():
     """Matrix multiplication (dot_general) tracks row/column dependencies.
 
-    For f(x) = x @ x.T, output[i,j] depends on rows i and j of input.
+    For f(x) = X @ X.T where X is (2, 3),
+    output[i,j] depends on rows i and j of input.
     Diagonal blocks share deps, off-diagonal blocks union both rows.
     """
 
     def f(x):
-        mat = x.reshape(2, 2)
+        mat = x.reshape(2, 3)
         return (mat @ mat.T).flatten()
 
-    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
     expected = np.array(
         [
-            [1, 1, 0, 0],
-            [1, 1, 1, 1],
-            [1, 1, 1, 1],
-            [0, 0, 1, 1],
+            [1, 1, 1, 0, 0, 0],
+            [1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1],
+            [0, 0, 0, 1, 1, 1],
         ]
     )
     np.testing.assert_array_equal(result, expected)

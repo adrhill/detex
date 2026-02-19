@@ -44,8 +44,21 @@ uv run pytest -m hessian         # Run only Hessian tests
 
 ## Conventions
 
+- Each test function should have a docstring explaining what it tests.
 - Tests documenting **expected future behavior** (TODOs) should use the `fallback` marker and include a `TODO(primitive)` comment explaining the precise expected behavior.
 - **Whenever you discover a conservative pattern** (the handler produces a correct but overly dense result), you **must** document it with a `TODO(primitive)` comment showing the true precise pattern.
   Catching these is extremely valuable — each one is a concrete roadmap entry for improving sparsity detection.
 - Tests documenting **known bugs** should use the `bug` marker and `pytest.raises` to assert the current (broken) behavior.
-- Each test function should have a docstring explaining what it tests.
+
+## Writing handler tests
+
+Handler test files (`_interpret/test_*.py`) should cover:
+
+- **Non-square shapes**: always use asymmetric shapes (e.g. `(3,4)` not `(4,4)`) so that dimension transposition bugs are caught.
+- **Multiple dimensionalities**: 1D, 2D, 3D, 4D where applicable.
+- **Broadcasting shapes**: size-1 dimensions that broadcast (e.g. `(3,4)` op `(3,1)`).
+- **Degenerate shapes**: size-0 dimensions, size-1 dimensions, scalar inputs (where the primitive supports them).
+- **Edge cases**: identity/trivial parameters, boundary parameter values.
+- **Real-world usage patterns**: `jnp` functions that lower to the primitive under test.
+- **Jacobian verification**: for at least one test per dimensionality, verify precision by comparing the detected pattern against `(np.abs(jax.jacobian(f)(x)) > 1e-10)` using `assert_array_equal`.
+  Choose test functions that avoid local sparsity (e.g. multiply by zero) so the numerical Jacobian matches the structural pattern.

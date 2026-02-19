@@ -40,16 +40,16 @@ def test_tile_multidim():
     """Tiling a 2D array along both axes tracks modular dependencies."""
 
     def f(x):
-        mat = x.reshape(2, 2)
+        mat = x.reshape(2, 3)
         return jnp.tile(mat, (2, 2)).flatten()
 
-    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
-    # mat = [[0,1],[2,3]], tiled to (4,4)
-    # Each output element maps to input[i%2, j%2]
-    expected = np.zeros((16, 4), dtype=int)
-    for out_idx in range(16):
-        row, col = divmod(out_idx, 4)
-        in_idx = (row % 2) * 2 + (col % 2)
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    # mat = [[0,1,2],[3,4,5]], tiled to (4,6)
+    # Each output element maps to input[i%2, j%3]
+    expected = np.zeros((24, 6), dtype=int)
+    for out_idx in range(24):
+        row, col = divmod(out_idx, 6)
+        in_idx = (row % 2) * 3 + (col % 3)
         expected[out_idx, in_idx] = 1
     np.testing.assert_array_equal(result, expected)
 
@@ -99,13 +99,13 @@ def test_tile_3d():
     """Tiling a 3D array tracks modular dependencies across all axes."""
 
     def f(x):
-        arr = x.reshape(1, 2, 2)
+        arr = x.reshape(1, 2, 3)
         return jnp.tile(arr, (2, 1, 1)).flatten()
 
-    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
-    # Tiling (1,2,2) by (2,1,1) -> (2,2,2), each element maps to input[i%1, j%2, k%2]
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    # Tiling (1,2,3) by (2,1,1) -> (2,2,3), each element maps to input[i%1, j%2, k%3]
     # So output is just input repeated twice.
-    expected = np.vstack([np.eye(4, dtype=int), np.eye(4, dtype=int)])
+    expected = np.vstack([np.eye(6, dtype=int), np.eye(6, dtype=int)])
     np.testing.assert_array_equal(result, expected)
 
 

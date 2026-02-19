@@ -232,43 +232,40 @@ def test_scatter_add_middle_dim():
     np.testing.assert_array_equal(result, expected)
 
 
-# Precision verification against jax.jacobian
-
-
-def _check_precision(f, input_size: int) -> None:
-    """Verify detected sparsity exactly matches actual Jacobian nonzeros.
-
-    Computes the true Jacobian with ``jax.jacobian`` and asserts the
-    detected pattern matches it element-wise.
-    """
-    x_test = jax.random.normal(jax.random.key(42), (input_size,))
-    actual_jac = jax.jacobian(f)(x_test)
-    actual_nonzero = (np.abs(actual_jac) > 1e-10).astype(int)
-    detected = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
-    np.testing.assert_array_equal(
-        detected, actual_nonzero, "Detected sparsity should match actual Jacobian"
-    )
+# Precision verification
 
 
 @pytest.mark.array_ops
 def test_scatter_at_set_precision():
-    """1D scatter verified against jax.jacobian.
+    """1D scatter: ``arr.at[[0,2]].set(x[4:6])`` replaces positions 0 and 2.
 
-    ``arr.at[[0,2]].set(x[:2])`` replaces positions 0 and 2.
+    Positions 0 and 2 depend on x[4] and x[5] respectively.
+    Positions 1 and 3 keep their original dependencies x[1] and x[3].
     """
 
     def f(x):
         arr = x[:4]
         return arr.at[jnp.array([0, 2])].set(x[4:6])
 
-    _check_precision(f, 6)
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 0, 0, 0, 1, 0],  # out[0] <- x[4]
+            [0, 1, 0, 0, 0, 0],  # out[1] <- x[1]
+            [0, 0, 0, 0, 0, 1],  # out[2] <- x[5]
+            [0, 0, 0, 1, 0, 0],  # out[3] <- x[3]
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.array_ops
 def test_scatter_2d_batched_precision():
-    """2D batched scatter (Pattern 1) verified against jax.jacobian.
+    """2D batched scatter (Pattern 1): replace rows with constants.
 
-    Reshapes into (3, 4) and replaces rows via fancy indexing.
+    Reshapes into (3, 4) and replaces rows 2 and 0 with ones.
+    Only row 1 (flat indices 4-7) keeps its original dependencies.
     """
     indices = jnp.array([2, 0])
 
@@ -277,14 +274,20 @@ def test_scatter_2d_batched_precision():
         updates = jnp.ones((2, 4))
         return mat.at[indices].set(updates).reshape(-1)
 
-    _check_precision(f, 12)
+    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    # Rows 0 and 2 replaced with constant ones, row 1 keeps identity.
+    expected = np.zeros((12, 12), dtype=int)
+    for i in range(4, 8):
+        expected[i, i] = 1
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.array_ops
 def test_scatter_middle_dim_precision():
-    """Middle-dim scatter (Pattern 2) verified against jax.jacobian.
+    """Middle-dim scatter (Pattern 2): sets ``arr.at[:, 1, :] = 0``.
 
-    Sets ``arr.at[:, 1, :] = 0`` on a (2, 3, 4) array.
+    Non-target positions keep identity;
+    target positions (dim 1 = 1) become constant.
     """
 
     def f(x):
@@ -292,14 +295,20 @@ def test_scatter_middle_dim_precision():
         arr = arr.at[:, 1, :].set(0.0)
         return arr.reshape(-1)
 
-    _check_precision(f, 24)
+    result = jacobian_sparsity(f, input_shape=24).todense().astype(int)
+    expected = np.zeros((24, 24), dtype=int)
+    for i in range(24):
+        if (i // 4) % 3 != 1:
+            expected[i, i] = 1
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.array_ops
 def test_scatter_multi_index_precision():
-    """Multi-index scatter (Pattern 3) verified against jax.jacobian.
+    """Multi-index scatter (Pattern 3): zeroes specific coordinates.
 
-    ``mat.at[rows, cols].set(vals)`` writes scalars at multi-dim coordinates.
+    ``mat.at[rows, cols].set(zeros)`` zeroes positions (0,1), (1,3), (2,0).
+    Those positions lose input deps; all others keep identity.
     """
 
     def f(x):
@@ -308,7 +317,12 @@ def test_scatter_multi_index_precision():
         cols = jnp.array([1, 3, 0])
         return mat.at[rows, cols].set(jnp.zeros(3)).reshape(-1)
 
-    _check_precision(f, 12)
+    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    # Zeroed positions: (0,1)=1, (1,3)=7, (2,0)=8
+    expected = np.eye(12, dtype=int)
+    for pos in [1, 7, 8]:
+        expected[pos, pos] = 0
+    np.testing.assert_array_equal(result, expected)
 
 
 # Asymmetric (non-square) shapes
@@ -327,7 +341,12 @@ def test_scatter_batched_nonsquare():
         updates = jnp.zeros((1, 5))
         return mat.at[jnp.array([1])].set(updates).reshape(-1)
 
-    _check_precision(f, 15)
+    result = jacobian_sparsity(f, input_shape=15).todense().astype(int)
+    # Row 1 (flat 5-9) zeroed, rows 0 and 2 keep identity.
+    expected = np.eye(15, dtype=int)
+    for i in range(5, 10):
+        expected[i, i] = 0
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.array_ops
@@ -342,7 +361,13 @@ def test_scatter_middle_dim_nonsquare():
         arr = arr.at[:, 0, :].set(0.0)
         return arr.reshape(-1)
 
-    _check_precision(f, 30)
+    result = jacobian_sparsity(f, input_shape=30).todense().astype(int)
+    # dim 1 = 0 positions zeroed: (i // 5) % 3 == 0
+    expected = np.zeros((30, 30), dtype=int)
+    for i in range(30):
+        if (i // 5) % 3 != 0:
+            expected[i, i] = 1
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.array_ops
@@ -358,32 +383,15 @@ def test_scatter_multi_index_nonsquare():
         cols = jnp.array([4, 0, 2])
         return mat.at[rows, cols].set(jnp.zeros(3)).reshape(-1)
 
-    _check_precision(f, 15)
+    result = jacobian_sparsity(f, input_shape=15).todense().astype(int)
+    # Zeroed positions: (0,4)=4, (2,0)=10, (1,2)=7
+    expected = np.eye(15, dtype=int)
+    for pos in [4, 7, 10]:
+        expected[pos, pos] = 0
+    np.testing.assert_array_equal(result, expected)
 
 
 # Conservative audit
-
-
-def _check_sparser_than_conservative(f, input_size: int) -> None:
-    """Verify the detected pattern has fewer nonzeros than the conservative bound.
-
-    Conservative gives every output the union of all input deps,
-    which is an upper bound.
-    The precise handler should produce strictly fewer nonzeros.
-    """
-    detected = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
-    out_size, in_size = detected.shape
-
-    # Conservative upper bound: each output depends on union of all inputs.
-    # The actual conservative count depends on which inputs are live,
-    # but the densest possible is out_size * in_size.
-    conservative_nnz = out_size * in_size
-    detected_nnz = int(detected.sum())
-
-    assert detected_nnz < conservative_nnz, (
-        f"Precise handler ({detected_nnz} nnz) should be strictly sparser "
-        f"than conservative ({conservative_nnz} nnz)"
-    )
 
 
 @pytest.mark.array_ops
@@ -394,7 +402,9 @@ def test_scatter_batched_sparser_than_conservative():
         mat = x.reshape(3, 4)
         return mat.at[jnp.array([0, 2])].set(jnp.zeros((2, 4))).reshape(-1)
 
-    _check_sparser_than_conservative(f, 12)
+    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    n_out, n_in = result.shape
+    assert 0 < result.sum() < n_out * n_in
 
 
 @pytest.mark.array_ops
@@ -406,7 +416,9 @@ def test_scatter_middle_dim_sparser_than_conservative():
         arr = arr.at[:, 2, :].set(0.0)
         return arr.reshape(-1)
 
-    _check_sparser_than_conservative(f, 24)
+    result = jacobian_sparsity(f, input_shape=24).todense().astype(int)
+    n_out, n_in = result.shape
+    assert 0 < result.sum() < n_out * n_in
 
 
 @pytest.mark.array_ops
@@ -419,7 +431,9 @@ def test_scatter_multi_index_sparser_than_conservative():
         cols = jnp.array([1, 3])
         return mat.at[rows, cols].set(jnp.zeros(2)).reshape(-1)
 
-    _check_sparser_than_conservative(f, 15)
+    result = jacobian_sparsity(f, input_shape=15).todense().astype(int)
+    n_out, n_in = result.shape
+    assert 0 < result.sum() < n_out * n_in
 
 
 # Composition
@@ -551,18 +565,16 @@ def test_scatter_duplicate_indices_add():
 
 @pytest.mark.array_ops
 def test_scatter_oob_indices():
-    """Out-of-bounds indices are clipped by JAX.
-
-    JAX clips OOB scatter indices to valid range.
-    The handler should match this behavior.
-    """
+    """OOB indices are silently ignored by JAX, so the array is unchanged."""
 
     def f(x):
         arr = x[:3]
-        # Index 10 is out of bounds for size 3; JAX clips to 2.
+        # Index 10 is OOB for size 3; JAX silently ignores it.
         return arr.at[jnp.array([10])].set(jnp.array([0.0]))
 
-    _check_precision(f, 3)
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.array_ops
@@ -641,19 +653,18 @@ def test_scatter_multi_index_duplicate_add():
 
 @pytest.mark.array_ops
 def test_scatter_multi_index_oob():
-    """Multi-index scatter with out-of-bounds coordinates.
-
-    JAX clips OOB indices; the handler should match.
-    """
+    """Multi-index scatter with OOB coordinates; JAX silently ignores them."""
 
     def f(x):
         mat = x.reshape(2, 3)
-        # (5, 10) is out of bounds for (2, 3); JAX clips to (1, 2).
+        # (5, 10) is OOB for (2, 3); JAX silently ignores it.
         rows = jnp.array([5])
         cols = jnp.array([10])
         return mat.at[rows, cols].set(jnp.zeros(1)).reshape(-1)
 
-    _check_precision(f, 6)
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    expected = np.eye(6, dtype=int)
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.fallback

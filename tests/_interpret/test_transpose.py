@@ -121,14 +121,14 @@ def test_transpose_size_one_dims():
 @pytest.mark.array_ops
 def test_transpose_4d_nhwc_to_nchw():
     """4D transpose simulating NHWC → NCHW layout change: (0, 3, 1, 2)."""
-    in_shape = (1, 2, 3, 2)
+    in_shape = (1, 2, 3, 4)
     perm = (0, 3, 1, 2)
 
     def f(x):
         arr = x.reshape(in_shape)
         return jnp.transpose(arr, perm).flatten()
 
-    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    result = jacobian_sparsity(f, input_shape=24).todense().astype(int)
     expected = _transpose_jacobian(in_shape, perm)
     np.testing.assert_array_equal(result, expected)
 

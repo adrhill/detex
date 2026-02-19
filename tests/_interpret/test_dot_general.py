@@ -108,22 +108,27 @@ def test_matmul_2x3_3x2():
 
 @pytest.mark.array_ops
 def test_matmul_self():
-    """X @ x.T where x is a 2x2 matrix.
+    """X @ X.T where X is a 2x3 matrix.
 
     Both operands share the same input, so deps are unioned.
     """
 
     def f(x):
-        mat = x.reshape(2, 2)
+        mat = x.reshape(2, 3)
         return (mat @ mat.T).flatten()
 
-    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    # mat = [[x0,x1,x2],[x3,x4,x5]]
+    # out[0,0] = row0·row0 → {0,1,2}
+    # out[0,1] = row0·row1 → {0,1,2,3,4,5}
+    # out[1,0] = row1·row0 → {0,1,2,3,4,5}
+    # out[1,1] = row1·row1 → {3,4,5}
     expected = np.array(
         [
-            [1, 1, 0, 0],
-            [1, 1, 1, 1],
-            [1, 1, 1, 1],
-            [0, 0, 1, 1],
+            [1, 1, 1, 0, 0, 0],
+            [1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1],
+            [0, 0, 0, 1, 1, 1],
         ]
     )
     np.testing.assert_array_equal(result, expected)
@@ -134,27 +139,17 @@ def test_matmul_self():
 def test_batched_matmul():
     """Batched matmul: batch dim is preserved, each batch independent.
 
-    A(2,2,3) @ B(2,3,1) → C(2,2,1).
-    Batch dim 0 is shared, contraction on dim 2 of A and dim 1 of B.
+    A(3,2,4) @ B(3,4,5) → C(3,2,5).
+    All dimension sizes are unique to catch axis-confusion bugs.
     """
 
     def f(x):
-        A = x[:12].reshape(2, 2, 3)
-        B = x[12:].reshape(2, 3, 1)
+        A = x[:24].reshape(3, 2, 4)
+        B = x[24:].reshape(3, 4, 5)
         return jnp.matmul(A, B).flatten()
 
-    result = jacobian_sparsity(f, input_shape=18).todense().astype(int)
-    # Batch 0: A[0] rows {0..5}, B[0] = {12,13,14}
-    # Batch 1: A[1] rows {6..11}, B[1] = {15,16,17}
-    # out[0,0,0] = A[0,0,:] @ B[0,:,0] → {0,1,2} ∪ {12,13,14}
-    # out[0,1,0] = A[0,1,:] @ B[0,:,0] → {3,4,5} ∪ {12,13,14}
-    # out[1,0,0] = A[1,0,:] @ B[1,:,0] → {6,7,8} ∪ {15,16,17}
-    # out[1,1,0] = A[1,1,:] @ B[1,:,0] → {9,10,11} ∪ {15,16,17}
-    expected = np.zeros((4, 18), dtype=int)
-    expected[0, [0, 1, 2, 12, 13, 14]] = 1
-    expected[1, [3, 4, 5, 12, 13, 14]] = 1
-    expected[2, [6, 7, 8, 15, 16, 17]] = 1
-    expected[3, [9, 10, 11, 15, 16, 17]] = 1
+    result = jacobian_sparsity(f, input_shape=84).todense().astype(int)
+    expected = _dot_general_jacobian(f, 84)
     np.testing.assert_array_equal(result, expected)
 
 
@@ -251,12 +246,12 @@ def test_einsum_batched():
     """Batched einsum bij,bjk->bik."""
 
     def f(x):
-        A = x[:12].reshape(2, 2, 3)
-        B = x[12:].reshape(2, 3, 2)
+        A = x[:24].reshape(3, 2, 4)
+        B = x[24:].reshape(3, 4, 5)
         return jnp.einsum("bij,bjk->bik", A, B).flatten()
 
-    result = jacobian_sparsity(f, input_shape=24).todense().astype(int)
-    expected = _dot_general_jacobian(f, 24)
+    result = jacobian_sparsity(f, input_shape=84).todense().astype(int)
+    expected = _dot_general_jacobian(f, 84)
     np.testing.assert_array_equal(result, expected)
 
 
@@ -279,12 +274,12 @@ def test_tensordot_axes_2():
     """Tensordot with axes=2: contracts last 2 axes of A with first 2 of B."""
 
     def f(x):
-        A = x[:12].reshape(2, 2, 3)
-        B = x[12:].reshape(2, 3, 4)
+        A = x[:30].reshape(5, 2, 3)
+        B = x[30:].reshape(2, 3, 4)
         return jnp.tensordot(A, B, axes=2).flatten()
 
-    result = jacobian_sparsity(f, input_shape=36).todense().astype(int)
-    expected = _dot_general_jacobian(f, 36)
+    result = jacobian_sparsity(f, input_shape=54).todense().astype(int)
+    expected = _dot_general_jacobian(f, 54)
     np.testing.assert_array_equal(result, expected)
 
 
@@ -392,15 +387,15 @@ def test_multi_contract_dims():
     """Multiple contracting dimensions: contract on 2 axes simultaneously."""
 
     def f(x):
-        A = x[:12].reshape(2, 3, 2)
-        B = x[12:].reshape(3, 2, 4)
-        # Contract dims (1,2) of A with (0,1) of B → shape (2, 4)
+        A = x[:30].reshape(5, 3, 2)
+        B = x[30:].reshape(3, 2, 4)
+        # Contract dims (1,2) of A with (0,1) of B → shape (5, 4)
         return jax.lax.dot_general(
             A, B, dimension_numbers=(((1, 2), (0, 1)), ((), ()))
         ).flatten()
 
-    result = jacobian_sparsity(f, input_shape=36).todense().astype(int)
-    expected = _dot_general_jacobian(f, 36)
+    result = jacobian_sparsity(f, input_shape=54).todense().astype(int)
+    expected = _dot_general_jacobian(f, 54)
     np.testing.assert_array_equal(result, expected)
 
 
@@ -461,12 +456,12 @@ def test_double_matmul():
 
     def f(x):
         A = x[:6].reshape(2, 3)
-        B = x[6:15].reshape(3, 3)
-        C = x[15:].reshape(3, 2)
+        B = x[6:18].reshape(3, 4)
+        C = x[18:].reshape(4, 2)
         return ((A @ B) @ C).flatten()
 
-    result = jacobian_sparsity(f, input_shape=21).todense().astype(int)
-    expected = _dot_general_jacobian(f, 21)
+    result = jacobian_sparsity(f, input_shape=26).todense().astype(int)
+    expected = _dot_general_jacobian(f, 26)
     np.testing.assert_array_equal(result, expected)
 
 

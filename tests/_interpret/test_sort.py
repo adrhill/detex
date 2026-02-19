@@ -116,8 +116,8 @@ def test_sort_2d_size_one_sort_dim():
 @pytest.mark.array_ops
 @pytest.mark.parametrize("dimension", [0, 1, 2])
 def test_sort_3d(dimension):
-    """Sort (2, 3, 2) along each dimension produces the correct block pattern."""
-    in_shape = (2, 3, 2)
+    """Sort (2, 3, 4) along each dimension produces the correct block pattern."""
+    in_shape = (2, 3, 4)
     n = int(np.prod(in_shape))
 
     def f(x):

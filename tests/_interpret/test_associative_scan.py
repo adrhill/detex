@@ -140,6 +140,7 @@ def test_associative_scan_reverse():
 
 
 @pytest.mark.control_flow
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_associative_scan_jacobian_values():
     """Verify sparse Jacobian values match dense jax.jacobian for cumulative sum."""
 
