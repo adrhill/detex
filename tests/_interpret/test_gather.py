@@ -348,14 +348,14 @@ def test_gather_indices_through_broadcast():
     _check_precision(f, input_size=5)
 
 
-@pytest.mark.xfail(reason="TODO(reshape): const_vals not propagated through reshape")
+@pytest.mark.fallback
 @pytest.mark.array_ops
 def test_gather_indices_through_reshape():
-    """Indices surviving reshape remain statically known.
+    """Reshaping a constant index array loses static tracking.
 
-    A 2D index array reshaped to 1D
-    should still resolve precisely for gather.
-    Requires const_vals propagation through reshape.
+    TODO(reshape): precise pattern is permutation —
+    out[0]=x[1], out[1]=x[0], out[2]=x[2], out[3]=x[3].
+    Currently falls back to all-ones because const_vals aren't propagated through reshape.
     """
 
     def f(x):
@@ -363,7 +363,72 @@ def test_gather_indices_through_reshape():
         idx_flat = idx.reshape(4)
         return x[idx_flat]
 
-    _check_precision(f, input_size=5)
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # Conservative: all-ones because indices are lost
+    expected = np.ones((4, 5), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.fallback
+@pytest.mark.array_ops
+def test_gather_indices_through_slice():
+    """Slicing a constant index array loses static tracking.
+
+    TODO(slice): precise pattern is permutation —
+    out[0]=x[3], out[1]=x[0], out[2]=x[2].
+    Currently falls back to all-ones because const_vals aren't propagated through slice.
+    """
+
+    def f(x):
+        idx = jnp.array([3, 0, 2, 1])
+        idx_sub = idx[:3]  # [3, 0, 2]
+        return x[idx_sub]
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # Conservative: all-ones because indices are lost
+    expected = np.ones((3, 5), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.fallback
+@pytest.mark.array_ops
+def test_gather_indices_through_transpose():
+    """Transposing a constant index array loses static tracking.
+
+    TODO(transpose): precise pattern is permutation —
+    out[0]=x[1], out[1]=x[3], out[2]=x[0], out[3]=x[2].
+    Currently falls back to all-ones because const_vals aren't propagated through transpose.
+    """
+
+    def f(x):
+        idx = jnp.array([[1, 0], [3, 2]])
+        idx_t = jnp.transpose(idx)  # [[1, 3], [0, 2]]
+        return x[idx_t.flatten()]  # [1, 3, 0, 2]
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # Conservative: all-ones because indices are lost
+    expected = np.ones((4, 5), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.fallback
+@pytest.mark.array_ops
+def test_gather_indices_through_tile():
+    """Tiling a constant index array loses static tracking.
+
+    TODO(tile): precise pattern has out[0],out[2]=x[2] and out[1],out[3]=x[0].
+    Currently falls back to all-ones because const_vals aren't propagated through tile.
+    """
+
+    def f(x):
+        idx = jnp.array([2, 0])
+        idx_rep = jnp.tile(idx, 2)  # [2, 0, 2, 0]
+        return x[idx_rep]
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    # Conservative: all-ones because indices are lost
+    expected = np.ones((4, 4), dtype=int)
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.array_ops
