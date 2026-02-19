@@ -1135,6 +1135,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#asdex.SparsityPattern.save" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        save
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asdex.SparsityPattern.load" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#asdex.SparsityPattern.__str__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1172,6 +1194,28 @@
   
     <nav class="md-nav" aria-label="ColoredPattern">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#asdex.ColoredPattern.save" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        save
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asdex.ColoredPattern.load" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#asdex.ColoredPattern.__repr__" class="md-nav__link">
@@ -1675,6 +1719,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#asdex.SparsityPattern.save" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        save
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asdex.SparsityPattern.load" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#asdex.SparsityPattern.__str__" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1712,6 +1778,28 @@
   
     <nav class="md-nav" aria-label="ColoredPattern">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#asdex.ColoredPattern.save" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        save
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asdex.ColoredPattern.load" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#asdex.ColoredPattern.__repr__" class="md-nav__link">
@@ -3352,6 +3440,108 @@ If None, uses all 1s.</p>
 <div class="doc doc-object doc-function">
 
 
+<h3 id="asdex.SparsityPattern.save" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">save</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></code>
+
+<a href="#asdex.SparsityPattern.save" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Save sparsity pattern to an <code>.npz</code> file.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>path</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | <span title="os.PathLike">PathLike</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Destination file path.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="asdex.SparsityPattern.load" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#asdex.SparsityPattern.load" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Load sparsity pattern from an <code>.npz</code> file.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>path</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | <span title="os.PathLike">PathLike</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Source file path.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h3 id="asdex.SparsityPattern.__str__" class="doc doc-heading">
             <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
 
@@ -3502,6 +3692,108 @@ Shape <code>(m,)</code> for <code>"VJP"</code> mode,
 
 
 
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="asdex.ColoredPattern.save" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">save</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></code>
+
+<a href="#asdex.ColoredPattern.save" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Save colored pattern to an <code>.npz</code> file.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>path</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | <span title="os.PathLike">PathLike</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Destination file path.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="asdex.ColoredPattern.load" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+<a href="#asdex.ColoredPattern.load" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Load colored pattern from an <code>.npz</code> file.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>path</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | <span title="os.PathLike">PathLike</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Source file path.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-function">
 
