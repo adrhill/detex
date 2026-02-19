@@ -1,12 +1,12 @@
 # Automatic Sparse Differentiation
 
 Automatic sparse differentiation (ASD) exploits the sparsity structure of Jacobians and Hessians
-to compute them far more efficiently than dense autodiff.
+to compute them far more efficiently than dense automatic differentiation (AD).
 This page explains the mathematical ideas behind the approach.
 
 ## Automatic Differentiation in Brief
 
-Automatic differentiation (AD) computes exact derivatives of programs
+AD computes exact derivatives of programs
 by applying the chain rule to each elementary operation.
 For a function \(f: \mathbb{R}^n \to \mathbb{R}^m\),
 AD can evaluate Jacobian-vector products in two modes:
@@ -23,24 +23,24 @@ not the full Jacobian.
 Building the complete matrix requires multiple passes,
 and reducing their number is the goal of sparse differentiation.
 
-## The Cost Problem
+## Computational Cost of AD
 
 Consider a function \(f: \mathbb{R}^n \to \mathbb{R}^m\) with Jacobian \(J \in \mathbb{R}^{m \times n}\).
 Computing \(J\) by standard autodiff requires either:
 
-- \(m\) **VJPs** (reverse-mode): one per row, or
-- \(n\) **JVPs** (forward-mode): one per column.
+- \(m\) VJPs (reverse-mode): one per row, or
+- \(n\) JVPs (forward-mode): one per column.
 
 For large, sparse Jacobians — common in scientific computing —
 most entries of \(J\) are zero,
 yet dense autodiff pays the full cost of \(m\) or \(n\) passes.
 ASD reduces this to a number of passes proportional to the
-number of **colors** in a graph coloring of the sparsity pattern,
+number of colors in a graph coloring of the sparsity pattern,
 which is often orders of magnitude smaller.
 
 ## Structural Orthogonality
 
-The key insight is **structural orthogonality**:
+The key insight is structural orthogonality:
 two rows \(i_1\) and \(i_2\) of \(J\) are structurally orthogonal
 when they share no nonzero column —
 that is, there is no column \(j\) where both \(J_{i_1 j}\) and \(J_{i_2 j}\) are (potentially) nonzero.
@@ -56,7 +56,7 @@ The same idea applies symmetrically to columns and JVPs.
 
 Graph coloring assigns each row a color
 such that rows sharing a nonzero column get different colors.
-From this coloring, we build a **seed matrix** \(S \in \mathbb{R}^{m \times p}\),
+From this coloring, we build a seed matrix \(S \in \mathbb{R}^{m \times p}\),
 where \(p\) is the number of colors.
 The seed for color \(c\) is the sum of the standard basis vectors
 for all rows assigned that color:
@@ -65,7 +65,7 @@ for all rows assigned that color:
 S_{:,c} = \sum_{i \,:\, \text{color}(i) = c} e_i
 \]
 
-The **compressed Jacobian** is then:
+The compressed Jacobian is then:
 
 \[
 B = S^\top \cdot J \in \mathbb{R}^{p \times n}
@@ -75,7 +75,7 @@ Computing \(B\) requires only \(p\) VJPs — one per color — instead of \(m\).
 
 ## Decompression
 
-Recovering the sparse Jacobian from \(B\) is called **decompression**.
+Recovering the sparse Jacobian from \(B\) is called decompression.
 Because same-colored rows are structurally orthogonal,
 each nonzero \(J_{ij}\) appears in exactly one entry of \(B\):
 
@@ -97,7 +97,7 @@ ASD decomposes the problem into three independent stages:
    so that structurally orthogonal groups share a color.
 3. **Decompression** — compute one AD pass per color and extract the sparse matrix.
 
-Steps 1 and 2 are **preprocessing**:
+Steps 1 and 2 are preprocessing:
 they depend only on the function's structure and input shape,
 not on the input values.
 Once computed, the coloring can be reused across arbitrarily many evaluations.
@@ -105,7 +105,7 @@ Step 3 is the only part that touches actual numerical data.
 
 ## Amortization
 
-The three-step split is designed around **amortization**.
+The three-step split is designed around amortization.
 Detection and coloring are the most expensive steps,
 but their results depend only on the function's structure and input shape —
 not on the input values.

@@ -10,7 +10,7 @@ and the algorithm used to find colorings.
 Given a [sparsity pattern](global-sparsity.md),
 we build a **conflict graph** whose vertices are the rows (or columns) of the matrix
 and whose edges connect pairs that share a nonzero column (or row).
-A **proper coloring** of this graph assigns colors to vertices
+A proper coloring of this graph assigns colors to vertices
 so that no two adjacent vertices share a color.
 Vertices with the same color are then guaranteed to be structurally orthogonal,
 meaning they can share an AD pass.
@@ -20,9 +20,9 @@ which is often dramatically fewer than the matrix dimension.
 ## Row and Column Coloring
 
 There are two variants.
-**Row coloring** treats rows as vertices and connects rows that share a nonzero column;
+Row coloring treats rows as vertices and connects rows that share a nonzero column;
 same-colored rows are evaluated together using VJPs (reverse-mode AD).
-**Column coloring** treats columns as vertices and connects columns that share a nonzero row;
+Column coloring treats columns as vertices and connects columns that share a nonzero row;
 same-colored columns are evaluated together using JVPs (forward-mode AD).
 By default, `asdex` tries both and picks whichever needs fewer colors.
 When tied, it prefers column coloring
@@ -34,7 +34,7 @@ Hessians are symmetric (\(H_{ij} = H_{ji}\)),
 so each off-diagonal entry appears twice in the matrix.
 Exploiting this redundancy can significantly reduce the number of colors needed,
 since recovering \(H_{ij}\) from a compressed column simultaneously gives us \(H_{ji}\) for free.
-The coloring operates on an **adjacency graph** whose vertices are variables
+The coloring operates on an adjacency graph whose vertices are variables
 and whose edges connect pairs \(i, j\) with \(H_{ij} \neq 0\).
 Diagonal entries are always recoverable, so only off-diagonal nonzeros create edges.
 
@@ -66,7 +66,7 @@ The coloring result is materialized as a **seed matrix**
 whose columns are indicator vectors — one per color group
 (see [Seed Matrices and Compression](asd.md#seed-matrices-and-compression)).
 Multiplying the seed matrix by the Jacobian (or evaluating the corresponding JVPs/VJPs)
-produces a **compressed matrix** with one row or column per color.
+produces a compressed matrix with one row or column per color.
 
 Recovering the sparse matrix from the compressed product is called **decompression**.
 Because same-colored rows or columns are structurally orthogonal,

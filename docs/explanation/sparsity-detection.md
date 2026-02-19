@@ -57,7 +57,7 @@ propagating index sets instead of numerical values.
 
 The core idea is to track, for each element of each intermediate array,
 _which input elements it depends on_.
-This dependency information is stored as **index sets** —
+This dependency information is stored as index sets —
 a list of `set[int]`, one set per array element.
 
 The algorithm proceeds in three steps:
@@ -149,7 +149,7 @@ Operations like `transpose`, `reshape`, `slice`, `reverse`, and `broadcast`
 rearrange elements without combining them.
 Each output element maps to exactly one input element,
 so the handler copies the corresponding index set.
-`asdex` implements this via a **position map**:
+`asdex` implements this via a position map:
 apply the operation to an array where each element holds its own flat index,
 then read off the mapping.
 
@@ -173,7 +173,7 @@ even though it is not a direct literal in the jaxpr.
 
 Not every JAX primitive has a precise handler.
 When `asdex` encounters an unhandled primitive,
-it uses a **conservative fallback**:
+it uses a conservative fallback:
 every output element is assumed to depend on every input element.
 This is always correct — it is a superset of the true pattern —
 but it may be much less sparse than necessary.
