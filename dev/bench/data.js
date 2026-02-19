@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771511471019,
+  "lastUpdate": 1771522427049,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -5934,6 +5934,142 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0008628335372278161",
             "extra": "mean: 118.74636619998 msec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c76f7134924f89cb8ca5e3228fe62d1340baa076",
+          "message": "docs: add explanation pages and improve cross-references (#56)\n\n* docs(explanation): add ASD overview and global sparsity pages\n\nAdd two new explanation pages that provide the conceptual foundation\nfor the existing sparsity detection and graph coloring pages:\n- `asd.md`: AD basics, structural orthogonality, seed matrices,\n  compression/decompression, amortization, and Hessian extension\n- `global-sparsity.md`: local vs. global patterns, conservatism,\n  and the precision-over-speed design decision\n\nMove overlapping content out of `sparsity-detection.md` and\n`coloring.md` into the new pages and update nav + links.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(explanation): expand coloring and sparsity detection pages\n\nColoring: add \"Row and Column Coloring\" and \"From Coloring to\nDecompression\" sections, attribute SparseMatrixColorings.jl in\nreferences, and link to API docs.\n\nSparsity detection: add sections on abstract interpretation motivation,\njaxpr representation, index set propagation with worked example,\nprimitive handler families, and fallback handlers.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(explanation): reduce bold formatting to first-use definitions\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(explanation): revise ASD overview and global sparsity pages\n\nUse `c` for number of colors, restructure Hessian section to separate\nthe definition-based argument from the symmetry-based one, and add a\ntip admonition encouraging users to report conservative patterns.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: add cross-references and contribution tips across pages\n\nAdd links between explanation, how-to, tutorial, and reference pages\nwhere they help the reader navigate. Add tip admonitions encouraging\nusers to report incorrect or overly dense patterns. Move the \"verify\ncorrectness\" admonitions above the first code block in the how-to\nguides.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-19T18:33:02+01:00",
+          "tree_id": "952f89e921ff1b66bec803f366c1b01ac4037b9c",
+          "url": "https://github.com/adrhill/asdex/commit/c76f7134924f89cb8ca5e3228fe62d1340baa076"
+        },
+        "date": 1771522425826,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 882.1548986779286,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0028373623623867356",
+            "extra": "mean: 1.1335877650270763 msec\nrounds: 183"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3291.1961086860033,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000017116509600791605",
+            "extra": "mean: 303.8409037251949 usec\nrounds: 2067"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 59.42403656641067,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00043975286622609743",
+            "extra": "mean: 16.82820720000109 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 84.12014409108957,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003672919011332168",
+            "extra": "mean: 11.887758999998255 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.396285294739663,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01403423495561684",
+            "extra": "mean: 46.73708478947291 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 249.1319145331875,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004941991824181203",
+            "extra": "mean: 4.013937764150997 msec\nrounds: 212"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 31.114181154280576,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010870628057511403",
+            "extra": "mean: 32.13968559999927 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 10.372656694455081,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025501523876671754",
+            "extra": "mean: 96.40731680000272 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 93.73807499938631,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012160783683358165",
+            "extra": "mean: 10.668023639343424 msec\nrounds: 61"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3166.15074011007,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006986948186713662",
+            "extra": "mean: 315.8409318076989 usec\nrounds: 2185"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 25.189375107475563,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001255299686810179",
+            "extra": "mean: 39.699277799996935 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 20.324277820702118,
+            "unit": "iter/sec",
+            "range": "stddev: 0.011281365271957652",
+            "extra": "mean: 49.2022402380964 msec\nrounds: 21"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_detection",
+            "value": 29.828228563677502,
+            "unit": "iter/sec",
+            "range": "stddev: 0.026906777662981544",
+            "extra": "mean: 33.52528957142705 msec\nrounds: 7"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_coloring",
+            "value": 613.1158986527033,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002179569030196107",
+            "extra": "mean: 1.631012998027711 msec\nrounds: 507"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_materialization",
+            "value": 12.226308102240491,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002891347870230165",
+            "extra": "mean: 81.79083919999925 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
+            "value": 8.436994736332975,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002884522031791949",
+            "extra": "mean: 118.52561619999733 msec\nrounds: 5"
           }
         ]
       }
