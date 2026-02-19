@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771522427049,
+  "lastUpdate": 1771523750164,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -6070,6 +6070,142 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.002884522031791949",
             "extra": "mean: 118.52561619999733 msec\nrounds: 5"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c0c090b7879293c25257b17b84ca2323651b45fe",
+          "message": "feat(pattern): add save/load for `SparsityPattern` and `ColoredPattern` (#57)\n\nSerialize patterns to `.npz` files for reuse across sessions.\nAdd roundtrip tests and document `save`/`load` in the how-to guides.\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-19T18:55:07+01:00",
+          "tree_id": "f62143cd5178fc75e8f41d5d63b8c39d9690ddcd",
+          "url": "https://github.com/adrhill/asdex/commit/c0c090b7879293c25257b17b84ca2323651b45fe"
+        },
+        "date": 1771523749365,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 818.0080670852859,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00394124037437695",
+            "extra": "mean: 1.222481831460642 msec\nrounds: 178"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3058.3166302886725,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005998960565478144",
+            "extra": "mean: 326.9772626209768 usec\nrounds: 1961"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 58.152149843107516,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005281605586323503",
+            "extra": "mean: 17.19626880000078 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 82.15132365827267,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00042472096397308556",
+            "extra": "mean: 12.172658400000103 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 20.408668286680765,
+            "unit": "iter/sec",
+            "range": "stddev: 0.017191695028135303",
+            "extra": "mean: 48.99878747368472 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 242.91939108328776,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005880460522324059",
+            "extra": "mean: 4.116591909524169 msec\nrounds: 210"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 29.460122283545928,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010227344767580174",
+            "extra": "mean: 33.94419040000116 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 11.215141215832125,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006967969009466868",
+            "extra": "mean: 89.16517239999848 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 124.39467160592126,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015238817878864767",
+            "extra": "mean: 8.03892953846103 msec\nrounds: 13"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3291.6772976725583,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000008502756592987899",
+            "extra": "mean: 303.7964871912166 usec\nrounds: 2186"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 23.271863096210154,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020535079843341978",
+            "extra": "mean: 42.97034559999844 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 17.80996477284918,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01666117689111819",
+            "extra": "mean: 56.148342388889695 msec\nrounds: 18"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_detection",
+            "value": 39.983410083490924,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008860763166146916",
+            "extra": "mean: 25.01037299999827 msec\nrounds: 6"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_coloring",
+            "value": 602.7615082336038,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003160523034361531",
+            "extra": "mean: 1.6590309539348425 msec\nrounds: 521"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_materialization",
+            "value": 11.550050316985496,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006194466120221334",
+            "extra": "mean: 86.57970940000155 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
+            "value": 7.09456069919245,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03547203238246689",
+            "extra": "mean: 140.95305437499837 msec\nrounds: 8"
           }
         ]
       }
