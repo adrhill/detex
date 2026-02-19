@@ -1,7 +1,7 @@
 # Getting Started
 
-This tutorial walks through the three stages of automatic sparse differentiation:
-**detection**, **coloring**, and **decompression**.
+This tutorial walks through the three stages of [automatic sparse differentiation](../explanation/asd.md):
+**[detection](../explanation/sparsity-detection.md)**, **[coloring](../explanation/coloring.md)**, and **decompression**.
 
 ## The Problem
 
@@ -48,13 +48,16 @@ as the decompression overhead dominates.
 
 !!! info "Global Sparsity Patterns"
 
-    The detected pattern is a **global** sparsity pattern:
+    The detected pattern is a [global sparsity pattern](../explanation/global-sparsity.md):
     it depends only on the function's structure, not on any particular input.
     This means it may contain extra nonzeros compared to the sparsity at a specific point,
-    but it is guaranteed to be correct everywhere.
+    but it is guaranteed to be correct everywhere and can therefore be reused.
+
     If you encounter overly conservative patterns,
     please [open an issue](https://github.com/adrhill/asdex/issues).
-    See [Sparsity Detection](../explanation/sparsity-detection.md) for details.
+    These reports directly drive improvements
+    and are one of the most impactful ways to contribute.
+
 
 Now we can compute the sparse Jacobian using the colored pattern:
 
