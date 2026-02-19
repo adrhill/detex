@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import os
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Literal
+from typing import Literal, cast
 
 import jax.numpy as jnp
 import numpy as np
@@ -177,6 +178,37 @@ class SparsityPattern:
             result[self.rows, self.cols] = 1
         return result
 
+    # Persistence
+
+    def save(self, path: str | os.PathLike[str]) -> None:
+        """Save sparsity pattern to an ``.npz`` file.
+
+        Args:
+            path: Destination file path.
+        """
+        np.savez(
+            path,
+            rows=self.rows,
+            cols=self.cols,
+            shape=np.array(self.shape),
+            input_shape=np.array(self.input_shape),
+        )
+
+    @classmethod
+    def load(cls, path: str | os.PathLike[str]) -> SparsityPattern:
+        """Load sparsity pattern from an ``.npz`` file.
+
+        Args:
+            path: Source file path.
+        """
+        data = np.load(path)
+        return cls.from_coordinates(
+            rows=data["rows"],
+            cols=data["cols"],
+            shape=tuple(data["shape"]),
+            input_shape=tuple(data["input_shape"]),
+        )
+
     # Display
 
     def __str__(self) -> str:
@@ -300,6 +332,46 @@ class ColoredPattern:
         for c in range(self.num_colors):
             seeds[c] = self.colors == c
         return seeds
+
+    # Persistence
+
+    def save(self, path: str | os.PathLike[str]) -> None:
+        """Save colored pattern to an ``.npz`` file.
+
+        Args:
+            path: Destination file path.
+        """
+        np.savez(
+            path,
+            rows=self.sparsity.rows,
+            cols=self.sparsity.cols,
+            shape=np.array(self.sparsity.shape),
+            input_shape=np.array(self.sparsity.input_shape),
+            colors=self.colors,
+            num_colors=np.array(self.num_colors),
+            mode=np.array(self.mode),
+        )
+
+    @classmethod
+    def load(cls, path: str | os.PathLike[str]) -> ColoredPattern:
+        """Load colored pattern from an ``.npz`` file.
+
+        Args:
+            path: Source file path.
+        """
+        data = np.load(path, allow_pickle=False)
+        sparsity = SparsityPattern.from_coordinates(
+            rows=data["rows"],
+            cols=data["cols"],
+            shape=tuple(data["shape"]),
+            input_shape=tuple(data["input_shape"]),
+        )
+        return cls(
+            sparsity=sparsity,
+            colors=data["colors"].astype(np.int32),
+            num_colors=int(data["num_colors"]),
+            mode=cast(Literal["JVP", "VJP", "HVP"], str(data["mode"])),
+        )
 
     # Display
 

@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from jax.experimental.sparse import BCOO
 
-from asdex import SparsityPattern, jacobian_sparsity
+from asdex import ColoredPattern, SparsityPattern, jacobian_sparsity
 from asdex._display import _render_braille, _render_dots
 
 
@@ -311,3 +311,69 @@ class TestIntegration:
         # This should print nicely with braille
         output = str(sparsity_pattern)
         assert len(output) > 0
+
+
+# --- Save/Load tests ---
+
+
+def test_save_load_sparsity_roundtrip(tmp_path):
+    """SparsityPattern survives a save/load roundtrip."""
+    original = SparsityPattern.from_coordinates([0, 0, 1, 2], [0, 1, 1, 2], (3, 3))
+    path = tmp_path / "pattern.npz"
+    original.save(path)
+
+    loaded = SparsityPattern.load(path)
+
+    assert loaded.shape == original.shape
+    assert loaded.input_shape == original.input_shape
+    assert loaded.nnz == original.nnz
+    np.testing.assert_array_equal(loaded.rows, original.rows)
+    np.testing.assert_array_equal(loaded.cols, original.cols)
+
+
+@pytest.mark.parametrize("mode", ["VJP", "JVP", "HVP"])
+def test_save_load_colored_roundtrip(tmp_path, mode):
+    """ColoredPattern survives a save/load roundtrip for each mode."""
+    sparsity = SparsityPattern.from_coordinates([0, 1, 2], [0, 1, 2], (3, 3))
+    # One color per row/col for a diagonal pattern.
+    colors = np.array([0, 1, 2], dtype=np.int32)
+    original = ColoredPattern(sparsity=sparsity, colors=colors, num_colors=3, mode=mode)
+    path = tmp_path / "colored.npz"
+    original.save(path)
+
+    loaded = ColoredPattern.load(path)
+
+    assert loaded.sparsity.shape == original.sparsity.shape
+    assert loaded.sparsity.input_shape == original.sparsity.input_shape
+    np.testing.assert_array_equal(loaded.sparsity.rows, original.sparsity.rows)
+    np.testing.assert_array_equal(loaded.sparsity.cols, original.sparsity.cols)
+    np.testing.assert_array_equal(loaded.colors, original.colors)
+    assert loaded.num_colors == original.num_colors
+    assert loaded.mode == original.mode
+
+
+def test_save_load_sparsity_empty(tmp_path):
+    """Empty SparsityPattern survives a save/load roundtrip."""
+    original = SparsityPattern.from_coordinates([], [], (3, 4))
+    path = tmp_path / "empty.npz"
+    original.save(path)
+
+    loaded = SparsityPattern.load(path)
+
+    assert loaded.shape == (3, 4)
+    assert loaded.nnz == 0
+    assert loaded.input_shape == (4,)
+
+
+def test_save_load_sparsity_non_default_input_shape(tmp_path):
+    """SparsityPattern with multidimensional input_shape roundtrips correctly."""
+    original = SparsityPattern.from_coordinates(
+        [0, 1], [0, 1], (2, 6), input_shape=(2, 3)
+    )
+    path = tmp_path / "nd.npz"
+    original.save(path)
+
+    loaded = SparsityPattern.load(path)
+
+    assert loaded.input_shape == (2, 3)
+    assert loaded.shape == (2, 6)

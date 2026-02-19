@@ -60,6 +60,24 @@ so it can be reused across evaluations.
     These reports directly drive improvements
     and are one of the most impactful ways to contribute.
 
+## Saving and Loading Patterns
+
+Save a colored pattern to disk and reload it in a later session:
+
+```python
+colored_pattern = hessian_coloring(g, input_shape=100)
+colored_pattern.save("colored.npz")
+```
+
+```python
+from asdex import ColoredPattern
+
+colored_pattern = ColoredPattern.load("colored.npz")
+hess_fn = hessian(g, colored_pattern)
+```
+
+[`SparsityPattern`](../reference/index.md#asdex.SparsityPattern) supports the same `save`/`load` interface.
+
 ## Symmetric Coloring
 
 Hessians are symmetric (\(H = H^\top\)),
