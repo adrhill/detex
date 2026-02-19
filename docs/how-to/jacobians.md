@@ -59,6 +59,24 @@ so it can be reused across evaluations.
     These reports directly drive improvements
     and are one of the most impactful ways to contribute.
 
+## Saving and Loading Patterns
+
+Save a colored pattern to disk and reload it in a later session:
+
+```python
+colored_pattern = jacobian_coloring(f, input_shape=1000)
+colored_pattern.save("colored.npz")
+```
+
+```python
+from asdex import ColoredPattern
+
+colored_pattern = ColoredPattern.load("colored.npz")
+jac_fn = jacobian(f, colored_pattern)
+```
+
+[`SparsityPattern`](../reference/index.md#asdex.SparsityPattern) supports the same `save`/`load` interface.
+
 ## Choosing Row vs Column Coloring
 
 By default, `asdex` tries both row and column coloring
