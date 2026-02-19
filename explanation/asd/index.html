@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://adrianhill.de/asdex/explanation/coloring/">
+        <link rel="canonical" href="https://adrianhill.de/asdex/explanation/asd/">
       
       
-        <link rel="prev" href="../sparsity-detection/">
+        <link rel="prev" href="../../how-to/brusselator/">
       
       
-        <link rel="next" href="../../reference/">
+        <link rel="next" href="../global-sparsity/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Graph Coloring - asdex</title>
+        <title>Automatic Sparse Differentiation - asdex</title>
       
     
     
@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#graph-coloring" class="md-skip">
+        <a href="#automatic-sparse-differentiation" class="md-skip">
           Skip to content
         </a>
       
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Graph Coloring
+              Automatic Sparse Differentiation
             
           </span>
         </div>
@@ -636,10 +636,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../asd/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automatic Sparse Differentiation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -655,6 +682,125 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#automatic-differentiation-in-brief" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Differentiation in Brief
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#computational-cost-of-ad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Computational Cost of AD
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#structural-orthogonality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Structural Orthogonality
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#seed-matrices-and-compression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Seed Matrices and Compression
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decompression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decompression
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-three-step-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Three-Step Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amortization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amortization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extension-to-hessians" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extension to Hessians
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -720,37 +866,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Graph Coloring
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../coloring/" class="md-nav__link">
         
   
   
@@ -766,92 +885,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-conflict-graph" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The Conflict Graph
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#row-and-column-coloring" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Row and Column Coloring
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#symmetric-coloring-for-hessians" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Symmetric Coloring for Hessians
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-greedy-algorithm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The Greedy Algorithm
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#from-coloring-to-decompression" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        From Coloring to Decompression
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1145,10 +1178,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-conflict-graph" class="md-nav__link">
+  <a href="#automatic-differentiation-in-brief" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Conflict Graph
+        Automatic Differentiation in Brief
       
     </span>
   </a>
@@ -1156,10 +1189,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#row-and-column-coloring" class="md-nav__link">
+  <a href="#computational-cost-of-ad" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Row and Column Coloring
+        Computational Cost of AD
       
     </span>
   </a>
@@ -1167,10 +1200,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#symmetric-coloring-for-hessians" class="md-nav__link">
+  <a href="#structural-orthogonality" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Symmetric Coloring for Hessians
+        Structural Orthogonality
       
     </span>
   </a>
@@ -1178,10 +1211,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-greedy-algorithm" class="md-nav__link">
+  <a href="#seed-matrices-and-compression" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The Greedy Algorithm
+        Seed Matrices and Compression
       
     </span>
   </a>
@@ -1189,10 +1222,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#from-coloring-to-decompression" class="md-nav__link">
+  <a href="#decompression" class="md-nav__link">
     <span class="md-ellipsis">
       
-        From Coloring to Decompression
+        Decompression
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-three-step-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Three-Step Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amortization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Amortization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extension-to-hessians" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extension to Hessians
       
     </span>
   </a>
@@ -1230,81 +1296,129 @@
   
 
 
-<h1 id="graph-coloring">Graph Coloring<a class="headerlink" href="#graph-coloring" title="Permanent link">&para;</a></h1>
-<p>Graph coloring is the key technique that makes <a href="../asd/">automatic sparse differentiation</a> efficient.
-This page explains how the conflict graph is built,
-the coloring variants <code>asdex</code> supports,
-and the algorithm used to find colorings.</p>
-<h2 id="the-conflict-graph">The Conflict Graph<a class="headerlink" href="#the-conflict-graph" title="Permanent link">&para;</a></h2>
-<p>Given a <a href="../global-sparsity/">sparsity pattern</a>,
-we build a <strong>conflict graph</strong> whose vertices are the rows (or columns) of the matrix
-and whose edges connect pairs that share a nonzero column (or row).
-A proper coloring of this graph assigns colors to vertices
-so that no two adjacent vertices share a color.
-Vertices with the same color are then guaranteed to be structurally orthogonal,
-meaning they can share an AD pass.
-The total number of passes equals the number of colors,
-which is often dramatically fewer than the matrix dimension.</p>
-<h2 id="row-and-column-coloring">Row and Column Coloring<a class="headerlink" href="#row-and-column-coloring" title="Permanent link">&para;</a></h2>
-<p>There are two variants.
-Row coloring treats rows as vertices and connects rows that share a nonzero column;
-same-colored rows are evaluated together using VJPs (reverse-mode AD).
-Column coloring treats columns as vertices and connects columns that share a nonzero row;
-same-colored columns are evaluated together using JVPs (forward-mode AD).
-By default, <code>asdex</code> tries both and picks whichever needs fewer colors.
-When tied, it prefers column coloring
-since JVPs are generally cheaper in JAX.</p>
-<h2 id="symmetric-coloring-for-hessians">Symmetric Coloring for Hessians<a class="headerlink" href="#symmetric-coloring-for-hessians" title="Permanent link">&para;</a></h2>
-<p>Hessians are symmetric (<span class="arithmatex">\(H_{ij} = H_{ji}\)</span>),
-so each off-diagonal entry appears twice in the matrix.
-Exploiting this redundancy can significantly reduce the number of colors needed,
-since recovering <span class="arithmatex">\(H_{ij}\)</span> from a compressed column simultaneously gives us <span class="arithmatex">\(H_{ji}\)</span> for free.
-The coloring operates on an adjacency graph whose vertices are variables
-and whose edges connect pairs <span class="arithmatex">\(i, j\)</span> with <span class="arithmatex">\(H_{ij} \neq 0\)</span>.
-Diagonal entries are always recoverable, so only off-diagonal nonzeros create edges.</p>
-<p><code>asdex</code> uses <strong>star coloring</strong> (Gebremedhin et al., 2005) on this graph:
-a proper coloring with the additional constraint
-that every path on 4 vertices uses at least 3 colors.
-This constraint ensures that for each off-diagonal nonzero <span class="arithmatex">\(H_{ij}\)</span>,
-at least one of <span class="arithmatex">\(i\)</span> or <span class="arithmatex">\(j\)</span> has a unique color among the other's neighbors,
-making every entry unambiguously recoverable from the compressed product.
-Star coloring typically needs far fewer colors
-than treating the Hessian as a general Jacobian and applying row or column coloring.</p>
-<h2 id="the-greedy-algorithm">The Greedy Algorithm<a class="headerlink" href="#the-greedy-algorithm" title="Permanent link">&para;</a></h2>
-<p><code>asdex</code> colors graphs using a greedy algorithm with <strong>LargestFirst</strong> vertex ordering.
-Vertices are sorted by decreasing degree (number of conflicts),
-and each vertex is assigned the smallest color not already used by any of its neighbors.
-Handling high-degree vertices first tends to produce fewer colors in practice,
-because the most constrained vertices are colored while the most options are still available.</p>
-<p>The greedy algorithm does not guarantee an optimal coloring,
-but it is fast — <span class="arithmatex">\(O(|V| + |E|)\)</span> in the size of the conflict graph —
-and produces good results for the sparsity patterns
-typically encountered in scientific computing.</p>
-<h2 id="from-coloring-to-decompression">From Coloring to Decompression<a class="headerlink" href="#from-coloring-to-decompression" title="Permanent link">&para;</a></h2>
-<p>The coloring result is materialized as a <strong>seed matrix</strong>
-whose columns are indicator vectors — one per color group
-(see <a href="../asd/#seed-matrices-and-compression">Seed Matrices and Compression</a>).
-Multiplying the seed matrix by the Jacobian (or evaluating the corresponding JVPs/VJPs)
-produces a compressed matrix with one row or column per color.</p>
-<p>Recovering the sparse matrix from the compressed product is called <strong>decompression</strong>.
-Because same-colored rows or columns are structurally orthogonal,
-each nonzero appears in exactly one position of the compressed matrix
-and can be read off directly — no linear systems need to be solved.</p>
-<p>For symmetric Hessians the story is similar,
-but each off-diagonal entry <span class="arithmatex">\(H_{ij}\)</span> can be recovered from either the row of <span class="arithmatex">\(i\)</span> or the row of <span class="arithmatex">\(j\)</span>
-in the compressed product.
-The star coloring guarantee ensures that at least one direction is always unambiguous.</p>
-<p>See the API reference for
-<a href="../../reference/#asdex.jacobian_coloring"><code>jacobian_coloring</code></a> and
-<a href="../../reference/#asdex.hessian_coloring"><code>hessian_coloring</code></a>.</p>
+<h1 id="automatic-sparse-differentiation">Automatic Sparse Differentiation<a class="headerlink" href="#automatic-sparse-differentiation" title="Permanent link">&para;</a></h1>
+<p>Automatic sparse differentiation (ASD) exploits the sparsity structure of Jacobians and Hessians
+to compute them far more efficiently than dense automatic differentiation (AD).
+This page explains the mathematical ideas behind the approach.</p>
+<h2 id="automatic-differentiation-in-brief">Automatic Differentiation in Brief<a class="headerlink" href="#automatic-differentiation-in-brief" title="Permanent link">&para;</a></h2>
+<p>AD computes exact derivatives of programs
+by applying the chain rule to each elementary operation.
+For a function <span class="arithmatex">\(f: \mathbb{R}^n \to \mathbb{R}^m\)</span>,
+AD can evaluate Jacobian-vector products in two modes:</p>
+<ul>
+<li><strong>Reverse mode</strong> computes a <strong>vector-Jacobian product</strong> (VJP): given a covector <span class="arithmatex">\(v \in \mathbb{R}^m\)</span>,
+  it returns <span class="arithmatex">\(v^\top J\)</span> in roughly the same time as one evaluation of <span class="arithmatex">\(f\)</span>.
+  Setting <span class="arithmatex">\(v = e_i\)</span> extracts row <span class="arithmatex">\(i\)</span> of the Jacobian.</li>
+<li><strong>Forward mode</strong> computes a <strong>Jacobian-vector product</strong> (JVP): given a tangent vector <span class="arithmatex">\(t \in \mathbb{R}^n\)</span>,
+  it returns <span class="arithmatex">\(Jt\)</span> in roughly the same time as one evaluation of <span class="arithmatex">\(f\)</span>.
+  Setting <span class="arithmatex">\(t = e_j\)</span> extracts column <span class="arithmatex">\(j\)</span> of the Jacobian.</li>
+</ul>
+<p>In both cases, one AD pass produces a single row or column —
+not the full Jacobian.
+Building the complete matrix requires multiple passes,
+and reducing their number is the goal of sparse differentiation.</p>
+<h2 id="computational-cost-of-ad">Computational Cost of AD<a class="headerlink" href="#computational-cost-of-ad" title="Permanent link">&para;</a></h2>
+<p>Consider a function <span class="arithmatex">\(f: \mathbb{R}^n \to \mathbb{R}^m\)</span> with Jacobian <span class="arithmatex">\(J \in \mathbb{R}^{m \times n}\)</span>.
+Computing <span class="arithmatex">\(J\)</span> by standard autodiff requires either:</p>
+<ul>
+<li><span class="arithmatex">\(m\)</span> VJPs (reverse-mode): one per row, or</li>
+<li><span class="arithmatex">\(n\)</span> JVPs (forward-mode): one per column.</li>
+</ul>
+<p>For large, sparse Jacobians — common in scientific computing —
+most entries of <span class="arithmatex">\(J\)</span> are zero,
+yet dense autodiff pays the full cost of <span class="arithmatex">\(m\)</span> or <span class="arithmatex">\(n\)</span> passes.
+ASD reduces this to a number of passes proportional to the
+number of colors in a graph coloring of the sparsity pattern,
+which is often orders of magnitude smaller.</p>
+<h2 id="structural-orthogonality">Structural Orthogonality<a class="headerlink" href="#structural-orthogonality" title="Permanent link">&para;</a></h2>
+<p>The key insight is structural orthogonality:
+two rows <span class="arithmatex">\(i_1\)</span> and <span class="arithmatex">\(i_2\)</span> of <span class="arithmatex">\(J\)</span> are structurally orthogonal
+when they share no nonzero column —
+that is, there is no column <span class="arithmatex">\(j\)</span> where both <span class="arithmatex">\(J_{i_1 j}\)</span> and <span class="arithmatex">\(J_{i_2 j}\)</span> are (potentially) nonzero.</p>
+<p>If two rows are structurally orthogonal,
+their VJPs can be combined into a single pass
+by summing their seed vectors.
+The nonzeros don't overlap,
+so the result is unambiguous.
+The same idea applies symmetrically to columns and JVPs.</p>
+<h2 id="seed-matrices-and-compression">Seed Matrices and Compression<a class="headerlink" href="#seed-matrices-and-compression" title="Permanent link">&para;</a></h2>
+<p>Graph coloring assigns each row a color
+such that rows sharing a nonzero column get different colors.
+From this coloring, we build a seed matrix <span class="arithmatex">\(S \in \mathbb{R}^{m \times c}\)</span>,
+where <span class="arithmatex">\(c\)</span> is the number of colors.
+The seed for color <span class="arithmatex">\(c\)</span> is the sum of the standard basis vectors
+for all rows assigned that color:</p>
+<div class="arithmatex">\[
+S_{:,c} = \sum_{i \,:\, \text{color}(i) = c} e_i
+\]</div>
+<p>The compressed Jacobian is then:</p>
+<div class="arithmatex">\[
+B = S^\top \cdot J \in \mathbb{R}^{c \times n}
+\]</div>
+<p>Computing <span class="arithmatex">\(B\)</span> requires only <span class="arithmatex">\(c\)</span> VJPs — one per color — instead of <span class="arithmatex">\(m\)</span>.</p>
+<h2 id="decompression">Decompression<a class="headerlink" href="#decompression" title="Permanent link">&para;</a></h2>
+<p>Recovering the sparse Jacobian from <span class="arithmatex">\(B\)</span> is called decompression.
+Because same-colored rows are structurally orthogonal,
+each nonzero <span class="arithmatex">\(J_{ij}\)</span> appears in exactly one entry of <span class="arithmatex">\(B\)</span>:</p>
+<div class="arithmatex">\[
+J_{ij} = B_{\text{color}(i),\, j}
+\]</div>
+<p>We simply read off each nonzero from the compressed matrix
+using the known color assignments.
+This is <strong>direct decompression</strong> — no systems of equations need to be solved.</p>
+<h2 id="the-three-step-pipeline">The Three-Step Pipeline<a class="headerlink" href="#the-three-step-pipeline" title="Permanent link">&para;</a></h2>
+<p>ASD decomposes the problem into three independent stages:</p>
+<ol>
+<li><strong><a href="../sparsity-detection/">Detection</a></strong> — determine the <a href="../global-sparsity/">global sparsity pattern</a> of the Jacobian
+   by analyzing the computation graph (no numerical evaluation).</li>
+<li><strong><a href="../coloring/">Coloring</a></strong> — assign colors to rows or columns
+   so that structurally orthogonal groups share a color.</li>
+<li><strong>Decompression</strong> — compute one AD pass per color and extract the sparse matrix.</li>
+</ol>
+<p>Steps 1 and 2 are preprocessing:
+they depend only on the function's structure and input shape,
+not on the input values.
+Once computed, the coloring can be reused across arbitrarily many evaluations.
+Step 3 is the only part that touches actual numerical data.</p>
+<h2 id="amortization">Amortization<a class="headerlink" href="#amortization" title="Permanent link">&para;</a></h2>
+<p>The three-step split is designed around amortization.
+Detection and coloring are the most expensive steps,
+but their results depend only on the function's structure and input shape —
+not on the input values.
+This means they can be computed once and reused
+across arbitrarily many evaluations at different inputs.</p>
+<p>In a typical workflow,
+a user calls <a href="../../reference/#asdex.jacobian_coloring"><code>jacobian_coloring</code></a> (or <a href="../../reference/#asdex.hessian_coloring"><code>hessian_coloring</code></a>) once during setup
+and passes the result to <a href="../../reference/#asdex.jacobian"><code>jacobian</code></a> (or <a href="../../reference/#asdex.hessian"><code>hessian</code></a>) in a loop.
+The per-evaluation cost is then just the decompression step:
+<span class="arithmatex">\(c\)</span> AD passes plus a cheap index lookup,
+where <span class="arithmatex">\(c\)</span> is the number of colors.
+For problems where the Jacobian is evaluated hundreds or thousands of times —
+such as implicit solvers, optimization, or time-stepping —
+the preprocessing cost becomes negligible.</p>
+<p>This amortization assumption also guides design decisions in <code>asdex</code>:
+it is worth spending more time on <a href="../sparsity-detection/">detection</a>
+if it produces <a href="../global-sparsity/">sparser patterns</a>,
+because fewer nonzeros lead to fewer colors
+and fewer AD passes on every subsequent evaluation.</p>
+<h2 id="extension-to-hessians">Extension to Hessians<a class="headerlink" href="#extension-to-hessians" title="Permanent link">&para;</a></h2>
+<p>For a scalar function <span class="arithmatex">\(f: \mathbb{R}^n \to \mathbb{R}\)</span>,
+the Hessian <span class="arithmatex">\(H \in \mathbb{R}^{n \times n}\)</span> is symmetric: <span class="arithmatex">\(H_{ij} = H_{ji}\)</span>.</p>
+<p>Since the Hessian is the Jacobian of the gradient,
+sparsity detection reduces to Jacobian detection:
+<span class="arithmatex">\(\operatorname{hessian\_sparsity}(f) = \operatorname{jacobian\_sparsity}(\nabla f)\)</span>.
+This works because <code>jax.grad</code> produces a jaxpr like any other function,
+so the same <a href="../sparsity-detection/">interpreter</a> handles both cases with no extra machinery.
+And because the Hessian is symmetric,
+coloring can exploit this via <a href="../coloring/">star coloring</a>,
+which typically needs far fewer colors than treating the Hessian as a general matrix.</p>
+<p>Each color corresponds to one Hessian-vector product (HVP),
+computed via forward-over-reverse autodiff.
+The decompression step recovers both <span class="arithmatex">\(H_{ij}\)</span> and <span class="arithmatex">\(H_{ji}\)</span> from each entry,
+halving the effective number of unknowns.</p>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="https://arxiv.org/abs/2505.07308"><em>Revisiting Sparse Matrix Coloring and Bicoloring</em></a>, Montoison et al. (2025)</li>
-<li><a href="https://epubs.siam.org/doi/10.1137/S0036144504444711"><em>What Color Is Your Jacobian? Graph Coloring for Computing Derivatives</em></a>, Gebremedhin et al. (2005)</li>
-<li><a href="https://epubs.siam.org/doi/abs/10.1137/050639879"><em>New Acyclic and Star Coloring Algorithms with Application to Computing Hessians</em></a>, Gebremedhin et al. (2007)</li>
-<li><a href="https://pubsonline.informs.org/doi/abs/10.1287/ijoc.1080.0286"><em>Efficient Computation of Sparse Hessians Using Coloring and Automatic Differentiation</em></a>, Gebremedhin et al. (2009)</li>
-<li><a href="https://dl.acm.org/doi/10.1145/2513109.2513110"><em>ColPack: Software for graph coloring and related problems in scientific computing</em></a>, Gebremedhin et al. (2013)</li>
-<li><a href="https://github.com/gdalle/SparseMatrixColorings.jl"><em>SparseMatrixColorings.jl</em></a>, Dalle &amp; Montoison (2025) — the Julia library from which the <code>asdex</code> coloring implementation is adapted</li>
+<li><a href="https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/"><em>An Illustrated Guide to Automatic Sparse Differentiation</em></a>, Hill, Dalle, Montoison (2025) — a visual walkthrough of the ideas on this page.</li>
 </ul>
 
 

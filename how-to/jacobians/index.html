@@ -763,6 +763,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../../explanation/asd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automatic Sparse Differentiation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/global-sparsity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Sparsity Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../explanation/sparsity-detection/" class="md-nav__link">
         
   
@@ -1197,6 +1253,16 @@
 
 
 <h1 id="computing-sparse-jacobians">Computing Sparse Jacobians<a class="headerlink" href="#computing-sparse-jacobians" title="Permanent link">&para;</a></h1>
+<p><code>asdex</code> computes sparse Jacobians for functions
+<span class="arithmatex">\(f: \mathbb{R}^n \to \mathbb{R}^m\)</span>
+using <a href="../../explanation/coloring/">row or column coloring</a> with forward- or reverse-mode AD.</p>
+<div class="admonition tip">
+<p class="admonition-title">Verify correctness at least once</p>
+<p>asdex's <a href="../../explanation/global-sparsity/">sparsity patterns</a> should always be conservative,
+but a bug in <a href="../../explanation/sparsity-detection/">sparsity detection</a> could cause missing nonzeros.
+Always verify against JAX's dense Jacobian at least once on a new function.
+See <a href="#verifying-results">Verifying Results</a> below.</p>
+</div>
 <h2 id="one-call-api">One-Call API<a class="headerlink" href="#one-call-api" title="Permanent link">&para;</a></h2>
 <p>The simplest way to compute a sparse Jacobian:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">jacobian</span>
@@ -1205,15 +1271,6 @@
 </code></pre></div>
 <p>This detects sparsity, colors the pattern, and decompresses — all in one call.
 The result is a JAX <a href="https://docs.jax.dev/en/latest/jax.experimental.sparse.html">BCOO</a> sparse matrix.</p>
-<div class="admonition tip">
-<p class="admonition-title">Verify correctness at least once</p>
-<p>asdex's sparsity patterns should always be conservative,
-i.e., they may contain extra nonzeros but should never miss any.
-A bug in sparsity detection could cause missing nonzeros,
-leading to incorrect Jacobians.
-Always verify against JAX's dense Jacobian at least once on a new function.
-See <a href="#verifying-results">Verifying Results</a> below.</p>
-</div>
 <div class="admonition warning">
 <p class="admonition-title">Precompute the colored pattern</p>
 <p>Without a precomputed colored pattern,
@@ -1236,6 +1293,14 @@ precompute the colored pattern once:</p>
 <p>The colored pattern depends only on the function structure,
 not the input values,
 so it can be reused across evaluations.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If your <code>colored_pattern</code> looks wrong or overly dense,
+please help out <code>asdex</code>'s development by
+<a href="https://github.com/adrhill/asdex/issues">reporting it</a>.
+These reports directly drive improvements
+and are one of the most impactful ways to contribute.</p>
+</div>
 <h2 id="choosing-row-vs-column-coloring">Choosing Row vs Column Coloring<a class="headerlink" href="#choosing-row-vs-column-coloring" title="Permanent link">&para;</a></h2>
 <p>By default, <code>asdex</code> tries both row and column coloring
 and picks whichever needs fewer colors:</p>

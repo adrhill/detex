@@ -763,6 +763,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../../explanation/asd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automatic Sparse Differentiation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/global-sparsity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Sparsity Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../explanation/sparsity-detection/" class="md-nav__link">
         
   
@@ -1200,6 +1256,13 @@
 <p><code>asdex</code> computes sparse Hessians for scalar-valued functions
 <span class="arithmatex">\(f: \mathbb{R}^n \to \mathbb{R}\)</span>
 using symmetric coloring and forward-over-reverse AD.</p>
+<div class="admonition tip">
+<p class="admonition-title">Verify correctness at least once</p>
+<p>asdex's <a href="../../explanation/global-sparsity/">sparsity patterns</a> should always be conservative,
+but a bug in <a href="../../explanation/sparsity-detection/">sparsity detection</a> could cause missing nonzeros.
+Always verify against JAX's dense Hessian at least once on a new function.
+See <a href="#verifying-results">Verifying Results</a> below.</p>
+</div>
 <h2 id="one-call-api">One-Call API<a class="headerlink" href="#one-call-api" title="Permanent link">&para;</a></h2>
 <p>The simplest way to compute a sparse Hessian:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">hessian</span>
@@ -1208,15 +1271,6 @@ using symmetric coloring and forward-over-reverse AD.</p>
 </code></pre></div>
 <p>This detects sparsity, colors the pattern symmetrically, and decompresses.
 The result is a JAX <a href="https://docs.jax.dev/en/latest/jax.experimental.sparse.html">BCOO</a> sparse matrix.</p>
-<div class="admonition tip">
-<p class="admonition-title">Verify correctness at least once</p>
-<p>asdex's sparsity patterns should always be conservative,
-i.e., they may contain extra nonzeros but should never miss any.
-A bug in sparsity detection could cause missing nonzeros,
-leading to incorrect Hessians.
-Always verify against JAX's dense Hessian at least once on a new function.
-See <a href="#verifying-results">Verifying Results</a> below.</p>
-</div>
 <div class="admonition warning">
 <p class="admonition-title">Precompute the colored pattern</p>
 <p>Without a precomputed colored pattern,
@@ -1239,6 +1293,14 @@ precompute the colored pattern once:</p>
 <p>The colored pattern depends only on the function structure,
 not the input values,
 so it can be reused across evaluations.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If your <code>colored_pattern</code> looks wrong or overly dense,
+please help out <code>asdex</code>'s development by
+<a href="https://github.com/adrhill/asdex/issues">reporting it</a>.
+These reports directly drive improvements
+and are one of the most impactful ways to contribute.</p>
+</div>
 <h2 id="symmetric-coloring">Symmetric Coloring<a class="headerlink" href="#symmetric-coloring" title="Permanent link">&para;</a></h2>
 <p>Hessians are symmetric (<span class="arithmatex">\(H = H^\top\)</span>),
 and <code>asdex</code> exploits this with <em>star coloring</em>
@@ -1291,7 +1353,7 @@ a classic optimization benchmark whose Hessian is tridiagonal:</p>
 before deciding on a coloring strategy.</p>
 <p>Since the Hessian is the Jacobian of the gradient,
 <code>hessian_sparsity</code> simply calls <code>jacobian_sparsity(jax.grad(f), input_shape)</code>.
-The sparsity interpreter composes naturally with JAX's autodiff transforms.</p>
+The <a href="../../explanation/sparsity-detection/">sparsity interpreter</a> composes naturally with JAX's autodiff transforms.</p>
 <h2 id="manually-providing-a-sparsity-pattern">Manually Providing a Sparsity Pattern<a class="headerlink" href="#manually-providing-a-sparsity-pattern" title="Permanent link">&para;</a></h2>
 <p>You can provide a sparsity pattern manually if you already know it ahead of time.
 Create a <code>SparsityPattern</code> from coordinate arrays, a dense matrix, or a JAX BCOO matrix.</p>

@@ -730,6 +730,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../../explanation/asd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automatic Sparse Differentiation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/global-sparsity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Sparsity Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../explanation/sparsity-detection/" class="md-nav__link">
         
   
@@ -1131,8 +1187,8 @@
 
 
 <h1 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
-<p>This tutorial walks through the three stages of automatic sparse differentiation:
-<strong>detection</strong>, <strong>coloring</strong>, and <strong>decompression</strong>.</p>
+<p>This tutorial walks through the three stages of <a href="../../explanation/asd/">automatic sparse differentiation</a>:
+<strong><a href="../../explanation/sparsity-detection/">detection</a></strong>, <strong><a href="../../explanation/coloring/">coloring</a></strong>, and <strong>decompression</strong>.</p>
 <h2 id="the-problem">The Problem<a class="headerlink" href="#the-problem" title="Permanent link">&para;</a></h2>
 <p>For a function <span class="arithmatex">\(f: \mathbb{R}^n \to \mathbb{R}^m\)</span>, computing the full Jacobian <span class="arithmatex">\(J \in \mathbb{R}^{m \times n}\)</span> requires <span class="arithmatex">\(n\)</span> forward-mode or <span class="arithmatex">\(m\)</span> reverse-mode AD passes.
 In practice, for example in scientific machine learning,
@@ -1181,13 +1237,14 @@ Note that on small problems, this doesn't directly translate into a speedup of f
 as the decompression overhead dominates.</p>
 <div class="admonition info">
 <p class="admonition-title">Global Sparsity Patterns</p>
-<p>The detected pattern is a <strong>global</strong> sparsity pattern:
+<p>The detected pattern is a <a href="../../explanation/global-sparsity/">global sparsity pattern</a>:
 it depends only on the function's structure, not on any particular input.
 This means it may contain extra nonzeros compared to the sparsity at a specific point,
-but it is guaranteed to be correct everywhere.
-If you encounter overly conservative patterns,
+but it is guaranteed to be correct everywhere and can therefore be reused.</p>
+<p>If you encounter overly conservative patterns,
 please <a href="https://github.com/adrhill/asdex/issues">open an issue</a>.
-See <a href="../../explanation/sparsity-detection/">Sparsity Detection</a> for details.</p>
+These reports directly drive improvements
+and are one of the most impactful ways to contribute.</p>
 </div>
 <p>Now we can compute the sparse Jacobian using the colored pattern:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
@@ -1228,9 +1285,9 @@ Let's benchmark on a 5000-dimensional input
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">t_asdex</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">jac_fn_asdex</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">block_until_ready</span><span class="p">(),</span> <span class="n">number</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span>
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">t_jax</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">jac_fn_jax</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">block_until_ready</span><span class="p">(),</span> <span class="n">number</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span> <span class="o">/</span> <span class="mi">10</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>asdex.jacobian:      6.08 ms
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>jax.jacobian:      120.69 ms
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>speedup:             19.9x
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>asdex.jacobian:      8.07 ms
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>jax.jacobian:      214.88 ms
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>speedup:             26.6x
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Precompute for Repeated Evaluations</p>
