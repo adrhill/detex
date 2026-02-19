@@ -3,7 +3,7 @@
 Before detecting sparsity or coloring a matrix,
 we need to decide _which_ sparsity pattern to work with.
 This page explains the distinction between local and global patterns
-and why `asdex` uses global patterns exclusively.
+and **why `asdex` uses global patterns exclusively**.
 
 ## Local vs. Global Patterns
 
@@ -52,7 +52,7 @@ negating most of the efficiency gains.
 [abstract interpretation](https://en.wikipedia.org/wiki/Abstract_interpretation)
 rather than numerical evaluation.
 Instead of plugging in concrete numbers,
-it propagates symbolic index sets through the computation graph.
+it propagates index sets through the computation graph.
 The result depends only on the function's structure,
 not on any particular input.
 The details are covered in [Sparsity Detection](sparsity-detection.md).
@@ -68,6 +68,14 @@ In practice, the trade-off is overwhelmingly favorable:
 the cost of extra colors is small,
 while the ability to reuse a single coloring across all inputs
 is what makes [automatic sparse differentiation](asd.md) practical.
+
+!!! tip
+
+    If a sparsity pattern looks overly conservative for your function,
+    please help out `asdex`'s development by
+    [reporting it](https://github.com/adrhill/asdex/issues).
+    These reports directly drive improvements
+    and are one of the most impactful ways to contribute.
 
 ## Precision Over Speed
 

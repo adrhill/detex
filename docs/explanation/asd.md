@@ -56,8 +56,8 @@ The same idea applies symmetrically to columns and JVPs.
 
 Graph coloring assigns each row a color
 such that rows sharing a nonzero column get different colors.
-From this coloring, we build a seed matrix \(S \in \mathbb{R}^{m \times p}\),
-where \(p\) is the number of colors.
+From this coloring, we build a seed matrix \(S \in \mathbb{R}^{m \times c}\),
+where \(c\) is the number of colors.
 The seed for color \(c\) is the sum of the standard basis vectors
 for all rows assigned that color:
 
@@ -68,10 +68,10 @@ S_{:,c} = \sum_{i \,:\, \text{color}(i) = c} e_i
 The compressed Jacobian is then:
 
 \[
-B = S^\top \cdot J \in \mathbb{R}^{p \times n}
+B = S^\top \cdot J \in \mathbb{R}^{c \times n}
 \]
 
-Computing \(B\) requires only \(p\) VJPs — one per color — instead of \(m\).
+Computing \(B\) requires only \(c\) VJPs — one per color — instead of \(m\).
 
 ## Decompression
 
@@ -116,8 +116,8 @@ In a typical workflow,
 a user calls `jacobian_coloring` (or `hessian_coloring`) once during setup
 and passes the result to `jacobian` (or `hessian`) in a loop.
 The per-evaluation cost is then just the decompression step:
-\(p\) AD passes plus a cheap index lookup,
-where \(p\) is the number of colors.
+\(c\) AD passes plus a cheap index lookup,
+where \(c\) is the number of colors.
 For problems where the Jacobian is evaluated hundreds or thousands of times —
 such as implicit solvers, optimization, or time-stepping —
 the preprocessing cost becomes negligible.
@@ -133,14 +133,16 @@ and fewer AD passes on every subsequent evaluation.
 For a scalar function \(f: \mathbb{R}^n \to \mathbb{R}\),
 the Hessian \(H \in \mathbb{R}^{n \times n}\) is symmetric: \(H_{ij} = H_{ji}\).
 
-This symmetry has two consequences:
+Since the Hessian is the Jacobian of the gradient,
+sparsity detection reduces to Jacobian detection:
+\(\operatorname{hessian\_sparsity}(f) = \operatorname{jacobian\_sparsity}(\nabla f)\).
+This works because `jax.grad` produces a jaxpr like any other function,
+so the same [interpreter](sparsity-detection.md) handles both cases with no extra machinery.
+And because the Hessian is symmetric,
+coloring can exploit this via [star coloring](coloring.md#symmetric-coloring-for-hessians),
+which typically needs far fewer colors than treating the Hessian as a general matrix.
 
-1. **Sparsity detection** reduces to Jacobian detection on the gradient:
-   \(\operatorname{hessian\_sparsity}(f) = \operatorname{jacobian\_sparsity}(\nabla f)\).
-2. **Coloring** can exploit symmetry via [star coloring](coloring.md#symmetric-coloring-for-hessians),
-   which typically needs far fewer colors than treating the Hessian as a general matrix.
-
-Each color corresponds to one **Hessian-vector product** (HVP),
+Each color corresponds to one Hessian-vector product (HVP),
 computed via forward-over-reverse autodiff.
 The decompression step recovers both \(H_{ij}\) and \(H_{ji}\) from each entry,
 halving the effective number of unknowns.
