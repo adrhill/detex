@@ -19,6 +19,8 @@ src/asdex/
 ├── detection.py        # Jacobian and Hessian sparsity detection via jaxpr analysis
 ├── coloring.py         # Graph coloring (row, column, symmetric) and convenience functions
 ├── decompression.py    # Sparse Jacobian (VJP/JVP) and Hessian (HVP) computation
+├── verify.py           # Correctness checks (check_jacobian_correctness, check_hessian_correctness)
+├── _display.py         # Display/formatting utilities
 └── _interpret/         # Custom jaxpr interpreter for index set propagation
 ```
 
@@ -28,39 +30,52 @@ The structure of the test folder is described in `tests/CLAUDE.md`.
 ## Development
 
 ```bash
-# Lint and format
-uv run ruff check --fix .    # lint + auto-fix
-uv run ruff format .         # format
-
-# Type check
-uv run ty check
-
-# Run tests
-uv run pytest
+uv run ruff check --fix .  # lint + auto-fix
+uv run ruff format .       # format
+uv run ty check            # type check
+uv run pytest              # run tests
 ```
 
 ## Architecture
 
+### Jacobians
+
 ```
-jacobian(f, colored_pattern)(x)          hessian(f, colored_pattern)(x)
-  │                                        │
-  ├─ 1. DETECTION                          ├─ 1. DETECTION
-  │     jacobian_sparsity(f, input_shape)   │     hessian_sparsity(f, input_shape)
-  │     ├─ make_jaxpr(f) → jaxpr           │     └─ jacobian_sparsity(grad(f), input_shape)
-  │     ├─ prop_jaxpr() → index sets       │
-  │     └─ SparsityPattern                 │
-  │                                        │
-  ├─ 2. COLORING                           ├─ 2. COLORING
-  │     color_jacobian_pattern(sparsity)    │     color_hessian_pattern(sparsity)
-  │                                        │
-  └─ 3. DECOMPRESSION                      └─ 3. DECOMPRESSION
-        One VJP or JVP per color                 One HVP per color (fwd-over-rev)
+jacobian(f, colored_pattern)(x)
+  │
+  ├─ 1. DETECTION
+  │     jacobian_sparsity(f, input_shape)
+  │     ├─ make_jaxpr(f) → jaxpr
+  │     ├─ prop_jaxpr() → index sets
+  │     └─ SparsityPattern
+  │
+  ├─ 2. COLORING
+  │     color_jacobian_pattern(sparsity)
+  │
+  └─ 3. DECOMPRESSION
+        One VJP or JVP per color
 
-Convenience: jacobian(f)(x)              Convenience: hessian(f)(x)
-             = auto-detect + color + decompress  = auto-detect + color + decompress
+Convenience: jacobian(f)(x) = auto-detect + color + decompress
+Precompute:  jacobian_coloring(f, shape) = detect + color
+```
 
-Precompute:  jacobian_coloring(f, shape)   hessian_coloring(f, shape)
-             = detect + color                = detect + color_symmetric
+### Hessians
+
+```
+hessian(f, colored_pattern)(x)
+  │
+  ├─ 1. DETECTION
+  │     hessian_sparsity(f, input_shape)
+  │     └─ jacobian_sparsity(grad(f), input_shape)
+  │
+  ├─ 2. COLORING
+  │     color_hessian_pattern(sparsity)
+  │
+  └─ 3. DECOMPRESSION
+        One HVP per color (fwd-over-rev)
+
+Convenience: hessian(f)(x) = auto-detect + color + decompress
+Precompute:  hessian_coloring(f, shape) = detect + color_symmetric
 ```
 
 ## Commits

@@ -1,28 +1,5 @@
 # Documentation Guide for AI Agents
 
-## Structure
-
-```
-docs/
-├── index.md                  # Landing page
-├── tutorials/
-│   └── getting-started.md    # Tutorial: first steps with asdex
-├── how-to/
-│   ├── jacobians.md          # How-To: sparse Jacobians
-│   └── hessians.md           # How-To: sparse Hessians
-├── explanation/
-│   └── coloring.md           # Explanation: graph coloring
-├── reference/
-│   ├── jacobian.md           # Reference: jacobian(), jacobian_coloring(), etc.
-│   ├── hessian.md            # Reference: hessian(), hessian_coloring(), etc.
-│   ├── sparsity.md           # Reference: jacobian_sparsity(), hessian_sparsity()
-│   ├── coloring.md           # Reference: color_rows(), color_cols(), color_symmetric()
-│   ├── data-structures.md    # Reference: SparsityPattern, ColoredPattern
-│   └── api.md                # Reference: all docstrings on one page
-└── javascripts/
-    └── mathjax.js            # MathJax configuration
-```
-
 ## Diataxis Framework
 
 The docs follow the [Diataxis](https://diataxis.fr/) framework.
@@ -51,17 +28,17 @@ All markdown content uses **semantic line breaks**:
 one sentence or clause per line.
 This makes diffs cleaner and is a firm requirement.
 
-Good:
-```markdown
-Graph coloring assigns colors to vertices such that adjacent vertices get different colors.
-This allows computing multiple rows in a single AD pass.
-```
-
-Bad:
+Bad, avoid:
 ```markdown
 Graph coloring assigns colors to vertices such that adjacent
 vertices get different colors. This allows computing multiple
 rows in a single AD pass.
+```
+
+Good:
+```markdown
+Graph coloring assigns colors to vertices such that adjacent vertices get different colors.
+This allows computing multiple rows in a single AD pass.
 ```
 
 ## MkDocs Conventions

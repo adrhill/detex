@@ -5,34 +5,11 @@ through primitives to determine Jacobian sparsity patterns.
 
 ## Structure
 
-```
-__init__.py        # prop_jaxpr, prop_dispatch, fallbacks
-_commons.py        # IndexSets, Deps, ConstVals, utilities
-_elementwise.py    # unary, binary, zero-derivative, integer_pow, convert_element_type
-_slice.py          # slice
-_squeeze.py        # squeeze
-_reshape.py        # reshape
-_broadcast.py      # broadcast_in_dim
-_concatenate.py    # concatenate
-_transpose.py      # transpose (dimension permutation)
-_rev.py            # rev (reverse along dimensions)
-_reduce.py         # reduce_sum, reduce_max, reduce_min, reduce_prod
-_top_k.py          # top_k (top-k selection along last axis)
-_gather.py         # gather (static/dynamic indices)
-_scatter.py        # scatter, scatter-add (static/dynamic indices)
-_select.py         # select_n
-_conv.py           # conv_general_dilated
-_dot_general.py    # dot_general (generalized matrix multiply)
-_while.py          # while_loop (fixed-point iteration)
-_scan.py           # scan (fixed-point iteration on carry)
-_cond.py           # cond (union over branches)
-_split.py          # split (partition along axis)
-_tile.py           # tile (repeat along dimensions)
-_dynamic_slice.py  # dynamic_slice, dynamic_update_slice
-_platform_index.py # platform_index (platform selection constant)
-_equinox/          # Equinox-specific primitives
-  _select_if_vmap.py  # select_if_vmap (vmapped cond)
-```
+- `__init__.py` — `prop_jaxpr`, `prop_dispatch`, fallback handling.
+- `_commons.py` — shared types (`IndexSets`, `Deps`, `ConstVals`) and utilities.
+- Each JAX primitive has its own module: `_foo.py` contains `prop_foo`.
+- Handlers for external packages (Equinox, Flax, etc.) live in their own subfolders
+  (e.g., `_equinox/`).
 
 ## Key Types
 
@@ -84,6 +61,10 @@ This lets `gather`/`scatter` resolve static indices precisely instead of falling
 2. Add a `case` branch in `prop_dispatch`.
 3. Remove from the fallback `case` group if upgrading from conservative.
 4. Add tests in the corresponding `tests/_interpret/test_<module>.py` file.
+
+For primitives from external packages (Equinox, Flax, etc.),
+place the handler in a dedicated subfolder (e.g., `_equinox/_select_if_vmap.py`)
+with tests in `tests/_interpret/_equinox/`.
 
 ## Tests
 
