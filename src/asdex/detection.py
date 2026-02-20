@@ -8,6 +8,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from asdex._interpret import prop_jaxpr
+from asdex._interpret._commons import identity_index_sets
 from asdex.pattern import SparsityPattern
 
 
@@ -37,7 +38,7 @@ def jacobian_sparsity(
     n = input_shape if isinstance(input_shape, int) else math.prod(input_shape)
 
     # Initialize: input element i depends on input index i
-    input_indices = [[{i} for i in range(n)]]
+    input_indices = [identity_index_sets(n)]
 
     # Build const_vals from closed jaxpr consts for static index tracking
     const_vals = {

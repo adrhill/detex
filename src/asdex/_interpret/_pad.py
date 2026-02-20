@@ -6,6 +6,7 @@ from ._commons import (
     Deps,
     IndexSets,
     atom_shape,
+    empty_index_set,
     flat_to_coords,
     index_sets,
     numel,
@@ -58,7 +59,7 @@ def prop_pad(eqn: JaxprEqn, deps: Deps) -> None:
     out_size = numel(out_shape)
 
     # The padding value is a scalar; use its first (only) dep set.
-    pad_dep = pad_indices[0] if pad_indices else set()
+    pad_dep = pad_indices[0] if pad_indices else empty_index_set()
 
     out_indices: IndexSets = []
     for out_flat in range(out_size):

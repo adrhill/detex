@@ -6,8 +6,36 @@ from collections.abc import Callable, Sequence
 import numpy as np
 from jax._src.core import Jaxpr, JaxprEqn, Literal, Var
 
-IndexSets = list[set[int]]
+IndexSet = set[int]
+"""A single per-element dependency set.
+
+Currently backed by Python's built-in set.
+Designed for a future swap to pyroaring.BitMap.
+"""
+
+IndexSets = list[IndexSet]
 """Per-element dependency index sets for an array."""
+
+
+def empty_index_set() -> IndexSet:
+    """Create an empty dependency set."""
+    return set()
+
+
+def singleton_index_set(i: int) -> IndexSet:
+    """Create a dependency set containing a single index."""
+    return {i}
+
+
+def empty_index_sets(n: int) -> IndexSets:
+    """Create n empty dependency sets."""
+    return [empty_index_set() for _ in range(n)]
+
+
+def identity_index_sets(n: int) -> IndexSets:
+    """Create identity sets where element i depends on index i."""
+    return [singleton_index_set(i) for i in range(n)]
+
 
 Deps = dict[Var, IndexSets]
 """Maps each variable to its per-element dependency index sets."""
@@ -55,8 +83,8 @@ def atom_numel(atom: Atom) -> int:
 def index_sets(deps: Deps, atom: Atom) -> IndexSets:
     """Get the index sets for a variable or literal."""
     if isinstance(atom, Literal):
-        return [set() for _ in range(atom_numel(atom))]
-    return deps.get(atom, [set()])
+        return empty_index_sets(atom_numel(atom))
+    return deps.get(atom, [empty_index_set()])
 
 
 def copy_index_sets(src: IndexSets) -> IndexSets:
@@ -119,11 +147,11 @@ def propagate_const_binary(
 # Index set operations
 
 
-def union_all(sets: Sequence[set[int]]) -> set[int]:
+def union_all(sets: Sequence[IndexSet]) -> IndexSet:
     """Union all sets together, returning a new set."""
     if not sets:
-        return set()
-    result: set[int] = set()
+        return empty_index_set()
+    result: IndexSet = empty_index_set()
     for s in sets:
         result |= s
     return result

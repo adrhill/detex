@@ -6,9 +6,11 @@ from jax._src.core import JaxprEqn
 from ._commons import (
     ConstVals,
     Deps,
+    IndexSet,
     IndexSets,
     atom_const_val,
     atom_numel,
+    empty_index_set,
     index_sets,
 )
 
@@ -37,7 +39,7 @@ def prop_select_n(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 
     out_indices: IndexSets = []
     for i in range(out_size):
-        merged: set[int] = set()
+        merged: IndexSet = empty_index_set()
         for c_idx in case_indices:
             merged |= c_idx[i]
         out_indices.append(merged)

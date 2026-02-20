@@ -8,6 +8,7 @@ from ._commons import (
     IndexSets,
     PropJaxprFn,
     copy_index_sets,
+    empty_index_sets,
     fixed_point_loop,
     forward_const_vals,
     index_sets,
@@ -78,7 +79,7 @@ def prop_scan(
         length = x_shape[0]
         slice_numel = len(x_indices) // length
         # Union deps across all length slices for each element position
-        merged: IndexSets = [set() for _ in range(slice_numel)]
+        merged: IndexSets = empty_index_sets(slice_numel)
         for t in range(length):
             for j in range(slice_numel):
                 merged[j] |= x_indices[t * slice_numel + j]

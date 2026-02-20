@@ -8,6 +8,7 @@ from ._commons import (
     Deps,
     atom_const_val,
     atom_shape,
+    empty_index_set,
     numel,
 )
 from ._elementwise import prop_binary_elementwise
@@ -62,4 +63,4 @@ def prop_mul(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         if (in1_val is not None and in1_val[i] == 0) or (
             in2_val is not None and in2_val[i] == 0
         ):
-            out_indices[i] = set()
+            out_indices[i] = empty_index_set()

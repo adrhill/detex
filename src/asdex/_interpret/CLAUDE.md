@@ -13,17 +13,27 @@ through primitives to determine Jacobian sparsity patterns.
 
 ## Key Types
 
-- `IndexSets` = `list[set[int]]` — per-element dependency sets for one array
+- `IndexSet` = `set[int]` — a single per-element dependency set (swappable to `pyroaring.BitMap`)
+- `IndexSets` = `list[IndexSet]` — per-element dependency sets for one array
 - `Deps` = `dict[Var, IndexSets]` — maps jaxpr variables to their index sets
 - `ConstVals` = `dict[Var, np.ndarray]` — statically-known values for precise gather/scatter
 
 ## Naming Conventions
 
 **Terminology** — "indices" and "map" mean different things:
-- **"indices" / "index sets"**: `IndexSets` (`list[set[int]]`),
+- **"indices" / "index sets"**: `IndexSets` (`list[IndexSet]`),
   the per-element dependency sets used for sparsity tracking.
 - **"map"**: numpy integer arrays that map output positions to input positions.
   Not index sets.
+
+**Construction** — always use the factory helpers from `_commons`:
+- `empty_index_set()` instead of `set()`
+- `singleton_index_set(i)` instead of `{i}`
+- `empty_index_sets(n)` instead of `[set() for _ in range(n)]`
+- `identity_index_sets(n)` instead of `[{i} for i in range(n)]`
+
+This ensures a future backend swap (e.g. to `pyroaring.BitMap`) only requires
+changing the helpers, not every handler.
 
 **Variable names** — use these consistently across handlers:
 - `in_indices`: input index sets (from `index_sets(deps, atom)`)

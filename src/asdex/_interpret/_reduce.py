@@ -11,6 +11,7 @@ from ._commons import (
     Deps,
     IndexSets,
     atom_shape,
+    empty_index_sets,
     index_sets,
     numel,
     union_all,
@@ -64,7 +65,7 @@ def prop_reduce(eqn: JaxprEqn, deps: Deps) -> None:
     out_coords = tuple(in_coords[d] for d in kept_dims)
     group_map = np.ravel_multi_index(out_coords, out_shape).ravel()
 
-    out_indices: IndexSets = [set() for _ in range(out_size)]
+    out_indices: IndexSets = empty_index_sets(out_size)
     for in_flat, elem_deps in enumerate(in_indices):
         out_indices[group_map[in_flat]] |= elem_deps
 

@@ -6,10 +6,12 @@ from jax._src.core import JaxprEqn
 
 from ._commons import (
     Deps,
+    IndexSet,
     IndexSets,
     atom_shape,
     check_no_index_sets,
     conservative_indices,
+    empty_index_set,
     flat_to_coords,
     index_sets,
     numel,
@@ -118,7 +120,7 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
         in_feature_end = in_feature_start + group_size_in
 
         # Collect dependencies from input
-        elem_deps: set[int] = set()
+        elem_deps: IndexSet = empty_index_set()
 
         # For each position in the kernel window
         for kernel_offsets in product(*[range(k) for k in kernel_spatial_sizes]):

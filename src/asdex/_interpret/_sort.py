@@ -9,8 +9,10 @@ from jax._src.core import JaxprEqn
 
 from ._commons import (
     Deps,
+    IndexSets,
     atom_numel,
     atom_shape,
+    empty_index_sets,
     index_sets,
     union_all,
 )
@@ -60,7 +62,7 @@ def prop_sort(eqn: JaxprEqn, deps: Deps) -> None:
 
     # Broadcast each slice's deps back to every element in the slice.
     for outvar in eqn.outvars:
-        out: list[set[int]] = [set()] * total
+        out: IndexSets = empty_index_sets(total)
         for gd, g in zip(group_indices, groups, strict=True):
             for i in g:
                 out[i] = gd.copy()
