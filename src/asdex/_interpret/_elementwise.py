@@ -167,12 +167,12 @@ def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
 
 
 def propagate_const_elementwise(eqn: JaxprEqn, const_vals: ConstVals) -> None:
-    """Propagate const values through a binary elementwise op.
+    """Propagate a const value through a binary elementwise op.
 
-    Looks up the primitive in ``_BINARY_CONST_UFUNCS``
-    and delegates to ``propagate_const_binary``.
-    Silently does nothing for primitives not in the table
-    (e.g. ``complex``).
+    If both inputs are statically known,
+    apply the matching numpy ufunc and store the result.
+    Without this, downstream handlers (e.g. ``gather``, ``scatter``) cannot resolve
+    static index arrays and fall back to conservative.
     """
     ufunc = _BINARY_CONST_UFUNCS.get(eqn.primitive.name)
     if ufunc is not None:

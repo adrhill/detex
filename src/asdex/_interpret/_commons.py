@@ -90,7 +90,8 @@ def propagate_const_unary(
 
     If the input is statically known,
     apply ``transform`` and store the result.
-    Mirrors ``propagate_const_binary`` for the single-input case.
+    Without this, downstream handlers (e.g. ``gather``, ``scatter``) cannot resolve
+    static index arrays and fall back to conservative.
     """
     in_val = atom_const_val(eqn.invars[0], const_vals)
     if in_val is not None:
@@ -102,11 +103,12 @@ def propagate_const_binary(
     const_vals: ConstVals,
     transform: Callable[[np.ndarray, np.ndarray], np.ndarray],
 ) -> None:
-    """Propagate constant values through a binary op.
+    """Propagate a const value through a binary op.
 
     If both inputs are statically known,
     apply ``transform`` and store the result.
-    Mirrors ``propagate_const_unary`` for the two-input case.
+    Without this, downstream handlers (e.g. ``gather``, ``scatter``) cannot resolve
+    static index arrays and fall back to conservative.
     """
     in1 = atom_const_val(eqn.invars[0], const_vals)
     in2 = atom_const_val(eqn.invars[1], const_vals)
