@@ -6,9 +6,10 @@ from jax._src.core import JaxprEqn
 from ._commons import (
     ConstVals,
     Deps,
-    IndexSets,
+    IndexSet,
     atom_const_val,
     atom_numel,
+    empty_index_set,
     index_sets,
 )
 
@@ -35,9 +36,9 @@ def prop_select_n(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     # The selector has zero derivative, so we skip it.
     case_indices = [index_sets(deps, c) for c in cases]
 
-    out_indices: IndexSets = []
+    out_indices: list[IndexSet] = []
     for i in range(out_size):
-        merged: set[int] = set()
+        merged: IndexSet = empty_index_set()
         for c_idx in case_indices:
             merged |= c_idx[i]
         out_indices.append(merged)

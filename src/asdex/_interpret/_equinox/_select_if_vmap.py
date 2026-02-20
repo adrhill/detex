@@ -6,7 +6,6 @@ from jax._src.core import JaxprEqn
 from .._commons import (
     ConstVals,
     Deps,
-    IndexSets,
     atom_const_val,
     atom_numel,
     check_no_index_sets,
@@ -38,11 +37,7 @@ def prop_select_if_vmap(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> Non
     true_indices = index_sets(deps, on_true)
     false_indices = index_sets(deps, on_false)
 
-    out_indices: IndexSets = []
-    for i in range(out_size):
-        out_indices.append(true_indices[i] | false_indices[i])
-
-    deps[out_var] = out_indices
+    deps[out_var] = [true_indices[i] | false_indices[i] for i in range(out_size)]
 
     # Propagate concrete values when both branches are statically known.
     pred_val = atom_const_val(eqn.invars[0], const_vals)

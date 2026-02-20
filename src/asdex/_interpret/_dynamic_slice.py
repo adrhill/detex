@@ -6,7 +6,7 @@ from jax._src.core import JaxprEqn
 from ._commons import (
     ConstVals,
     Deps,
-    IndexSets,
+    IndexSet,
     atom_const_val,
     atom_shape,
     check_no_index_sets,
@@ -116,7 +116,7 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
         return
 
     # Start with operand deps, then overwrite the update region
-    out_indices: IndexSets = copy_index_sets(operand_indices)
+    out_indices: list[IndexSet] = copy_index_sets(operand_indices)
 
     # Map each update element to its flat position in the operand
     upd_coords = np.indices(upd_shape)

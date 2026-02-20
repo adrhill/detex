@@ -5,7 +5,7 @@ from jax._src.core import JaxprEqn
 from ._commons import (
     ConstVals,
     Deps,
-    IndexSets,
+    IndexSet,
     PropJaxprFn,
     copy_index_sets,
     forward_const_vals,
@@ -39,12 +39,12 @@ def prop_cond(
     """
     branches = eqn.params["branches"]
     operands = eqn.invars[1:]
-    operand_indices: list[IndexSets] = [index_sets(deps, v) for v in operands]
+    operand_indices: list[list[IndexSet]] = [index_sets(deps, v) for v in operands]
 
     n_out = len(eqn.outvars)
 
     # Propagate each branch and collect per-branch output deps
-    branch_outputs: list[list[IndexSets]] = []
+    branch_outputs: list[list[list[IndexSet]]] = []
     for branch in branches:
         seed_const_vals(const_vals, branch.jaxpr.constvars, branch.consts)
         forward_const_vals(const_vals, operands, branch.jaxpr.invars)
@@ -55,7 +55,7 @@ def prop_cond(
     for i in range(n_out):
         outvar = eqn.outvars[i]
         # Start from first branch, union with the rest
-        merged: IndexSets = copy_index_sets(branch_outputs[0][i])
+        merged: list[IndexSet] = copy_index_sets(branch_outputs[0][i])
         for branch_out in branch_outputs[1:]:
             for j in range(len(merged)):
                 merged[j] |= branch_out[i][j]

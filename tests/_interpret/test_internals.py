@@ -17,7 +17,7 @@ from asdex._interpret import (
     prop_jaxpr,
     prop_nested_jaxpr,
 )
-from asdex._interpret._commons import atom_shape
+from asdex._interpret._commons import atom_shape, singleton_index_set
 from asdex._interpret._reshape import prop_reshape
 
 
@@ -114,11 +114,11 @@ def test_prop_jaxpr_default_const_vals():
     closed_jaxpr = jax.make_jaxpr(lambda x: x + 1)(dummy)
     jaxpr = closed_jaxpr.jaxpr
 
-    input_indices = [[{0}, {1}]]
+    input_indices = [[singleton_index_set(0), singleton_index_set(1)]]
     # Call without const_vals — should default to empty dict
     result = prop_jaxpr(jaxpr, input_indices)
     assert len(result) == 1
-    assert result[0] == [{0}, {1}]
+    assert result[0] == [singleton_index_set(0), singleton_index_set(1)]
 
 
 @pytest.mark.elementwise
@@ -155,7 +155,9 @@ def test_reshape_size_mismatch_raises():
     eqn.invars = [in_var]
     eqn.outvars = [out_var]
 
-    deps = {in_var: [{0}, {1}, {2}]}
+    deps = {
+        in_var: [singleton_index_set(0), singleton_index_set(1), singleton_index_set(2)]
+    }
     with pytest.raises(ValueError, match="Reshape size mismatch"):
         prop_reshape(eqn, deps, {})  # type: ignore[arg-type]
 

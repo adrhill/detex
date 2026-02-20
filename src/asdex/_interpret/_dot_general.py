@@ -6,9 +6,11 @@ from jax._src.core import JaxprEqn
 from ._commons import (
     ConstVals,
     Deps,
-    IndexSets,
+    IndexSet,
     atom_const_val,
     atom_shape,
+    empty_index_set,
+    empty_index_sets,
     index_sets,
 )
 
@@ -78,7 +80,7 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     if not out_shape:
         # Scalar output (e.g., vector dot product).
         # Skip terms where either factor is a known zero.
-        result: set[int] = set()
+        result: IndexSet = empty_index_set()
         for i in range(len(lhs_indices)):
             lhs_zero = lhs_val_flat is not None and lhs_val_flat[i] == 0
             rhs_zero = rhs_val_flat is not None and rhs_val_flat[i] == 0
@@ -117,7 +119,7 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         else np.empty((0, 1), dtype=int)
     )
 
-    out_indices: IndexSets = [set() for _ in range(out_size)]
+    out_indices: list[IndexSet] = empty_index_sets(out_size)
 
     for c_idx in range(n_contract):
         lhs_coord = tuple(

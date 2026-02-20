@@ -17,7 +17,7 @@ https://docs.jax.dev/en/latest/_autosummary/jax.lax.platform_dependent.html
 
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps
+from ._commons import Deps, empty_index_sets
 
 
 def prop_platform_index(eqn: JaxprEqn, deps: Deps) -> None:
@@ -42,4 +42,4 @@ def prop_platform_index(eqn: JaxprEqn, deps: Deps) -> None:
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.platform_dependent.html
     """
-    deps[eqn.outvars[0]] = [set()]
+    deps[eqn.outvars[0]] = empty_index_sets(1)

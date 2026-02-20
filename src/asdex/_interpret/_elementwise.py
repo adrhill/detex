@@ -10,6 +10,7 @@ from ._commons import (
     atom_numel,
     atom_shape,
     copy_index_sets,
+    empty_index_sets,
     index_sets,
     numel,
     propagate_const_binary,
@@ -60,7 +61,7 @@ def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
         Output deps: [{}, {}, {}]  (empty sets, no dependence)
     """
     for outvar in eqn.outvars:
-        deps[outvar] = [set() for _ in range(atom_numel(outvar))]
+        deps[outvar] = empty_index_sets(atom_numel(outvar))
 
 
 def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
@@ -83,7 +84,7 @@ def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
     """
     in_indices = index_sets(deps, eqn.invars[0])
     if eqn.params.get("y", 1) == 0:
-        deps[eqn.outvars[0]] = [set() for _ in range(len(in_indices))]
+        deps[eqn.outvars[0]] = empty_index_sets(len(in_indices))
     else:
         deps[eqn.outvars[0]] = copy_index_sets(in_indices)
 
