@@ -55,7 +55,7 @@ not every handler.
   Applying operations (transpose, slice, flip) to this array
   reveals which input position each output position reads from.
 - **`permute_indices(in_indices, permutation_map)`** —
-  builds output index sets by copying from input positions according to a map.
+  builds output index sets by sharing references from input positions according to a map.
   Used by handlers where each output reads exactly one input element
   (transpose, rev, slice, reshape, broadcast, split, tile, gather, dynamic_slice).
 - **`fixed_point_loop(iterate_fn, carry, n_carry)`** —
@@ -66,6 +66,17 @@ not every handler.
   Mirrors `propagate_const_binary` for the single-input case.
 - **`conservative_indices(all_indices, out_size)`** —
   conservative fallback where every output element depends on the union of all inputs.
+
+## Index Set Aliasing
+
+Index sets in `Deps` are **shared, not copied**.
+Multiple output elements may reference the same `set[int]` object,
+and output sets may alias input sets.
+Handlers must therefore **never mutate** a set obtained from `deps` or `index_sets()`.
+Always build new sets (via `union_all`, `|`, or the factory helpers) instead of mutating in place.
+
+The one exception is `fixed_point_loop`,
+which explicitly copies carry sets before mutating them via `|=`.
 
 ## Const Value Tracking
 
