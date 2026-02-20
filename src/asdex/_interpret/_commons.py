@@ -9,8 +9,9 @@ from jax._src.core import Jaxpr, JaxprEqn, Literal, Var
 IndexSet = set[int]
 """A single per-element dependency set.
 
-Currently backed by Python's built-in set.
-Designed for a future swap to pyroaring.BitMap.
+Backed by Python's built-in set.
+Benchmarked against pyroaring.BitMap and int bitmasks;
+set[int] wins for the typical workload (small sparse sets, large universe).
 """
 
 

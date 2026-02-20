@@ -13,7 +13,7 @@ through primitives to determine Jacobian sparsity patterns.
 
 ## Key Types
 
-- `IndexSet` = `set[int]` — a single per-element dependency set (swappable to `pyroaring.BitMap`)
+- `IndexSet` = `set[int]` — a single per-element dependency set
 - `list[IndexSet]` — per-element dependency sets for one array
 - `Deps` = `dict[Var, list[IndexSet]]` — maps jaxpr variables to their index sets
 - `ConstVals` = `dict[Var, np.ndarray]` — statically-known values for precise gather/scatter
@@ -32,8 +32,8 @@ through primitives to determine Jacobian sparsity patterns.
 - `empty_index_sets(n)` instead of `[set() for _ in range(n)]`
 - `identity_index_sets(n)` instead of `[{i} for i in range(n)]`
 
-This ensures a future backend swap (e.g. to `pyroaring.BitMap`) only requires
-changing the helpers, not every handler.
+This ensures a future backend swap only requires changing the helpers,
+not every handler.
 
 **Variable names** — use these consistently across handlers:
 - `in_indices`: input index sets (from `index_sets(deps, atom)`)
