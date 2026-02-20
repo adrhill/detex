@@ -59,8 +59,14 @@ through primitives to determine Jacobian sparsity patterns.
 
 ## Const Value Tracking
 
-Handlers like `broadcast_in_dim`, `select_n`, and binary ops propagate concrete values through `const_vals`.
-This lets `gather`/`scatter` resolve static indices precisely instead of falling back to conservative.
+Handlers like `broadcast_in_dim`, `select_n`, and `propagate_const_elementwise`
+propagate concrete values through `const_vals`.
+This lets downstream handlers resolve static indices precisely.
+
+**Invariant**: if a required const value is missing from `const_vals`,
+the handler must assume the worst and return a conservative pattern.
+This applies to `gather`, `scatter`, `dynamic_slice`, `dynamic_update_slice`,
+`dot_general` (zero-skipping), and `mul` (zero-clearing).
 
 ## Adding a New Handler
 
