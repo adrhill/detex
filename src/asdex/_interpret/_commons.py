@@ -5,20 +5,23 @@ from collections.abc import Callable, Sequence
 
 import numpy as np
 from jax._src.core import Jaxpr, JaxprEqn, Literal, Var
-from pyroaring import BitMap
 
-IndexSet = BitMap
-"""A single per-element dependency set backed by a Roaring bitmap."""
+IndexSet = set[int]
+"""A single per-element dependency set.
+
+Currently backed by Python's built-in set.
+Designed for a future swap to pyroaring.BitMap.
+"""
 
 
 def empty_index_set() -> IndexSet:
     """Create an empty dependency set."""
-    return BitMap()
+    return set()
 
 
 def singleton_index_set(i: int) -> IndexSet:
     """Create a dependency set containing a single index."""
-    return BitMap([i])
+    return {i}
 
 
 def empty_index_sets(n: int) -> list[IndexSet]:

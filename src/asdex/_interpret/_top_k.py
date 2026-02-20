@@ -12,7 +12,6 @@ from ._commons import (
     Deps,
     atom_numel,
     atom_shape,
-    empty_index_sets,
     index_sets,
     union_all,
 )
@@ -58,4 +57,4 @@ def prop_top_k(eqn: JaxprEqn, deps: Deps) -> None:
     deps[eqn.outvars[0]] = [
         group_indices[b] for b in range(n_batches) for _ in range(k)
     ]
-    deps[eqn.outvars[1]] = empty_index_sets(atom_numel(eqn.outvars[1]))
+    deps[eqn.outvars[1]] = [set() for _ in range(atom_numel(eqn.outvars[1]))]
