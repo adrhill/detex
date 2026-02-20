@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771599190744,
+  "lastUpdate": 1771606783269,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -6478,6 +6478,142 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.02848627562369354",
             "extra": "mean: 128.418567333334 msec\nrounds: 6"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "67fbae7d34492dfafdb27279f2c4e94ee3437dfb",
+          "message": "refactor(interpret): introduce `IndexSet` abstraction (#60)\n\n* refactor(interpret): introduce `IndexSet` abstraction for future backend swap\n\nAdd `IndexSet` type alias and factory helpers (`empty_index_set`,\n`singleton_index_set`, `empty_index_sets`, `identity_index_sets`) to\ncentralize index set construction in `_commons.py`.\n\nUpdate all handlers, `detection.py`, and tests to use the new helpers\ninstead of bare `set()` / `{i}` / `[set() for ...]` construction.\nThis confines the `set[int]` dependency to the helpers, enabling a\nfuture swap to `pyroaring.BitMap` by changing only the factory functions.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): remove `IndexSets` type alias\n\nReplace `IndexSets` with `list[IndexSet]` everywhere to avoid\nthe visually similar `IndexSet` / `IndexSets` pair.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-20T17:59:00+01:00",
+          "tree_id": "e8dee067a23c8ac10d12777e6248158111f15482",
+          "url": "https://github.com/adrhill/asdex/commit/67fbae7d34492dfafdb27279f2c4e94ee3437dfb"
+        },
+        "date": 1771606782243,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 816.7046193432479,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002809837545300645",
+            "extra": "mean: 1.2244328932584572 msec\nrounds: 178"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3301.02072356661,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00000907544324414739",
+            "extra": "mean: 302.93660165803 usec\nrounds: 2051"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 59.38721045586209,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004822521313502439",
+            "extra": "mean: 16.838642400003323 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 83.79039316998548,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00027866948615172293",
+            "extra": "mean: 11.934542400001646 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.229325359203813,
+            "unit": "iter/sec",
+            "range": "stddev: 0.015430402982792546",
+            "extra": "mean: 47.104652789470656 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 251.42000727762192,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003213375204018758",
+            "extra": "mean: 3.9774082056078544 msec\nrounds: 214"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 30.51636894367823,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0014175528246474227",
+            "extra": "mean: 32.76929840000378 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 11.626124367429021,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010791068421252767",
+            "extra": "mean: 86.01318619999745 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 120.27343172451452,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00012254737225083593",
+            "extra": "mean: 8.314388187496746 msec\nrounds: 16"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3326.5003255073534,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000006836910326655765",
+            "extra": "mean: 300.6162339237052 usec\nrounds: 2146"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 19.923974972953214,
+            "unit": "iter/sec",
+            "range": "stddev: 0.021347409167883247",
+            "extra": "mean: 50.190787799999725 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 20.232329027935187,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008047236874152402",
+            "extra": "mean: 49.425847050000016 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_detection",
+            "value": 32.22433745906068,
+            "unit": "iter/sec",
+            "range": "stddev: 0.019469469902420846",
+            "extra": "mean: 31.032445625001515 msec\nrounds: 8"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_coloring",
+            "value": 606.397345853542,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000014674237949148384",
+            "extra": "mean: 1.6490837350094891 msec\nrounds: 517"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_materialization",
+            "value": 11.593747025696134,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009106650550872088",
+            "extra": "mean: 86.25339140000392 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
+            "value": 7.510483804543765,
+            "unit": "iter/sec",
+            "range": "stddev: 0.027711224402017138",
+            "extra": "mean: 133.14721475000192 msec\nrounds: 8"
           }
         ]
       }
