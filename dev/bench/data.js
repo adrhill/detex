@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771525774462,
+  "lastUpdate": 1771599190744,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -6342,6 +6342,142 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.04459345064329735",
             "extra": "mean: 143.6803856249993 msec\nrounds: 8"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "18f12d46d7e0b4f42958d5d784c84b2f55d6557c",
+          "message": "feat(interpret): improve sparsity via const-value tracking (#59)\n\n* feat(interpret): improve sparsity for const_vals, mul-by-zero, and dot_general\n\nPropagate const_vals through reshape, slice, transpose, and tile so that\nconstant index arrays survive shape-transforming ops before gather/scatter.\n\nAdd prop_mul handler in _mul.py that clears dependencies at positions\nwhere a known-zero constant makes the product zero (d(0*y)/dy = 0).\n\nMake dot_general skip contraction terms where either factor is a known\nconstant zero, producing sparser patterns for matmul with sparse constants.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): extract `propagate_const_unary` and `propagate_const_binary` into `_commons`\n\nMove const-value propagation utilities to `_commons.py` alongside\n`atom_const_val`. Replace inline const propagation in reshape, slice,\ntranspose, and tile with `propagate_const_unary` calls using `partial`,\n`itemgetter`, or named closures. Remove unnecessary `np.asarray` and\n`.ravel()` round-trips — const values are stored in natural shape.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: remove resolved items from TODO.md\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): make `propagate_const_binary` take a callable transform\n\nSymmetric with `propagate_const_unary`. The ufunc dict lookup\nmoves from `_commons.py` into `propagate_const_elementwise` in\n`_elementwise.py`, keeping the shared utility interface clean.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): extract `copy_index_sets` utility into `_commons`\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(interpret): explain downstream impact in `propagate_const_*` docstrings\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(interpret): document conservative fallback invariant for const_vals\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-20T15:52:27+01:00",
+          "tree_id": "1fb12c5b3c013bef6a21f2d9113078ec71bdc9c8",
+          "url": "https://github.com/adrhill/asdex/commit/18f12d46d7e0b4f42958d5d784c84b2f55d6557c"
+        },
+        "date": 1771599190062,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 792.37178871351,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0033379364365099056",
+            "extra": "mean: 1.2620338258427826 msec\nrounds: 178"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3306.331088276839,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000006561970352595943",
+            "extra": "mean: 302.45004910296814 usec\nrounds: 2118"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 39.199111967639055,
+            "unit": "iter/sec",
+            "range": "stddev: 0.019580880003549957",
+            "extra": "mean: 25.51078199999921 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 83.15790203723284,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00040215842762637903",
+            "extra": "mean: 12.02531539999967 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.033269737508014,
+            "unit": "iter/sec",
+            "range": "stddev: 0.016096975600604108",
+            "extra": "mean: 47.54372536842093 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 243.41569654513728,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003605956600528783",
+            "extra": "mean: 4.108198502369658 msec\nrounds: 211"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 30.34087199022872,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008961091991275546",
+            "extra": "mean: 32.958841800000016 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 10.417753650741876,
+            "unit": "iter/sec",
+            "range": "stddev: 0.022684410072598304",
+            "extra": "mean: 95.9899833999998 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 90.22501554588302,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012057938986435375",
+            "extra": "mean: 11.08340069491548 msec\nrounds: 59"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3280.8559837031894,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000032222706948445385",
+            "extra": "mean: 304.79850531911296 usec\nrounds: 2256"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 24.80666146973708,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001958743692824652",
+            "extra": "mean: 40.31175260000026 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 19.326580007827673,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013885459815837517",
+            "extra": "mean: 51.742212000000976 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_detection",
+            "value": 28.160603639757436,
+            "unit": "iter/sec",
+            "range": "stddev: 0.02621635086626919",
+            "extra": "mean: 35.51060242857115 msec\nrounds: 7"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_coloring",
+            "value": 604.2858039451331,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000025767543725484564",
+            "extra": "mean: 1.6548460901636473 msec\nrounds: 488"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_materialization",
+            "value": 12.376114873533774,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000954336803181647",
+            "extra": "mean: 80.80080140000092 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
+            "value": 7.787035946323214,
+            "unit": "iter/sec",
+            "range": "stddev: 0.02848627562369354",
+            "extra": "mean: 128.418567333334 msec\nrounds: 6"
           }
         ]
       }
