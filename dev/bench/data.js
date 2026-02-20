@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771606783269,
+  "lastUpdate": 1771624385441,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -6614,6 +6614,142 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.027711224402017138",
             "extra": "mean: 133.14721475000192 msec\nrounds: 8"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2032c886c215412736549a4a88861f6400d8b2a9",
+          "message": "perf(interpret): remove unnecessary index set copies (#61)\n\n* perf(interpret): remove unnecessary index set copies\n\nIndex sets stored in `deps` are never mutated by subsequent handlers,\nso defensive `.copy()` calls in `permute_indices`, `conservative_indices`,\nbroadcast, pad, sort, top_k, dynamic_update_slice, and scan tiling\nare unnecessary. Removing them avoids millions of small-set copies.\n\nThe only place that mutates stored sets is `fixed_point_loop` (`|=`\non carry), which now copies carry sets on entry to avoid aliasing bugs.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* perf(interpret): use pyroaring for index sets\n\nSwap the `IndexSet` backend from Python's built-in `set` to Roaring\nbitmaps (`pyroaring.BitMap`). Only `_commons.py` changes — all ~28\nhandler modules already use the factory helpers and compatible ops\n(`|=`, `.copy()`, `|`, `len()`, `bool()`, iteration).\n\nFix bare `set()` in `_top_k.py` to use `empty_index_sets()` factory.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Revert \"perf(interpret): use pyroaring for index sets\"\n\nThis reverts commit 9a3f497052b6f760f6dafaf448501c84dc89c8fd.\n\n* docs(interpret): update IndexSet docstring after pyroaring benchmark\n\npyroaring.BitMap and int bitmasks were benchmarked against set[int].\nset[int] wins for the typical workload (small sparse sets, large universe).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(interpret): document index set aliasing invariant\n\nHandlers must not mutate sets from `deps` since copies were removed\nfor performance. The only exception is `fixed_point_loop`, which\nexplicitly copies carry sets before in-place mutation.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-20T22:52:24+01:00",
+          "tree_id": "553bbfd621d92cca5e919de63d918a5850616fa3",
+          "url": "https://github.com/adrhill/asdex/commit/2032c886c215412736549a4a88861f6400d8b2a9"
+        },
+        "date": 1771624385035,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 850.8536821765543,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0029358324666130566",
+            "extra": "mean: 1.1752902067038329 msec\nrounds: 179"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3347.534544134219,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000007742304312369538",
+            "extra": "mean: 298.727313136251 usec\nrounds: 2162"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 60.7821239481678,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00047425032540042834",
+            "extra": "mean: 16.45220560000098 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 81.64201423446232,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021792935695950805",
+            "extra": "mean: 12.248595400012618 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 20.56787633773195,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01830257317128752",
+            "extra": "mean: 48.619506631586034 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 248.69138563686113,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000028911510398288377",
+            "extra": "mean: 4.02104800469526 msec\nrounds: 213"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 29.244772410640632,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004495523208422888",
+            "extra": "mean: 34.19414540002208 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 10.197554282213167,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025385138541575928",
+            "extra": "mean: 98.06272880000506 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 96.31658397899372,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010445384294121231",
+            "extra": "mean: 10.38242801694562 msec\nrounds: 59"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3332.4214939902536,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000013071366817416024",
+            "extra": "mean: 300.0820879961965 usec\nrounds: 2216"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 25.346947753501585,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001183554105003659",
+            "extra": "mean: 39.45248200000151 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 19.385802751913477,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013582004569320702",
+            "extra": "mean: 51.58414189999405 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_detection",
+            "value": 30.6193910889002,
+            "unit": "iter/sec",
+            "range": "stddev: 0.021646893683388766",
+            "extra": "mean: 32.659042666675 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_coloring",
+            "value": 606.9485404578855,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009031310894073675",
+            "extra": "mean: 1.6475861351369165 msec\nrounds: 518"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_materialization",
+            "value": 12.330176205688288,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000889315582264126",
+            "extra": "mean: 81.1018418000117 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
+            "value": 7.839793928663708,
+            "unit": "iter/sec",
+            "range": "stddev: 0.030152073702989845",
+            "extra": "mean: 127.55437312501527 msec\nrounds: 8"
           }
         ]
       }
