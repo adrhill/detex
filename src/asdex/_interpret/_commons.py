@@ -59,6 +59,11 @@ def index_sets(deps: Deps, atom: Atom) -> IndexSets:
     return deps.get(atom, [set()])
 
 
+def copy_index_sets(src: IndexSets) -> IndexSets:
+    """Deep-copy a list of index sets."""
+    return [s.copy() for s in src]
+
+
 def atom_const_val(atom: Atom, const_vals: ConstVals) -> np.ndarray | None:
     """Get the concrete value of an atom, if statically known.
 

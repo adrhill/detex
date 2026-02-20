@@ -9,6 +9,7 @@ from ._commons import (
     atom_const_val,
     atom_numel,
     atom_shape,
+    copy_index_sets,
     index_sets,
     numel,
     propagate_const_binary,
@@ -84,7 +85,7 @@ def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
     if eqn.params.get("y", 1) == 0:
         deps[eqn.outvars[0]] = [set() for _ in range(len(in_indices))]
     else:
-        deps[eqn.outvars[0]] = [s.copy() for s in in_indices]
+        deps[eqn.outvars[0]] = copy_index_sets(in_indices)
 
 
 def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
@@ -162,7 +163,7 @@ def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     Jaxpr:
         invars[0]: input array
     """
-    deps[eqn.outvars[0]] = [s.copy() for s in index_sets(deps, eqn.invars[0])]
+    deps[eqn.outvars[0]] = copy_index_sets(index_sets(deps, eqn.invars[0]))
 
 
 def propagate_const_elementwise(eqn: JaxprEqn, const_vals: ConstVals) -> None:
@@ -204,7 +205,7 @@ def prop_convert_element_type(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.convert_element_type.html
     """
-    deps[eqn.outvars[0]] = [s.copy() for s in index_sets(deps, eqn.invars[0])]
+    deps[eqn.outvars[0]] = copy_index_sets(index_sets(deps, eqn.invars[0]))
 
     in_val = atom_const_val(eqn.invars[0], const_vals)
     if in_val is not None:

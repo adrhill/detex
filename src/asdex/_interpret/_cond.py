@@ -7,6 +7,7 @@ from ._commons import (
     Deps,
     IndexSets,
     PropJaxprFn,
+    copy_index_sets,
     forward_const_vals,
     index_sets,
     seed_const_vals,
@@ -54,7 +55,7 @@ def prop_cond(
     for i in range(n_out):
         outvar = eqn.outvars[i]
         # Start from first branch, union with the rest
-        merged: IndexSets = [s.copy() for s in branch_outputs[0][i]]
+        merged: IndexSets = copy_index_sets(branch_outputs[0][i])
         for branch_out in branch_outputs[1:]:
             for j in range(len(merged)):
                 merged[j] |= branch_out[i][j]

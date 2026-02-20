@@ -7,6 +7,7 @@ from ._commons import (
     Deps,
     IndexSets,
     PropJaxprFn,
+    copy_index_sets,
     fixed_point_loop,
     forward_const_vals,
     index_sets,
@@ -107,5 +108,5 @@ def prop_scan(
         # Tile: repeat the slice deps for each time step
         tiled: IndexSets = []
         for _ in range(length):
-            tiled.extend([s.copy() for s in slice_indices])
+            tiled.extend(copy_index_sets(slice_indices))
         deps[outvar] = tiled
