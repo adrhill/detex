@@ -9,30 +9,39 @@ from ._commons import (
     atom_const_val,
     atom_numel,
     atom_shape,
+    copy_index_sets,
     index_sets,
     numel,
+    propagate_const_binary,
 )
 
-
-def propagate_const_binary(
-    eqn: JaxprEqn, const_vals: ConstVals, ufuncs: dict[str, np.ufunc]
-) -> None:
-    """Propagate constant values through a binary op.
-
-    If both inputs are statically known and a matching ufunc exists,
-    the output value is computed and stored.
-    Used for tracking static indices through arithmetic to gather/scatter.
-
-    Example: z = x + y where x = [1, 2], y = [3, 4]
-        const_vals before: {x: [1, 2], y: [3, 4]}
-        const_vals after:  {x: [1, 2], y: [3, 4], z: [4, 6]}
-    """
-    in1 = atom_const_val(eqn.invars[0], const_vals)
-    in2 = atom_const_val(eqn.invars[1], const_vals)
-    if in1 is not None and in2 is not None:
-        ufunc = ufuncs.get(eqn.primitive.name)
-        if ufunc is not None:
-            const_vals[eqn.outvars[0]] = ufunc(in1, in2)
+# Ufuncs for evaluating constant values during tracing.
+# Used to propagate static index values through arithmetic to gather/scatter.
+_BINARY_CONST_UFUNCS: dict[str, np.ufunc] = {
+    # arithmetic
+    "add": np.add,
+    "add_any": np.add,
+    "sub": np.subtract,
+    "mul": np.multiply,
+    "div": np.divide,
+    "pow": np.power,
+    "max": np.maximum,
+    "min": np.minimum,
+    "atan2": np.arctan2,
+    "rem": np.remainder,
+    "nextafter": np.nextafter,
+    # comparison
+    "lt": np.less,
+    "le": np.less_equal,
+    "gt": np.greater,
+    "ge": np.greater_equal,
+    "eq": np.equal,
+    "ne": np.not_equal,
+    # bitwise
+    "and": np.bitwise_and,
+    "or": np.bitwise_or,
+    "xor": np.bitwise_xor,
+}
 
 
 def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
@@ -76,7 +85,7 @@ def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
     if eqn.params.get("y", 1) == 0:
         deps[eqn.outvars[0]] = [set() for _ in range(len(in_indices))]
     else:
-        deps[eqn.outvars[0]] = [s.copy() for s in in_indices]
+        deps[eqn.outvars[0]] = copy_index_sets(in_indices)
 
 
 def prop_binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
@@ -154,7 +163,23 @@ def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     Jaxpr:
         invars[0]: input array
     """
-    deps[eqn.outvars[0]] = [s.copy() for s in index_sets(deps, eqn.invars[0])]
+    deps[eqn.outvars[0]] = copy_index_sets(index_sets(deps, eqn.invars[0]))
+
+
+def propagate_const_elementwise(eqn: JaxprEqn, const_vals: ConstVals) -> None:
+    """Propagate a const value through a binary elementwise op.
+
+    If both inputs are statically known,
+    apply the matching numpy ufunc and store the result.
+    Without this, downstream handlers (e.g. ``gather``, ``scatter``) cannot resolve
+    static index arrays and fall back to conservative.
+    """
+    ufunc = _BINARY_CONST_UFUNCS.get(eqn.primitive.name)
+    if ufunc is not None:
+        propagate_const_binary(eqn, const_vals, ufunc)
+    # Primitives without a ufunc are silently skipped.
+    # Not propagating a const value is always safe —
+    # it just makes downstream gather/scatter fall back to conservative.
 
 
 def prop_convert_element_type(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -180,7 +205,7 @@ def prop_convert_element_type(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.convert_element_type.html
     """
-    deps[eqn.outvars[0]] = [s.copy() for s in index_sets(deps, eqn.invars[0])]
+    deps[eqn.outvars[0]] = copy_index_sets(index_sets(deps, eqn.invars[0]))
 
     in_val = atom_const_val(eqn.invars[0], const_vals)
     if in_val is not None:

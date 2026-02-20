@@ -1,11 +1,21 @@
 """Propagation rule for slice operations."""
 
+from operator import itemgetter
+
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, atom_shape, index_sets, permute_indices, position_map
+from ._commons import (
+    ConstVals,
+    Deps,
+    atom_shape,
+    index_sets,
+    permute_indices,
+    position_map,
+    propagate_const_unary,
+)
 
 
-def prop_slice(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Slicing extracts a contiguous (possibly strided) subarray.
 
     Each output element maps to exactly one input element,
@@ -39,3 +49,5 @@ def prop_slice(eqn: JaxprEqn, deps: Deps) -> None:
     permutation_map = position_map(in_shape)[slices].ravel()
 
     deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)
+
+    propagate_const_unary(eqn, const_vals, itemgetter(slices))

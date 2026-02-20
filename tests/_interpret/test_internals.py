@@ -157,7 +157,7 @@ def test_reshape_size_mismatch_raises():
 
     deps = {in_var: [{0}, {1}, {2}]}
     with pytest.raises(ValueError, match="Reshape size mismatch"):
-        prop_reshape(eqn, deps)  # type: ignore[arg-type]
+        prop_reshape(eqn, deps, {})  # type: ignore[arg-type]
 
 
 # Conservative fallback tests
@@ -261,26 +261,18 @@ def test_matmul():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_iota_eye():
-    """Eye @ x: dot_general unions over all contracting positions.
+    """Eye @ x: dot_general skips value-level zeros in the identity matrix.
 
-    The handler correctly tracks structural dependencies but cannot
-    exploit value-level zeros in the eye matrix.
-    Each output unions all x elements along the contracting axis,
-    so the result is dense (every output depends on all inputs).
-
-    TODO(dot_general): precise pattern is np.eye(3)
-    since the identity matrix selects each input element independently.
+    The handler exploits that ``jnp.eye(3)`` is a known constant,
+    so out[i] depends only on x[i].
     """
 
     def f(x):
         return jnp.eye(3) @ x
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # Dense because dot_general unions over all contracting positions,
-    # regardless of the actual values (eye has structural zeros we can't see).
-    expected = np.ones((3, 3), dtype=int)
+    expected = np.eye(3, dtype=int)
     np.testing.assert_array_equal(result, expected)
 
 

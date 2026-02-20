@@ -28,6 +28,10 @@ through primitives to determine Jacobian sparsity patterns.
 **Variable names** — use these consistently across handlers:
 - `in_indices`: input index sets (from `index_sets(deps, atom)`)
 - `in_shape`: input array shape (from `atom_shape(atom)`)
+- `in_val`: const value for a unary input (from `atom_const_val(atom, const_vals)`)
+- `in1_val` / `in2_val`: const values for binary inputs.
+  Use descriptive prefixes when roles differ:
+  `lhs_val` / `rhs_val` (dot_general), `pred_val` / `which_val` (select), etc.
 - `permutation_map`: the flat integer array passed to `permute_indices()`
 - `in_position_map`: when a `position_map()` result is stored
   (e.g., reused across loop iterations in `_split.py`)
@@ -47,13 +51,22 @@ through primitives to determine Jacobian sparsity patterns.
 - **`fixed_point_loop(iterate_fn, carry, n_carry)`** —
   runs a body function on carry index sets until they stabilize.
   Used by `while_loop` and `scan`.
+- **`propagate_const_unary(eqn, const_vals, transform)`** —
+  propagates a const value through a unary op by applying `transform`.
+  Mirrors `propagate_const_binary` for the single-input case.
 - **`conservative_indices(all_indices, out_size)`** —
   conservative fallback where every output element depends on the union of all inputs.
 
 ## Const Value Tracking
 
-Handlers like `broadcast_in_dim`, `select_n`, and binary ops propagate concrete values through `const_vals`.
-This lets `gather`/`scatter` resolve static indices precisely instead of falling back to conservative.
+Handlers like `broadcast_in_dim`, `select_n`, and `propagate_const_elementwise`
+propagate concrete values through `const_vals`.
+This lets downstream handlers resolve static indices precisely.
+
+**Invariant**: if a required const value is missing from `const_vals`,
+the handler must assume the worst and return a conservative pattern.
+This applies to `gather`, `scatter`, `dynamic_slice`, `dynamic_update_slice`,
+`dot_general` (zero-skipping), and `mul` (zero-clearing).
 
 ## Adding a New Handler
 

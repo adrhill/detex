@@ -67,22 +67,21 @@ def test_diag_2d():
     """jnp.diag on a 2D input extracts the diagonal via platform_dependent.
 
     The gather resolves the row index precisely but the column index
-    is data-dependent (iota), so each output depends on its entire row.
-
-    TODO(gather): the true pattern is diagonal — out[i] depends only on in[i*4].
-    Resolving iota values as const_vals would make this precise.
+    exploits known iota values and zero-clearing in mul
+    to produce the precise diagonal pattern.
     """
 
     def f(x):
         return jnp.diag(x.reshape(3, 3))
 
     result = jacobian_sparsity(f, input_shape=9).todense().astype(int)
-    # out[i] depends on row i: elements {3i, 3i+1, 3i+2}
+    # out[i] = mat[i, i], so out[i] depends only on x[i*4]:
+    # x[0] for out[0], x[4] for out[1], x[8] for out[2].
     expected = np.array(
         [
-            [1, 0, 0, 1, 0, 0, 1, 0, 0],
-            [0, 1, 0, 0, 1, 0, 0, 1, 0],
-            [0, 0, 1, 0, 0, 1, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1],
         ],
         dtype=int,
     )

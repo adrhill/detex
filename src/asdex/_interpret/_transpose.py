@@ -1,11 +1,22 @@
 """Propagation rule for transpose operations."""
 
+from functools import partial
+
+import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, atom_shape, index_sets, permute_indices, position_map
+from ._commons import (
+    ConstVals,
+    Deps,
+    atom_shape,
+    index_sets,
+    permute_indices,
+    position_map,
+    propagate_const_unary,
+)
 
 
-def prop_transpose(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_transpose(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Transpose permutes the dimensions of an array.
 
     Each output element maps to exactly one input element
@@ -32,3 +43,5 @@ def prop_transpose(eqn: JaxprEqn, deps: Deps) -> None:
     permutation_map = position_map(in_shape).transpose(permutation).ravel()
 
     deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)
+
+    propagate_const_unary(eqn, const_vals, partial(np.transpose, axes=permutation))

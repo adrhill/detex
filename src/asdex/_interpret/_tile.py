@@ -1,12 +1,21 @@
 """Propagation rule for tile operations."""
 
+from functools import partial
+
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, atom_shape, index_sets, permute_indices
+from ._commons import (
+    ConstVals,
+    Deps,
+    atom_shape,
+    index_sets,
+    permute_indices,
+    propagate_const_unary,
+)
 
 
-def prop_tile(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_tile(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Tile repeats an array along each dimension.
 
     Each output element depends on exactly one input element
@@ -36,3 +45,5 @@ def prop_tile(eqn: JaxprEqn, deps: Deps) -> None:
     permutation_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
     deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)
+
+    propagate_const_unary(eqn, const_vals, partial(np.tile, reps=reps))

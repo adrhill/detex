@@ -4,7 +4,7 @@ import math
 from collections.abc import Callable, Sequence
 
 import numpy as np
-from jax._src.core import Jaxpr, Literal, Var
+from jax._src.core import Jaxpr, JaxprEqn, Literal, Var
 
 IndexSets = list[set[int]]
 """Per-element dependency index sets for an array."""
@@ -59,6 +59,11 @@ def index_sets(deps: Deps, atom: Atom) -> IndexSets:
     return deps.get(atom, [set()])
 
 
+def copy_index_sets(src: IndexSets) -> IndexSets:
+    """Deep-copy a list of index sets."""
+    return [s.copy() for s in src]
+
+
 def atom_const_val(atom: Atom, const_vals: ConstVals) -> np.ndarray | None:
     """Get the concrete value of an atom, if statically known.
 
@@ -74,6 +79,41 @@ def atom_const_val(atom: Atom, const_vals: ConstVals) -> np.ndarray | None:
     if isinstance(atom, Var) and atom in const_vals:
         return const_vals[atom]
     return None
+
+
+def propagate_const_unary(
+    eqn: JaxprEqn,
+    const_vals: ConstVals,
+    transform: Callable[[np.ndarray], np.ndarray],
+) -> None:
+    """Propagate a const value through a unary op.
+
+    If the input is statically known,
+    apply ``transform`` and store the result.
+    Without this, downstream handlers (e.g. ``gather``, ``scatter``) cannot resolve
+    static index arrays and fall back to conservative.
+    """
+    in_val = atom_const_val(eqn.invars[0], const_vals)
+    if in_val is not None:
+        const_vals[eqn.outvars[0]] = transform(in_val)
+
+
+def propagate_const_binary(
+    eqn: JaxprEqn,
+    const_vals: ConstVals,
+    transform: Callable[[np.ndarray, np.ndarray], np.ndarray],
+) -> None:
+    """Propagate a const value through a binary op.
+
+    If both inputs are statically known,
+    apply ``transform`` and store the result.
+    Without this, downstream handlers (e.g. ``gather``, ``scatter``) cannot resolve
+    static index arrays and fall back to conservative.
+    """
+    in1 = atom_const_val(eqn.invars[0], const_vals)
+    in2 = atom_const_val(eqn.invars[1], const_vals)
+    if in1 is not None and in2 is not None:
+        const_vals[eqn.outvars[0]] = transform(in1, in2)
 
 
 # Index set operations

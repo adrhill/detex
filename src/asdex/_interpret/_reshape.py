@@ -1,11 +1,21 @@
 """Propagation rule for reshape operations."""
 
+import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, atom_shape, index_sets, numel, permute_indices, position_map
+from ._commons import (
+    ConstVals,
+    Deps,
+    atom_shape,
+    index_sets,
+    numel,
+    permute_indices,
+    position_map,
+    propagate_const_unary,
+)
 
 
-def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_reshape(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Reshape changes array shape without changing data or element count.
 
     Dependencies pass through unchanged in row-major (C) order.
@@ -52,3 +62,12 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps) -> None:
         deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)
     else:
         deps[eqn.outvars[0]] = in_indices
+
+    new_sizes = eqn.params["new_sizes"]
+
+    def _reshape_val(v: np.ndarray) -> np.ndarray:
+        if dimensions is not None:
+            return v.transpose(dimensions).reshape(new_sizes)
+        return v.reshape(new_sizes)
+
+    propagate_const_unary(eqn, const_vals, _reshape_val)
