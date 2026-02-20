@@ -9,8 +9,9 @@ from jax._src.core import Jaxpr, JaxprEqn, Literal, Var
 IndexSet = set[int]
 """A single per-element dependency set.
 
-Currently backed by Python's built-in set.
-Designed for a future swap to pyroaring.BitMap.
+Backed by Python's built-in set.
+Benchmarked against pyroaring.BitMap and int bitmasks;
+set[int] wins for the typical workload (small sparse sets, large universe).
 """
 
 
@@ -178,7 +179,7 @@ def check_no_index_sets(deps: Deps, atom: Atom, primitive_name: str) -> None:
 def conservative_indices(all_indices: list[IndexSet], out_size: int) -> list[IndexSet]:
     """Build conservative output index sets where every element depends on the union of all inputs."""
     combined = union_all(all_indices)
-    return [combined.copy() for _ in range(out_size)]
+    return [combined] * out_size
 
 
 # Position maps
@@ -204,7 +205,7 @@ def permute_indices(
     (transpose, rev, slice, reshape, broadcast, etc.)
     where each output reads exactly one input element.
     """
-    return [in_indices[j].copy() for j in permutation_map]
+    return [in_indices[j] for j in permutation_map]
 
 
 # Coordinate helpers
@@ -290,6 +291,11 @@ def fixed_point_loop(
     Mutates ``carry`` in place and returns the final body output
     (needed by ``scan`` for ``y_slice`` extraction; ignored by ``while_loop``).
     """
+    # Carry sets may alias (shared objects from upstream handlers),
+    # so copy them before in-place mutation via |=.
+    for i in range(n_carry):
+        carry[i] = [s.copy() for s in carry[i]]
+
     body_output: list[list[IndexSet]] = []
     for _iteration in range(_MAX_FIXED_POINT_ITERS):
         body_output = iterate_fn(carry)

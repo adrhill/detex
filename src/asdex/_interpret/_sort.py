@@ -65,5 +65,5 @@ def prop_sort(eqn: JaxprEqn, deps: Deps) -> None:
         out: list[IndexSet] = empty_index_sets(total)
         for gd, g in zip(group_indices, groups, strict=True):
             for i in g:
-                out[i] = gd.copy()
+                out[i] = gd
         deps[outvar] = out

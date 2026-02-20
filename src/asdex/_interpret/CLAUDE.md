@@ -13,7 +13,7 @@ through primitives to determine Jacobian sparsity patterns.
 
 ## Key Types
 
-- `IndexSet` = `set[int]` — a single per-element dependency set (swappable to `pyroaring.BitMap`)
+- `IndexSet` = `set[int]` — a single per-element dependency set
 - `list[IndexSet]` — per-element dependency sets for one array
 - `Deps` = `dict[Var, list[IndexSet]]` — maps jaxpr variables to their index sets
 - `ConstVals` = `dict[Var, np.ndarray]` — statically-known values for precise gather/scatter
@@ -32,8 +32,8 @@ through primitives to determine Jacobian sparsity patterns.
 - `empty_index_sets(n)` instead of `[set() for _ in range(n)]`
 - `identity_index_sets(n)` instead of `[{i} for i in range(n)]`
 
-This ensures a future backend swap (e.g. to `pyroaring.BitMap`) only requires
-changing the helpers, not every handler.
+This ensures a future backend swap only requires changing the helpers,
+not every handler.
 
 **Variable names** — use these consistently across handlers:
 - `in_indices`: input index sets (from `index_sets(deps, atom)`)
@@ -55,7 +55,7 @@ changing the helpers, not every handler.
   Applying operations (transpose, slice, flip) to this array
   reveals which input position each output position reads from.
 - **`permute_indices(in_indices, permutation_map)`** —
-  builds output index sets by copying from input positions according to a map.
+  builds output index sets by sharing references from input positions according to a map.
   Used by handlers where each output reads exactly one input element
   (transpose, rev, slice, reshape, broadcast, split, tile, gather, dynamic_slice).
 - **`fixed_point_loop(iterate_fn, carry, n_carry)`** —
@@ -66,6 +66,17 @@ changing the helpers, not every handler.
   Mirrors `propagate_const_binary` for the single-input case.
 - **`conservative_indices(all_indices, out_size)`** —
   conservative fallback where every output element depends on the union of all inputs.
+
+## Index Set Aliasing
+
+Index sets in `Deps` are **shared, not copied**.
+Multiple output elements may reference the same `set[int]` object,
+and output sets may alias input sets.
+Handlers must therefore **never mutate** a set obtained from `deps` or `index_sets()`.
+Always build new sets (via `union_all`, `|`, or the factory helpers) instead of mutating in place.
+
+The one exception is `fixed_point_loop`,
+which explicitly copies carry sets before mutating them via `|=`.
 
 ## Const Value Tracking
 
