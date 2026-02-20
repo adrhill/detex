@@ -11,7 +11,6 @@ from ._commons import (
     atom_shape,
     check_no_index_sets,
     conservative_indices,
-    copy_index_sets,
     index_sets,
     numel,
     permute_indices,
@@ -116,7 +115,7 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
         return
 
     # Start with operand deps, then overwrite the update region
-    out_indices: list[IndexSet] = copy_index_sets(operand_indices)
+    out_indices: list[IndexSet] = list(operand_indices)
 
     # Map each update element to its flat position in the operand
     upd_coords = np.indices(upd_shape)
@@ -124,6 +123,6 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
     permutation_map = np.ravel_multi_index(op_coords, operand_shape).ravel()
 
     for upd_flat, op_flat in enumerate(permutation_map):
-        out_indices[op_flat] = upd_indices[upd_flat].copy()
+        out_indices[op_flat] = upd_indices[upd_flat]
 
     deps[eqn.outvars[0]] = out_indices

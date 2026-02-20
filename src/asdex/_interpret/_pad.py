@@ -87,8 +87,8 @@ def prop_pad(eqn: JaxprEqn, deps: Deps) -> None:
             in_flat += in_idx * in_strides[d]
 
         if is_pad:
-            out_indices.append(pad_dep.copy())
+            out_indices.append(pad_dep)
         else:
-            out_indices.append(in_indices[in_flat].copy())
+            out_indices.append(in_indices[in_flat])
 
     deps[eqn.outvars[0]] = out_indices

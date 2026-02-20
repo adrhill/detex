@@ -62,7 +62,7 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> N
     # Early return avoids building the np.indices grid for this common case.
     out_size = numel(out_shape)
     if len(in_indices) == 1:
-        deps[out_var] = [in_indices[0].copy() for _ in range(out_size)]
+        deps[out_var] = [in_indices[0]] * out_size
         return
 
     # General case: map each output element back to the input element it reads.

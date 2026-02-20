@@ -55,6 +55,6 @@ def prop_top_k(eqn: JaxprEqn, deps: Deps) -> None:
 
     # Each of the k value outputs per batch copies its group's deps
     deps[eqn.outvars[0]] = [
-        group_indices[b].copy() for b in range(n_batches) for _ in range(k)
+        group_indices[b] for b in range(n_batches) for _ in range(k)
     ]
     deps[eqn.outvars[1]] = [set() for _ in range(atom_numel(eqn.outvars[1]))]
