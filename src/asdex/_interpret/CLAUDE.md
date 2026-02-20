@@ -6,7 +6,7 @@ through primitives to determine Jacobian sparsity patterns.
 ## Structure
 
 - `__init__.py` — `prop_jaxpr`, `prop_dispatch`, fallback handling.
-- `_commons.py` — shared types (`IndexSets`, `Deps`, `ConstVals`) and utilities.
+- `_commons.py` — shared types (`IndexSet`, `Deps`, `ConstVals`) and utilities.
 - Each JAX primitive has its own module: `_foo.py` contains `prop_foo`.
 - Handlers for external packages (Equinox, Flax, etc.) live in their own subfolders
   (e.g., `_equinox/`).
@@ -14,14 +14,14 @@ through primitives to determine Jacobian sparsity patterns.
 ## Key Types
 
 - `IndexSet` = `set[int]` — a single per-element dependency set (swappable to `pyroaring.BitMap`)
-- `IndexSets` = `list[IndexSet]` — per-element dependency sets for one array
-- `Deps` = `dict[Var, IndexSets]` — maps jaxpr variables to their index sets
+- `list[IndexSet]` — per-element dependency sets for one array
+- `Deps` = `dict[Var, list[IndexSet]]` — maps jaxpr variables to their index sets
 - `ConstVals` = `dict[Var, np.ndarray]` — statically-known values for precise gather/scatter
 
 ## Naming Conventions
 
 **Terminology** — "indices" and "map" mean different things:
-- **"indices" / "index sets"**: `IndexSets` (`list[IndexSet]`),
+- **"indices" / "index sets"**: `list[IndexSet]`,
   the per-element dependency sets used for sparsity tracking.
 - **"map"**: numpy integer arrays that map output positions to input positions.
   Not index sets.

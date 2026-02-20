@@ -9,7 +9,7 @@ from jax._src.core import JaxprEqn
 
 from ._commons import (
     Deps,
-    IndexSets,
+    IndexSet,
     atom_shape,
     empty_index_sets,
     index_sets,
@@ -65,7 +65,7 @@ def prop_reduce(eqn: JaxprEqn, deps: Deps) -> None:
     out_coords = tuple(in_coords[d] for d in kept_dims)
     group_map = np.ravel_multi_index(out_coords, out_shape).ravel()
 
-    out_indices: IndexSets = empty_index_sets(out_size)
+    out_indices: list[IndexSet] = empty_index_sets(out_size)
     for in_flat, elem_deps in enumerate(in_indices):
         out_indices[group_map[in_flat]] |= elem_deps
 

@@ -3,7 +3,7 @@
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import ConstVals, Deps, IndexSets, atom_const_val, atom_shape, index_sets
+from ._commons import ConstVals, Deps, IndexSet, atom_const_val, atom_shape, index_sets
 
 
 def prop_concatenate(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -31,7 +31,7 @@ def prop_concatenate(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     # For each input, build a shaped array whose values are positions in that pool.
     # np.concatenate on these index arrays mirrors the real op's element shuffling,
     # giving a flat mapping from each output element to the pool position it came from.
-    all_indices: IndexSets = []
+    all_indices: list[IndexSet] = []
     index_arrays = []
     for invar in eqn.invars:
         in_indices = index_sets(deps, invar)

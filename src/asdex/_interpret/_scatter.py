@@ -6,7 +6,7 @@ from jax._src.core import JaxprEqn
 from ._commons import (
     ConstVals,
     Deps,
-    IndexSets,
+    IndexSet,
     atom_const_val,
     atom_numel,
     atom_shape,
@@ -117,7 +117,7 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
                         scatter_positions[pos_int] = []
                     scatter_positions[pos_int].append(update_row)
 
-            out_indices: IndexSets = []
+            out_indices: list[IndexSet] = []
             for out_row in range(n_rows):
                 if out_row in scatter_positions:
                     update_row_list = scatter_positions[out_row]
@@ -138,10 +138,10 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
                             else:
                                 out_indices.append(empty_index_set())
                 else:
-                    for d in range(row_size):
-                        out_indices.append(
-                            operand_indices[out_row * row_size + d].copy()
-                        )
+                    out_indices.extend(
+                        operand_indices[out_row * row_size + d].copy()
+                        for d in range(row_size)
+                    )
 
             deps[eqn.outvars[0]] = out_indices
             return
@@ -231,7 +231,7 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
                     scatter_positions[flat_pos] = []
                 scatter_positions[flat_pos].append(update_idx)
 
-            out_indices: IndexSets = []
+            out_indices: list[IndexSet] = []
             for i in range(out_size):
                 if i in scatter_positions:
                     if is_combine:

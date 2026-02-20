@@ -13,9 +13,6 @@ Currently backed by Python's built-in set.
 Designed for a future swap to pyroaring.BitMap.
 """
 
-IndexSets = list[IndexSet]
-"""Per-element dependency index sets for an array."""
-
 
 def empty_index_set() -> IndexSet:
     """Create an empty dependency set."""
@@ -27,17 +24,17 @@ def singleton_index_set(i: int) -> IndexSet:
     return {i}
 
 
-def empty_index_sets(n: int) -> IndexSets:
+def empty_index_sets(n: int) -> list[IndexSet]:
     """Create n empty dependency sets."""
     return [empty_index_set() for _ in range(n)]
 
 
-def identity_index_sets(n: int) -> IndexSets:
+def identity_index_sets(n: int) -> list[IndexSet]:
     """Create identity sets where element i depends on index i."""
     return [singleton_index_set(i) for i in range(n)]
 
 
-Deps = dict[Var, IndexSets]
+Deps = dict[Var, list[IndexSet]]
 """Maps each variable to its per-element dependency index sets."""
 
 ConstVals = dict[Var, np.ndarray]
@@ -46,7 +43,9 @@ ConstVals = dict[Var, np.ndarray]
 Atom = Var | Literal
 """Atomic elements in jaxpressions: named intermediates (Var) or constants (Literal)."""
 
-PropJaxprFn = Callable[[Jaxpr, list[IndexSets], ConstVals | None], list[IndexSets]]
+PropJaxprFn = Callable[
+    [Jaxpr, list[list[IndexSet]], ConstVals | None], list[list[IndexSet]]
+]
 """Signature of ``prop_jaxpr``, passed as callback to break circular imports."""
 
 _MAX_FIXED_POINT_ITERS = 500
@@ -80,14 +79,14 @@ def atom_numel(atom: Atom) -> int:
 # Atom value access
 
 
-def index_sets(deps: Deps, atom: Atom) -> IndexSets:
+def index_sets(deps: Deps, atom: Atom) -> list[IndexSet]:
     """Get the index sets for a variable or literal."""
     if isinstance(atom, Literal):
         return empty_index_sets(atom_numel(atom))
     return deps.get(atom, [empty_index_set()])
 
 
-def copy_index_sets(src: IndexSets) -> IndexSets:
+def copy_index_sets(src: list[IndexSet]) -> list[IndexSet]:
     """Deep-copy a list of index sets."""
     return [s.copy() for s in src]
 
@@ -176,7 +175,7 @@ def check_no_index_sets(deps: Deps, atom: Atom, primitive_name: str) -> None:
         raise ValueError(msg)
 
 
-def conservative_indices(all_indices: IndexSets, out_size: int) -> IndexSets:
+def conservative_indices(all_indices: list[IndexSet], out_size: int) -> list[IndexSet]:
     """Build conservative output index sets where every element depends on the union of all inputs."""
     combined = union_all(all_indices)
     return [combined.copy() for _ in range(out_size)]
@@ -196,8 +195,8 @@ def position_map(shape: Sequence[int]) -> np.ndarray:
 
 
 def permute_indices(
-    in_indices: IndexSets, permutation_map: Sequence[int] | np.ndarray
-) -> IndexSets:
+    in_indices: list[IndexSet], permutation_map: Sequence[int] | np.ndarray
+) -> list[IndexSet]:
     """Build output index sets by permuting through a flat index array.
 
     Each output element ``i`` copies its index set from ``in_indices[permutation_map[i]]``.
@@ -276,10 +275,10 @@ def forward_const_vals(
 
 
 def fixed_point_loop(
-    iterate_fn: Callable[[list[IndexSets]], list[IndexSets]],
-    carry: list[IndexSets],
+    iterate_fn: Callable[[list[list[IndexSet]]], list[list[IndexSet]]],
+    carry: list[list[IndexSet]],
     n_carry: int,
-) -> list[IndexSets]:
+) -> list[list[IndexSet]]:
     """Run ``iterate_fn`` on carry index sets until they stabilize.
 
     Used by ``while_loop`` and ``scan`` to propagate index sets
@@ -291,7 +290,7 @@ def fixed_point_loop(
     Mutates ``carry`` in place and returns the final body output
     (needed by ``scan`` for ``y_slice`` extraction; ignored by ``while_loop``).
     """
-    body_output: list[IndexSets] = []
+    body_output: list[list[IndexSet]] = []
     for _iteration in range(_MAX_FIXED_POINT_ITERS):
         body_output = iterate_fn(carry)
 

@@ -5,7 +5,7 @@ from jax._src.core import JaxprEqn
 from ._commons import (
     ConstVals,
     Deps,
-    IndexSets,
+    IndexSet,
     PropJaxprFn,
     copy_index_sets,
     empty_index_sets,
@@ -60,15 +60,15 @@ def prop_scan(
     forward_const_vals(const_vals, consts, body_jaxpr.invars[:num_consts])
 
     # Prepare const deps for the body
-    const_inputs: list[IndexSets] = [index_sets(deps, v) for v in consts]
+    const_inputs: list[list[IndexSet]] = [index_sets(deps, v) for v in consts]
 
     # Initialize carry deps from initial values
-    carry_indices: list[IndexSets] = [index_sets(deps, v) for v in carry_init]
+    carry_indices: list[list[IndexSet]] = [index_sets(deps, v) for v in carry_init]
 
     # Prepare x_slice deps by unioning across the leading (length) dimension.
     # Each xs[i] has shape (length, *rest), and the body sees x_slice with shape rest.
     # We overapproximate by unioning all slices.
-    x_slice_indices: list[IndexSets] = []
+    x_slice_indices: list[list[IndexSet]] = []
     for x_var in xs:
         x_indices = index_sets(deps, x_var)
         x_shape = tuple(getattr(x_var.aval, "shape", ()))
@@ -79,14 +79,14 @@ def prop_scan(
         length = x_shape[0]
         slice_numel = len(x_indices) // length
         # Union deps across all length slices for each element position
-        merged: IndexSets = empty_index_sets(slice_numel)
+        merged: list[IndexSet] = empty_index_sets(slice_numel)
         for t in range(length):
             for j in range(slice_numel):
                 merged[j] |= x_indices[t * slice_numel + j]
         x_slice_indices.append(merged)
 
     # Fixed-point iteration on carry deps
-    def iterate(carry: list[IndexSets]) -> list[IndexSets]:
+    def iterate(carry: list[list[IndexSet]]) -> list[list[IndexSet]]:
         return prop_jaxpr(
             body_jaxpr, const_inputs + carry + x_slice_indices, const_vals
         )
@@ -107,7 +107,7 @@ def prop_scan(
             continue
         length = y_shape[0]
         # Tile: repeat the slice deps for each time step
-        tiled: IndexSets = []
+        tiled: list[IndexSet] = []
         for _ in range(length):
             tiled.extend(copy_index_sets(slice_indices))
         deps[outvar] = tiled

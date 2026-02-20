@@ -7,7 +7,6 @@ from ._commons import (
     ConstVals,
     Deps,
     IndexSet,
-    IndexSets,
     atom_const_val,
     atom_shape,
     empty_index_set,
@@ -120,7 +119,7 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         else np.empty((0, 1), dtype=int)
     )
 
-    out_indices: IndexSets = empty_index_sets(out_size)
+    out_indices: list[IndexSet] = empty_index_sets(out_size)
 
     for c_idx in range(n_contract):
         lhs_coord = tuple(

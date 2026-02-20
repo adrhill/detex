@@ -15,7 +15,7 @@ from ._broadcast import prop_broadcast_in_dim
 from ._commons import (
     ConstVals,
     Deps,
-    IndexSets,
+    IndexSet,
     atom_numel,
     conservative_indices,
     empty_index_sets,
@@ -59,19 +59,19 @@ from ._while import prop_while
 
 def prop_jaxpr(
     jaxpr: Jaxpr,
-    input_indices: list[IndexSets],
+    input_indices: list[list[IndexSet]],
     const_vals: ConstVals | None = None,
-) -> list[IndexSets]:
+) -> list[list[IndexSet]]:
     """Propagate index sets through a jaxpr.
 
     Args:
         jaxpr: The jaxpr to analyze
-        input_indices: List of IndexSets, one per input variable
+        input_indices: List of per-element index set lists, one per input variable
         const_vals: Optional mapping of constant variables to their values.
             Used for precise tracking of static indices in gather/scatter.
 
     Returns:
-        List of IndexSets, one per output variable
+        List of per-element index set lists, one per output variable
     """
     deps: Deps = {}
     if const_vals is None:
@@ -336,7 +336,7 @@ def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
 
     Used for primitives without precise handlers.
     """
-    all_inputs: IndexSets = []
+    all_inputs: list[IndexSet] = []
     for invar in eqn.invars:
         all_inputs.extend(index_sets(deps, invar))
     for outvar in eqn.outvars:

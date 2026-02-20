@@ -5,7 +5,7 @@ from jax._src.core import JaxprEqn
 from ._commons import (
     ConstVals,
     Deps,
-    IndexSets,
+    IndexSet,
     PropJaxprFn,
     fixed_point_loop,
     forward_const_vals,
@@ -54,12 +54,12 @@ def prop_while(
     forward_const_vals(const_vals, body_consts, body_jaxpr.invars[:body_nconsts])
 
     # Initialize carry deps from the initial values
-    carry_indices: list[IndexSets] = [index_sets(deps, v) for v in carry_init]
+    carry_indices: list[list[IndexSet]] = [index_sets(deps, v) for v in carry_init]
 
     # body_jaxpr invars: [body_consts..., carry...]
-    const_inputs: list[IndexSets] = [index_sets(deps, v) for v in body_consts]
+    const_inputs: list[list[IndexSet]] = [index_sets(deps, v) for v in body_consts]
 
-    def iterate(carry: list[IndexSets]) -> list[IndexSets]:
+    def iterate(carry: list[list[IndexSet]]) -> list[list[IndexSet]]:
         return prop_jaxpr(body_jaxpr, const_inputs + carry, const_vals)
 
     fixed_point_loop(iterate, carry_indices, n_carry)
