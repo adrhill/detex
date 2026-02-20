@@ -93,24 +93,20 @@ def propagate_const_unary(
 
 
 def propagate_const_binary(
-    eqn: JaxprEqn, const_vals: ConstVals, ufuncs: dict[str, np.ufunc]
+    eqn: JaxprEqn,
+    const_vals: ConstVals,
+    transform: Callable[[np.ndarray, np.ndarray], np.ndarray],
 ) -> None:
     """Propagate constant values through a binary op.
 
-    If both inputs are statically known and a matching ufunc exists,
-    the output value is computed and stored.
-    Used for tracking static indices through arithmetic to gather/scatter.
-
-    Example: z = x + y where x = [1, 2], y = [3, 4]
-        const_vals before: {x: [1, 2], y: [3, 4]}
-        const_vals after:  {x: [1, 2], y: [3, 4], z: [4, 6]}
+    If both inputs are statically known,
+    apply ``transform`` and store the result.
+    Mirrors ``propagate_const_unary`` for the two-input case.
     """
     in1 = atom_const_val(eqn.invars[0], const_vals)
     in2 = atom_const_val(eqn.invars[1], const_vals)
     if in1 is not None and in2 is not None:
-        ufunc = ufuncs.get(eqn.primitive.name)
-        if ufunc is not None:
-            const_vals[eqn.outvars[0]] = ufunc(in1, in2)
+        const_vals[eqn.outvars[0]] = transform(in1, in2)
 
 
 # Index set operations

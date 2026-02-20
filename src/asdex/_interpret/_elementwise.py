@@ -11,7 +11,36 @@ from ._commons import (
     atom_shape,
     index_sets,
     numel,
+    propagate_const_binary,
 )
+
+# Ufuncs for evaluating constant values during tracing.
+# Used to propagate static index values through arithmetic to gather/scatter.
+_BINARY_CONST_UFUNCS: dict[str, np.ufunc] = {
+    # arithmetic
+    "add": np.add,
+    "add_any": np.add,
+    "sub": np.subtract,
+    "mul": np.multiply,
+    "div": np.divide,
+    "pow": np.power,
+    "max": np.maximum,
+    "min": np.minimum,
+    "atan2": np.arctan2,
+    "rem": np.remainder,
+    "nextafter": np.nextafter,
+    # comparison
+    "lt": np.less,
+    "le": np.less_equal,
+    "gt": np.greater,
+    "ge": np.greater_equal,
+    "eq": np.equal,
+    "ne": np.not_equal,
+    # bitwise
+    "and": np.bitwise_and,
+    "or": np.bitwise_or,
+    "xor": np.bitwise_xor,
+}
 
 
 def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
@@ -134,6 +163,22 @@ def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
         invars[0]: input array
     """
     deps[eqn.outvars[0]] = [s.copy() for s in index_sets(deps, eqn.invars[0])]
+
+
+def propagate_const_elementwise(eqn: JaxprEqn, const_vals: ConstVals) -> None:
+    """Propagate const values through a binary elementwise op.
+
+    Looks up the primitive in ``_BINARY_CONST_UFUNCS``
+    and delegates to ``propagate_const_binary``.
+    Silently does nothing for primitives not in the table
+    (e.g. ``complex``).
+    """
+    ufunc = _BINARY_CONST_UFUNCS.get(eqn.primitive.name)
+    if ufunc is not None:
+        propagate_const_binary(eqn, const_vals, ufunc)
+    # Primitives without a ufunc are silently skipped.
+    # Not propagating a const value is always safe —
+    # it just makes downstream gather/scatter fall back to conservative.
 
 
 def prop_convert_element_type(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:

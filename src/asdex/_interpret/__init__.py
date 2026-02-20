@@ -20,7 +20,6 @@ from ._commons import (
     conservative_indices,
     forward_const_vals,
     index_sets,
-    propagate_const_binary,
     seed_const_vals,
 )
 from ._concatenate import prop_concatenate
@@ -34,6 +33,7 @@ from ._elementwise import (
     prop_integer_pow,
     prop_unary_elementwise,
     prop_zero_derivative,
+    propagate_const_elementwise,
 )
 from ._equinox._select_if_vmap import prop_select_if_vmap
 from ._gather import prop_gather
@@ -54,37 +54,6 @@ from ._tile import prop_tile
 from ._top_k import prop_top_k
 from ._transpose import prop_transpose
 from ._while import prop_while
-
-# Ufuncs for evaluating constant values during tracing.
-# Used to propagate static index values through arithmetic to gather/scatter.
-_ARITHMETIC_UFUNCS: dict[str, np.ufunc] = {
-    "add": np.add,
-    "add_any": np.add,
-    "sub": np.subtract,
-    "mul": np.multiply,
-    "div": np.divide,
-    "pow": np.power,
-    "max": np.maximum,
-    "min": np.minimum,
-    "atan2": np.arctan2,
-    "rem": np.remainder,
-    "nextafter": np.nextafter,
-}
-
-_COMPARISON_UFUNCS: dict[str, np.ufunc] = {
-    "lt": np.less,
-    "le": np.less_equal,
-    "gt": np.greater,
-    "ge": np.greater_equal,
-    "eq": np.equal,
-    "ne": np.not_equal,
-}
-
-_BITWISE_UFUNCS: dict[str, np.ufunc] = {
-    "and": np.bitwise_and,
-    "or": np.bitwise_or,
-    "xor": np.bitwise_xor,
-}
 
 
 def prop_jaxpr(
@@ -200,10 +169,10 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_zero_derivative(eqn, deps)
         case "eq" | "ne" | "lt" | "le" | "gt" | "ge":
             prop_zero_derivative(eqn, deps)
-            propagate_const_binary(eqn, const_vals, _COMPARISON_UFUNCS)
+            propagate_const_elementwise(eqn, const_vals)
         case "and" | "or" | "xor":
             prop_zero_derivative(eqn, deps)
-            propagate_const_binary(eqn, const_vals, _BITWISE_UFUNCS)
+            propagate_const_elementwise(eqn, const_vals)
         case "jit" | "pjit" | "xla_call" | "named_call":
             prop_nested_jaxpr(eqn, deps, const_vals)
         case "slice":
@@ -226,7 +195,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_integer_pow(eqn, deps)
         case "mul":
             prop_mul(eqn, deps, const_vals)
-            propagate_const_binary(eqn, const_vals, _ARITHMETIC_UFUNCS)
+            propagate_const_elementwise(eqn, const_vals)
         case (
             "add"
             | "sub"
@@ -241,7 +210,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             | "complex"
         ):
             prop_binary_elementwise(eqn, deps)
-            propagate_const_binary(eqn, const_vals, _ARITHMETIC_UFUNCS)
+            propagate_const_elementwise(eqn, const_vals)
         case (
             "neg"
             | "exp"
