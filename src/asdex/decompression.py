@@ -8,19 +8,7 @@ import jax.numpy as jnp
 from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike
 
-from asdex.coloring import color_hessian_pattern, color_jacobian_pattern
 from asdex.detection import _ensure_scalar
-from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
-from asdex.detection import jacobian_sparsity as _detect_sparsity
-from asdex.modes import (
-    ColoringMode,
-    HessianMode,
-    JacobianMode,
-    _assert_hessian_args,
-    _assert_jacobian_args,
-    _resolve_ad_mode,
-    _resolve_hessian_mode,
-)
 from asdex.pattern import ColoredPattern
 
 # Public API
@@ -28,74 +16,34 @@ from asdex.pattern import ColoredPattern
 
 def jacobian(
     f: Callable[[ArrayLike], ArrayLike],
-    colored_pattern: ColoredPattern | None = None,
-    *,
-    input_shape: int | tuple[int, ...] | None = None,
-    coloring_mode: ColoringMode = "auto",
-    ad_mode: JacobianMode = "auto",
+    colored_pattern: ColoredPattern,
 ) -> Callable[[ArrayLike], BCOO]:
     """Build a sparse Jacobian function using coloring and AD.
 
     Uses row coloring + VJPs or column coloring + JVPs,
     depending on which needs fewer colors.
 
-    Either ``colored_pattern`` or ``input_shape`` must be provided.
-    When ``input_shape`` is given,
-    sparsity detection and coloring are performed once at definition time.
-
     Args:
         f: Function taking an array and returning an array.
             Input and output may be multi-dimensional.
         colored_pattern: Pre-computed [`ColoredPattern`][asdex.ColoredPattern]
             from [`jacobian_coloring`][asdex.jacobian_coloring].
-        input_shape: Shape of the input array (int or tuple).
-            When provided, sparsity is detected and colored automatically
-            once at definition time.
-        coloring_mode: Coloring mode (used only when ``colored_pattern`` is None).
-            ``"row"`` for row coloring,
-            ``"column"`` for column coloring,
-            ``"symmetric"`` for symmetric (star) coloring,
-            ``"auto"`` picks automatically.
-            When ``"auto"`` but ``ad_mode`` is specific,
-            resolves to the natural coloring:
-            ``"fwd"`` implies ``"column"``, ``"rev"`` implies ``"row"``.
-        ad_mode: AD mode for Jacobian computation.
-            ``"fwd"`` uses JVPs (forward-mode AD),
-            ``"rev"`` uses VJPs (reverse-mode AD),
-            ``"auto"`` selects based on the coloring mode.
 
     Returns:
         A function that takes an input array and returns
             the sparse Jacobian as BCOO of shape ``(m, n)``
             where ``n = x.size`` and ``m = prod(output_shape)``.
     """
-    _assert_jacobian_args(colored_pattern, input_shape, coloring_mode, ad_mode)
-    if colored_pattern is None and input_shape is None:
-        raise TypeError("Either colored_pattern or input_shape must be provided.")
-    if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
-        raise TypeError(
-            f"Expected ColoredPattern, got {type(colored_pattern).__name__}. "
-            "Use jacobian(f, input_shape=...) for automatic coloring."
-        )
-    if input_shape is not None:
-        sparsity = _detect_sparsity(f, input_shape)
-        colored_pattern = color_jacobian_pattern(sparsity, coloring_mode, ad_mode)
-
-    assert colored_pattern is not None  # guaranteed by checks above
 
     def jac_fn(x: ArrayLike) -> BCOO:
-        return _eval_jacobian(f, jnp.asarray(x), colored_pattern, ad_mode)
+        return _eval_jacobian(f, jnp.asarray(x), colored_pattern)
 
     return jac_fn
 
 
 def hessian(
     f: Callable[[ArrayLike], ArrayLike],
-    colored_pattern: ColoredPattern | None = None,
-    *,
-    input_shape: int | tuple[int, ...] | None = None,
-    coloring_mode: ColoringMode = "auto",
-    ad_mode: HessianMode = "auto",
+    colored_pattern: ColoredPattern,
 ) -> Callable[[ArrayLike], BCOO]:
     """Build a sparse Hessian function using coloring and HVPs.
 
@@ -104,50 +52,20 @@ def hessian(
     If ``f`` returns a squeezable shape like ``(1,)`` or ``(1, 1)``,
     it is automatically squeezed to scalar.
 
-    Either ``colored_pattern`` or ``input_shape`` must be provided.
-    When ``input_shape`` is given,
-    sparsity detection and coloring are performed once at definition time.
-
     Args:
         f: Scalar-valued function taking an array.
             Input may be multi-dimensional.
         colored_pattern: Pre-computed [`ColoredPattern`][asdex.ColoredPattern]
             from [`hessian_coloring`][asdex.hessian_coloring].
-        input_shape: Shape of the input array (int or tuple).
-            When provided, sparsity is detected and colored automatically
-            once at definition time.
-        coloring_mode: Coloring mode (used only when ``colored_pattern`` is None).
-            ``"row"`` for row coloring,
-            ``"column"`` for column coloring,
-            ``"symmetric"`` for symmetric (star) coloring,
-            ``"auto"`` defaults to ``"symmetric"``.
-        ad_mode: AD composition strategy for Hessian-vector products.
-            ``"fwd_over_rev"`` uses forward-over-reverse,
-            ``"rev_over_fwd"`` uses reverse-over-forward,
-            ``"rev_over_rev"`` uses reverse-over-reverse,
-            ``"auto"`` defaults to ``"fwd_over_rev"``.
 
     Returns:
         A function that takes an input array and returns
             the sparse Hessian as BCOO of shape ``(n, n)``
             where ``n = x.size``.
     """
-    _assert_hessian_args(colored_pattern, input_shape, coloring_mode, ad_mode)
-    if colored_pattern is None and input_shape is None:
-        raise TypeError("Either colored_pattern or input_shape must be provided.")
-    if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
-        raise TypeError(
-            f"Expected ColoredPattern, got {type(colored_pattern).__name__}. "
-            "Use hessian(f, input_shape=...) for automatic coloring."
-        )
-    if input_shape is not None:
-        sparsity = _detect_hessian_sparsity(f, input_shape)
-        colored_pattern = color_hessian_pattern(sparsity, coloring_mode)
-
-    assert colored_pattern is not None  # guaranteed by checks above
 
     def hess_fn(x: ArrayLike) -> BCOO:
-        return _eval_hessian(f, jnp.asarray(x), colored_pattern, ad_mode)
+        return _eval_hessian(f, jnp.asarray(x), colored_pattern)
 
     return hess_fn
 
@@ -159,7 +77,6 @@ def _eval_jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
     colored_pattern: ColoredPattern,
-    ad_mode: JacobianMode,
 ) -> BCOO:
     """Evaluate the sparse Jacobian of f at x."""
     n = x.size
@@ -183,8 +100,7 @@ def _eval_jacobian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
-    resolved_ad_mode = _resolve_ad_mode(colored_pattern.mode, ad_mode)
-    match resolved_ad_mode:
+    match colored_pattern.mode:
         case "rev":
             return _jacobian_rows(f, x, colored_pattern, out_shape)
         case "fwd":
@@ -197,7 +113,6 @@ def _eval_hessian(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
     colored_pattern: ColoredPattern,
-    ad_mode: HessianMode,
 ) -> BCOO:
     """Evaluate the sparse Hessian of f at x.
 
@@ -220,8 +135,7 @@ def _eval_hessian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n))
 
-    resolved_ad_mode = _resolve_hessian_mode(ad_mode)
-    grads = _compute_hvps(f, x, colored_pattern, resolved_ad_mode)
+    grads = _compute_hvps(f, x, colored_pattern)
     return _decompress(colored_pattern, grads)
 
 
@@ -267,12 +181,11 @@ def _compute_hvps(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
     colored_pattern: ColoredPattern,
-    ad_mode: HessianMode,
 ) -> jax.Array:
     """Compute one HVP per color using pre-computed seed matrix."""
     seeds = jnp.asarray(colored_pattern._seed_matrix, dtype=x.dtype)
 
-    match ad_mode:
+    match colored_pattern.mode:
         case "fwd_over_rev":
 
             def single_hvp(v: jax.Array) -> jax.Array:

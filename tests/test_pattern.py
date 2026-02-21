@@ -15,17 +15,17 @@ class TestValidation:
     def test_mismatched_rows_cols_raises(self):
         """Rows and cols with different lengths raise ValueError."""
         with pytest.raises(ValueError, match="same length"):
-            SparsityPattern.from_coordinates([0, 1], [0], (2, 2))
+            SparsityPattern.from_coo([0, 1], [0], (2, 2))
 
 
 class TestConstruction:
     """Test SparsityPattern construction methods."""
 
-    def test_from_coordinates(self):
+    def test_from_coo(self):
         """Basic construction from row/col arrays."""
         rows = [0, 0, 1, 2]
         cols = [0, 1, 1, 2]
-        sparsity_pattern = SparsityPattern.from_coordinates(rows, cols, (3, 3))
+        sparsity_pattern = SparsityPattern.from_coo(rows, cols, (3, 3))
 
         assert sparsity_pattern.shape == (3, 3)
         assert sparsity_pattern.nnz == 4
@@ -34,9 +34,9 @@ class TestConstruction:
         np.testing.assert_array_equal(sparsity_pattern.rows, [0, 0, 1, 2])
         np.testing.assert_array_equal(sparsity_pattern.cols, [0, 1, 1, 2])
 
-    def test_from_coordinates_empty(self):
+    def test_from_coo_empty(self):
         """Construction with no non-zeros."""
-        sparsity_pattern = SparsityPattern.from_coordinates([], [], (3, 4))
+        sparsity_pattern = SparsityPattern.from_coo([], [], (3, 4))
 
         assert sparsity_pattern.shape == (3, 4)
         assert sparsity_pattern.nnz == 0
@@ -87,9 +87,7 @@ class TestConversion:
 
     def test_todense(self):
         """Convert to dense numpy array."""
-        sparsity_pattern = SparsityPattern.from_coordinates(
-            [0, 1, 2], [0, 1, 2], (3, 3)
-        )
+        sparsity_pattern = SparsityPattern.from_coo([0, 1, 2], [0, 1, 2], (3, 3))
         dense = sparsity_pattern.todense()
 
         expected = np.eye(3, dtype=np.int8)
@@ -97,7 +95,7 @@ class TestConversion:
 
     def test_todense_empty(self):
         """Todense with no non-zeros."""
-        sparsity_pattern = SparsityPattern.from_coordinates([], [], (2, 3))
+        sparsity_pattern = SparsityPattern.from_coo([], [], (2, 3))
         dense = sparsity_pattern.todense()
 
         expected = np.zeros((2, 3), dtype=np.int8)
@@ -105,9 +103,7 @@ class TestConversion:
 
     def test_to_bcoo_with_data(self):
         """to_bcoo with custom data values."""
-        sparsity_pattern = SparsityPattern.from_coordinates(
-            [0, 1, 2], [0, 1, 2], (3, 3)
-        )
+        sparsity_pattern = SparsityPattern.from_coo([0, 1, 2], [0, 1, 2], (3, 3))
         data = jnp.array([2.0, 3.0, 4.0])
         bcoo = sparsity_pattern.to_bcoo(data=data)
 
@@ -116,14 +112,14 @@ class TestConversion:
 
     def test_to_bcoo_default_data(self):
         """to_bcoo uses 1s by default."""
-        sparsity_pattern = SparsityPattern.from_coordinates([0, 1], [0, 1], (2, 2))
+        sparsity_pattern = SparsityPattern.from_coo([0, 1], [0, 1], (2, 2))
         bcoo = sparsity_pattern.to_bcoo()
 
         np.testing.assert_array_equal(bcoo.todense(), np.eye(2))
 
     def test_to_bcoo_empty(self):
         """to_bcoo with empty pattern produces zero matrix."""
-        sparsity_pattern = SparsityPattern.from_coordinates([], [], (3, 4))
+        sparsity_pattern = SparsityPattern.from_coo([], [], (3, 4))
         bcoo = sparsity_pattern.to_bcoo()
 
         assert bcoo.shape == (3, 4)
@@ -131,7 +127,7 @@ class TestConversion:
 
     def test_to_bcoo_empty_with_data(self):
         """to_bcoo with empty pattern and custom data."""
-        sparsity_pattern = SparsityPattern.from_coordinates([], [], (2, 2))
+        sparsity_pattern = SparsityPattern.from_coo([], [], (2, 2))
         data = jnp.array([])
         bcoo = sparsity_pattern.to_bcoo(data=data)
 
@@ -145,32 +141,30 @@ class TestProperties:
     def test_density(self):
         """Density calculation."""
         # 2 non-zeros in 3x4 = 12 elements
-        sparsity_pattern = SparsityPattern.from_coordinates([0, 1], [0, 1], (3, 4))
+        sparsity_pattern = SparsityPattern.from_coo([0, 1], [0, 1], (3, 4))
         assert sparsity_pattern.density == pytest.approx(2 / 12)
 
     def test_density_empty(self):
         """Density of empty pattern."""
-        sparsity_pattern = SparsityPattern.from_coordinates([], [], (3, 4))
+        sparsity_pattern = SparsityPattern.from_coo([], [], (3, 4))
         assert sparsity_pattern.density == 0.0
 
     def test_density_zero_size(self):
         """Density with zero-size matrix."""
-        sparsity_pattern = SparsityPattern.from_coordinates([], [], (0, 4))
+        sparsity_pattern = SparsityPattern.from_coo([], [], (0, 4))
         assert sparsity_pattern.density == 0.0
 
     def test_col_to_rows(self):
         """col_to_rows mapping."""
         # Pattern: row 0 has cols 0,1; row 1 has col 1; row 2 has col 2
-        sparsity_pattern = SparsityPattern.from_coordinates(
-            [0, 0, 1, 2], [0, 1, 1, 2], (3, 3)
-        )
+        sparsity_pattern = SparsityPattern.from_coo([0, 0, 1, 2], [0, 1, 1, 2], (3, 3))
 
         col_to_rows = sparsity_pattern.col_to_rows
         assert col_to_rows == {0: [0], 1: [0, 1], 2: [2]}
 
     def test_col_to_rows_caching(self):
         """col_to_rows is cached."""
-        sparsity_pattern = SparsityPattern.from_coordinates([0, 1], [0, 1], (2, 2))
+        sparsity_pattern = SparsityPattern.from_coo([0, 1], [0, 1], (2, 2))
 
         # Access twice - should be same object
         first = sparsity_pattern.col_to_rows
@@ -183,9 +177,7 @@ class TestVisualization:
 
     def test_small_matrix_uses_dots(self):
         """Small matrices use dot display (●/⋅)."""
-        sparsity_pattern = SparsityPattern.from_coordinates(
-            [0, 1, 2], [0, 1, 2], (3, 3)
-        )
+        sparsity_pattern = SparsityPattern.from_coo([0, 1, 2], [0, 1, 2], (3, 3))
         s = str(sparsity_pattern)
 
         # Should have header line
@@ -201,7 +193,7 @@ class TestVisualization:
         # Create 20x50 pattern (exceeds thresholds)
         rows = list(range(20))
         cols = list(range(20))
-        sparsity_pattern = SparsityPattern.from_coordinates(rows, cols, (20, 50))
+        sparsity_pattern = SparsityPattern.from_coo(rows, cols, (20, 50))
         s = str(sparsity_pattern)
 
         # Should have braille characters (Unicode block starting at 0x2800)
@@ -212,7 +204,7 @@ class TestVisualization:
 
     def test_repr_compact(self):
         """__repr__ is compact."""
-        sparsity_pattern = SparsityPattern.from_coordinates([0, 1], [0, 1], (10, 20))
+        sparsity_pattern = SparsityPattern.from_coo([0, 1], [0, 1], (10, 20))
         r = repr(sparsity_pattern)
 
         assert "SparsityPattern" in r
@@ -223,14 +215,12 @@ class TestVisualization:
 
     def test_render_dots_empty_matrix(self):
         """Dot rendering of empty matrix."""
-        sparsity_pattern = SparsityPattern.from_coordinates([], [], (0, 0))
+        sparsity_pattern = SparsityPattern.from_coo([], [], (0, 0))
         assert _render_dots(sparsity_pattern) == "(empty)"
 
     def test_render_dots_small_diagonal(self):
         """Dot rendering of small diagonal pattern."""
-        sparsity_pattern = SparsityPattern.from_coordinates(
-            [0, 1, 2], [0, 1, 2], (3, 3)
-        )
+        sparsity_pattern = SparsityPattern.from_coo([0, 1, 2], [0, 1, 2], (3, 3))
         dots = _render_dots(sparsity_pattern)
 
         # Should show diagonal pattern
@@ -241,7 +231,7 @@ class TestVisualization:
 
     def test_braille_empty_matrix(self):
         """Braille rendering of empty matrix."""
-        sparsity_pattern = SparsityPattern.from_coordinates([], [], (0, 0))
+        sparsity_pattern = SparsityPattern.from_coo([], [], (0, 0))
         assert _render_braille(sparsity_pattern) == "(empty)"
 
     def test_braille_large_matrix_downsamples(self):
@@ -249,7 +239,7 @@ class TestVisualization:
         # Create 100x100 diagonal
         rows = list(range(100))
         cols = list(range(100))
-        sparsity_pattern = SparsityPattern.from_coordinates(rows, cols, (100, 100))
+        sparsity_pattern = SparsityPattern.from_coo(rows, cols, (100, 100))
 
         braille = _render_braille(sparsity_pattern, max_height=10, max_width=20)
         lines = braille.split("\n")
@@ -265,7 +255,7 @@ class TestVisualization:
         braille returns "(empty)" and __str__ uses it directly.
         """
         # n=50 exceeds _SMALL_COLS=40, forcing braille path; m=0 triggers "(empty)"
-        sparsity_pattern = SparsityPattern.from_coordinates([], [], (0, 50))
+        sparsity_pattern = SparsityPattern.from_coo([], [], (0, 50))
         s = str(sparsity_pattern)
 
         assert "SparsityPattern" in s
@@ -318,7 +308,7 @@ class TestIntegration:
 
 def test_save_load_sparsity_roundtrip(tmp_path):
     """SparsityPattern survives a save/load roundtrip."""
-    original = SparsityPattern.from_coordinates([0, 0, 1, 2], [0, 1, 1, 2], (3, 3))
+    original = SparsityPattern.from_coo([0, 0, 1, 2], [0, 1, 1, 2], (3, 3))
     path = tmp_path / "pattern.npz"
     original.save(path)
 
@@ -331,13 +321,23 @@ def test_save_load_sparsity_roundtrip(tmp_path):
     np.testing.assert_array_equal(loaded.cols, original.cols)
 
 
-@pytest.mark.parametrize("mode", ["row", "column", "symmetric"])
-def test_save_load_colored_roundtrip(tmp_path, mode):
+@pytest.mark.parametrize(
+    ("symmetric", "mode"),
+    [(False, "fwd"), (False, "rev"), (True, "fwd_over_rev")],
+    ids=["fwd", "rev", "symmetric"],
+)
+def test_save_load_colored_roundtrip(tmp_path, symmetric, mode):
     """ColoredPattern survives a save/load roundtrip for each mode."""
-    sparsity = SparsityPattern.from_coordinates([0, 1, 2], [0, 1, 2], (3, 3))
+    sparsity = SparsityPattern.from_coo([0, 1, 2], [0, 1, 2], (3, 3))
     # One color per row/col for a diagonal pattern.
     colors = np.array([0, 1, 2], dtype=np.int32)
-    original = ColoredPattern(sparsity=sparsity, colors=colors, num_colors=3, mode=mode)
+    original = ColoredPattern(
+        sparsity=sparsity,
+        colors=colors,
+        num_colors=3,
+        symmetric=symmetric,
+        mode=mode,
+    )
     path = tmp_path / "colored.npz"
     original.save(path)
 
@@ -349,12 +349,13 @@ def test_save_load_colored_roundtrip(tmp_path, mode):
     np.testing.assert_array_equal(loaded.sparsity.cols, original.sparsity.cols)
     np.testing.assert_array_equal(loaded.colors, original.colors)
     assert loaded.num_colors == original.num_colors
+    assert loaded.symmetric == original.symmetric
     assert loaded.mode == original.mode
 
 
 def test_save_load_sparsity_empty(tmp_path):
     """Empty SparsityPattern survives a save/load roundtrip."""
-    original = SparsityPattern.from_coordinates([], [], (3, 4))
+    original = SparsityPattern.from_coo([], [], (3, 4))
     path = tmp_path / "empty.npz"
     original.save(path)
 
@@ -367,9 +368,7 @@ def test_save_load_sparsity_empty(tmp_path):
 
 def test_save_load_sparsity_non_default_input_shape(tmp_path):
     """SparsityPattern with multidimensional input_shape roundtrips correctly."""
-    original = SparsityPattern.from_coordinates(
-        [0, 1], [0, 1], (2, 6), input_shape=(2, 3)
-    )
+    original = SparsityPattern.from_coo([0, 1], [0, 1], (2, 6), input_shape=(2, 3))
     path = tmp_path / "nd.npz"
     original.save(path)
 

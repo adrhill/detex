@@ -14,8 +14,10 @@ from numpy.testing import assert_allclose
 
 from asdex import (
     hessian,
+    hessian_coloring,
     hessian_sparsity,
     jacobian,
+    jacobian_coloring,
     jacobian_sparsity,
 )
 
@@ -163,7 +165,7 @@ def test_jacobian_matrix_input():
         return x.sum(axis=1)
 
     x = np.arange(12.0).reshape(3, 4)
-    result = jacobian(f, input_shape=x.shape)(x).todense()
+    result = jacobian(f, jacobian_coloring(f, x.shape))(x).todense()
     # Reference: jax.jacobian gives (m, *input_shape), reshape to (m, n)
     expected = jax.jacobian(f)(x).reshape(3, 12)
     assert_allclose(result, expected, rtol=1e-5)
@@ -177,7 +179,7 @@ def test_jacobian_elementwise_matrix():
         return x**2
 
     x = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-    result = jacobian(f, input_shape=x.shape)(x).todense()
+    result = jacobian(f, jacobian_coloring(f, x.shape))(x).todense()
 
     # Diagonal Jacobian: diag(2x) in flattened space
     expected = jax.jacobian(f)(x).reshape(6, 6)
@@ -192,7 +194,7 @@ def test_jacobian_2d_output():
         return (x**2).reshape(2, 3)
 
     x = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
-    result = jacobian(f, input_shape=x.shape)(x).todense()
+    result = jacobian(f, jacobian_coloring(f, x.shape))(x).todense()
     expected = jax.jacobian(f)(x).reshape(6, 6)
     assert_allclose(result, expected, rtol=1e-5)
 
@@ -206,7 +208,7 @@ def test_jacobian_2d_input_and_output():
         return x.sum(axis=1, keepdims=True)
 
     x = np.arange(12.0).reshape(3, 4)
-    result = jacobian(f, input_shape=x.shape)(x).todense()
+    result = jacobian(f, jacobian_coloring(f, x.shape))(x).todense()
     expected = jax.jacobian(f)(x).reshape(3, 12)
     assert_allclose(result, expected, rtol=1e-5)
 
@@ -219,7 +221,7 @@ def test_hessian_matrix_input():
         return jnp.sum(x**2)
 
     x = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-    result = hessian(f, input_shape=x.shape)(x).todense()
+    result = hessian(f, hessian_coloring(f, x.shape))(x).todense()
     # Reference: jax.hessian gives (*in_shape, *in_shape), reshape to (n, n)
     expected = jax.hessian(f)(x).reshape(6, 6)
     assert_allclose(result, expected, rtol=1e-5)
@@ -274,7 +276,9 @@ def test_lenet_jacobian_values():
     """Sparse Jacobian of LeNet matches dense jax.jacobian."""
     x = jax.random.normal(jax.random.key(0), (8, 8))
 
-    result = jacobian(_lenet_fn, input_shape=(8, 8))(np.asarray(x)).todense()
+    result = jacobian(_lenet_fn, jacobian_coloring(_lenet_fn, (8, 8)))(
+        np.asarray(x)
+    ).todense()
     # Reference: jax.jacobian gives (m, H, W), reshape to (m, n)
     expected = jax.jacobian(_lenet_fn)(x).reshape(result.shape[0], 64)
 

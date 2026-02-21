@@ -119,29 +119,31 @@ def test_check_jacobian_custom_seed_and_num_probes():
 
 @pytest.mark.jacobian
 def test_check_jacobian_forward_mode():
-    """check_jacobian_correctness works with ad_mode='fwd'."""
+    """check_jacobian_correctness works with fwd mode colored pattern."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    check_jacobian_correctness(f, x, ad_mode="fwd")
+    cp = jacobian_coloring(f, x.shape, mode="fwd")
+    check_jacobian_correctness(f, x, colored_pattern=cp)
 
 
 @pytest.mark.jacobian
 def test_check_jacobian_reverse_mode():
-    """check_jacobian_correctness works with ad_mode='rev'."""
+    """check_jacobian_correctness works with rev mode colored pattern."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    check_jacobian_correctness(f, x, ad_mode="rev")
+    cp = jacobian_coloring(f, x.shape, mode="rev")
+    check_jacobian_correctness(f, x, colored_pattern=cp)
 
 
 @pytest.mark.jacobian
 def test_check_jacobian_reverse_mode_raises_on_mismatch():
-    """check_jacobian_correctness raises with ad_mode='rev' on wrong results."""
+    """check_jacobian_correctness raises with rev mode on wrong results."""
 
     def f_dense(x):
         return jnp.array([x[0] + x[1] + x[2], x[0] + x[1] + x[2], x[0] + x[1] + x[2]])
@@ -150,24 +152,23 @@ def test_check_jacobian_reverse_mode_raises_on_mismatch():
 
     x = np.array([1.0, 2.0, 3.0])
     with pytest.raises(VerificationError, match="matvec verification"):
-        check_jacobian_correctness(
-            f_dense, x, colored_pattern=colored_pattern, ad_mode="rev"
-        )
+        check_jacobian_correctness(f_dense, x, colored_pattern=colored_pattern)
 
 
 # Jacobian verification — dense
 
 
 @pytest.mark.jacobian
-@pytest.mark.parametrize("ad_mode", ["fwd", "rev"])
-def test_check_jacobian_dense(ad_mode):
+@pytest.mark.parametrize("mode", ["fwd", "rev"])
+def test_check_jacobian_dense(mode):
     """check_jacobian_correctness works with method='dense' and both AD modes."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    check_jacobian_correctness(f, x, method="dense", ad_mode=ad_mode)
+    cp = jacobian_coloring(f, x.shape, mode=mode)
+    check_jacobian_correctness(f, x, colored_pattern=cp, method="dense")
 
 
 @pytest.mark.jacobian
@@ -256,20 +257,21 @@ def test_check_hessian_custom_seed_and_num_probes():
 
 
 @pytest.mark.hessian
-@pytest.mark.parametrize("ad_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
-def test_check_hessian_modes(ad_mode):
+@pytest.mark.parametrize("mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_check_hessian_modes(mode):
     """check_hessian_correctness works with all HVP AD modes."""
 
     def f(x):
         return x[0] * x[1] + x[1] * x[2] + x[2] * x[3]
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    check_hessian_correctness(f, x, ad_mode=ad_mode)
+    cp = hessian_coloring(f, x.shape, mode=mode)
+    check_hessian_correctness(f, x, colored_pattern=cp)
 
 
 @pytest.mark.hessian
-@pytest.mark.parametrize("ad_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
-def test_check_hessian_modes_raise_on_mismatch(ad_mode):
+@pytest.mark.parametrize("mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_check_hessian_modes_raise_on_mismatch(mode):
     """check_hessian_correctness raises with all HVP AD modes on wrong results."""
 
     def f(x):
@@ -279,24 +281,23 @@ def test_check_hessian_modes_raise_on_mismatch(ad_mode):
 
     x = np.array([1.0, 2.0, 3.0])
     with pytest.raises(VerificationError, match="matvec verification"):
-        check_hessian_correctness(
-            f, x, colored_pattern=colored_pattern, ad_mode=ad_mode
-        )
+        check_hessian_correctness(f, x, colored_pattern=colored_pattern)
 
 
 # Hessian verification — dense
 
 
 @pytest.mark.hessian
-@pytest.mark.parametrize("ad_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
-def test_check_hessian_dense(ad_mode):
+@pytest.mark.parametrize("mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_check_hessian_dense(mode):
     """check_hessian_correctness works with method='dense' and all AD modes."""
 
     def f(x):
         return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
 
     x = np.array([1.0, 1.0, 1.0, 1.0])
-    check_hessian_correctness(f, x, method="dense", ad_mode=ad_mode)
+    cp = hessian_coloring(f, x.shape, mode=mode)
+    check_hessian_correctness(f, x, colored_pattern=cp, method="dense")
 
 
 @pytest.mark.hessian

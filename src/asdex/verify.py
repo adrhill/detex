@@ -11,13 +11,6 @@ from numpy.typing import ArrayLike
 
 from asdex.coloring import hessian_coloring, jacobian_coloring
 from asdex.decompression import hessian, jacobian
-from asdex.modes import (
-    ColoringMode,
-    HessianMode,
-    JacobianMode,
-    _assert_hessian_args,
-    _assert_jacobian_args,
-)
 from asdex.pattern import ColoredPattern
 
 
@@ -38,9 +31,7 @@ def check_jacobian_correctness(
     x: ArrayLike,
     *,
     colored_pattern: ColoredPattern | None = None,
-    coloring_mode: ColoringMode = "auto",
     method: Literal["matvec", "dense"] = "matvec",
-    ad_mode: JacobianMode = "auto",
     num_probes: int = 25,
     seed: int = 0,
     rtol: float | None = None,
@@ -53,21 +44,11 @@ def check_jacobian_correctness(
         x: Input at which to evaluate the Jacobian.
         colored_pattern: Optional pre-computed colored pattern.
             If None, sparsity is detected and colored automatically.
-        coloring_mode: Coloring mode (used only when ``colored_pattern`` is None).
-            ``"row"`` for row coloring,
-            ``"column"`` for column coloring,
-            ``"symmetric"`` for symmetric (star) coloring,
-            ``"auto"`` picks automatically.
         method: Verification method.
             ``"matvec"`` uses randomized matrix-vector products,
             which is O(k) in the number of probes.
             ``"dense"`` materializes the full dense Jacobian,
             which is O(n^2).
-        ad_mode: AD mode for the reference computation.
-            ``"fwd"`` uses ``jax.jacfwd`` / ``jax.jvp``.
-            ``"rev"`` uses ``jax.jacrev`` / ``jax.vjp``.
-            ``"auto"`` picks ``"fwd"`` when m >= n
-            and ``"rev"`` when m < n.
         num_probes: Number of random probe vectors (only used by ``"matvec"``).
         seed: PRNG seed for reproducibility (only used by ``"matvec"``).
         rtol: Relative tolerance for comparison.
@@ -80,30 +61,25 @@ def check_jacobian_correctness(
     """
     if method not in ("matvec", "dense"):
         raise ValueError(f"Unknown method {method!r}. Expected 'matvec' or 'dense'.")
-    _assert_jacobian_args(colored_pattern, None, coloring_mode, ad_mode)
 
     x = jnp.asarray(x)
 
     if colored_pattern is None:
-        colored_pattern = jacobian_coloring(
-            f, input_shape=x.shape, coloring_mode=coloring_mode
-        )
+        colored_pattern = jacobian_coloring(f, input_shape=x.shape)
 
-    match ad_mode:
-        case "auto":
-            m = colored_pattern.sparsity.m
-            n = colored_pattern.sparsity.n
-            ad_mode = "fwd" if m >= n else "rev"
-        case "fwd" | "rev":
-            pass
-        case _ as unreachable:
-            assert_never(unreachable)
+    # Derive reference AD mode from the colored pattern
+    ref_mode = colored_pattern.mode
+    if ref_mode not in ("fwd", "rev"):
+        # Hessian modes shouldn't appear here, but default to fwd
+        m = colored_pattern.sparsity.m
+        n = colored_pattern.sparsity.n
+        ref_mode = "fwd" if m >= n else "rev"
 
     J_sparse = jacobian(f, colored_pattern)(x)
 
     match method:
         case "dense":
-            jac_fn = jax.jacfwd if ad_mode == "fwd" else jax.jacrev
+            jac_fn = jax.jacfwd if ref_mode == "fwd" else jax.jacrev
             J_dense = jac_fn(f)(x)
             _check_allclose(
                 J_sparse.todense(), J_dense, "Jacobian", rtol=rtol, atol=atol
@@ -113,7 +89,7 @@ def check_jacobian_correctness(
                 f,
                 x,
                 J_sparse,
-                ad_mode=ad_mode,
+                ref_mode=ref_mode,
                 num_probes=num_probes,
                 seed=seed,
                 rtol=rtol,
@@ -128,9 +104,7 @@ def check_hessian_correctness(
     x: ArrayLike,
     *,
     colored_pattern: ColoredPattern | None = None,
-    coloring_mode: ColoringMode = "auto",
     method: Literal["matvec", "dense"] = "matvec",
-    ad_mode: HessianMode = "auto",
     num_probes: int = 25,
     seed: int = 0,
     rtol: float | None = None,
@@ -143,21 +117,11 @@ def check_hessian_correctness(
         x: Input at which to evaluate the Hessian.
         colored_pattern: Optional pre-computed colored pattern.
             If None, sparsity is detected and colored automatically.
-        coloring_mode: Coloring mode (used only when ``colored_pattern`` is None).
-            ``"row"`` for row coloring,
-            ``"column"`` for column coloring,
-            ``"symmetric"`` for symmetric (star) coloring,
-            ``"auto"`` defaults to ``"symmetric"``.
         method: Verification method.
             ``"matvec"`` uses randomized matrix-vector products,
             which is O(k) in the number of probes.
             ``"dense"`` materializes the full dense Hessian,
             which is O(n^2).
-        ad_mode: AD mode for the reference computation.
-            ``"fwd_over_rev"`` uses forward-over-reverse,
-            ``"rev_over_fwd"`` uses reverse-over-forward,
-            ``"rev_over_rev"`` uses reverse-over-reverse,
-            ``"auto"`` defaults to ``"fwd_over_rev"``.
         num_probes: Number of random probe vectors (only used by ``"matvec"``).
         seed: PRNG seed for reproducibility (only used by ``"matvec"``).
         rtol: Relative tolerance for comparison.
@@ -170,28 +134,20 @@ def check_hessian_correctness(
     """
     if method not in ("matvec", "dense"):
         raise ValueError(f"Unknown method {method!r}. Expected 'matvec' or 'dense'.")
-    _assert_hessian_args(colored_pattern, None, coloring_mode, ad_mode)
 
     x = jnp.asarray(x)
 
     if colored_pattern is None:
-        colored_pattern = hessian_coloring(
-            f, input_shape=x.shape, coloring_mode=coloring_mode
-        )
+        colored_pattern = hessian_coloring(f, input_shape=x.shape)
 
-    match ad_mode:
-        case "auto":
-            ad_mode = "fwd_over_rev"
-        case "fwd_over_rev" | "rev_over_fwd" | "rev_over_rev":
-            pass
-        case _ as unreachable:
-            assert_never(unreachable)
+    # Derive reference AD mode from the colored pattern
+    hessian_mode = colored_pattern.mode
 
     H_sparse = hessian(f, colored_pattern)(x)
 
     match method:
         case "dense":
-            H_dense = _dense_hessian(f, x, ad_mode)
+            H_dense = _dense_hessian(f, x, hessian_mode)
             _check_allclose(
                 H_sparse.todense(), H_dense, "Hessian", rtol=rtol, atol=atol
             )
@@ -200,7 +156,7 @@ def check_hessian_correctness(
                 f,
                 x,
                 H_sparse,
-                ad_mode=ad_mode,
+                hessian_mode=hessian_mode,
                 num_probes=num_probes,
                 seed=seed,
                 rtol=rtol,
@@ -216,18 +172,19 @@ def check_hessian_correctness(
 def _dense_hessian(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
-    ad_mode: HessianMode,
+    mode: str,
 ) -> jax.Array:
     """Compute a dense Hessian using the specified AD composition."""
-    match ad_mode:
+    match mode:
         case "fwd_over_rev":
             return jax.jacfwd(jax.grad(f))(x)
         case "rev_over_fwd":
             return jax.jacrev(jax.jacfwd(f))(x)
         case "rev_over_rev":
             return jax.jacrev(jax.grad(f))(x)
-        case _ as unreachable:
-            assert_never(unreachable)  # type: ignore[type-assertion-failure]
+        case _:
+            # Default to fwd_over_rev for unknown modes
+            return jax.jacfwd(jax.grad(f))(x)
 
 
 def _check_jacobian_matvec(
@@ -235,7 +192,7 @@ def _check_jacobian_matvec(
     x: jax.Array,
     J_sparse: BCOO,
     *,
-    ad_mode: JacobianMode,
+    ref_mode: str,
     num_probes: int,
     seed: int,
     rtol: float | None = None,
@@ -252,7 +209,7 @@ def _check_jacobian_matvec(
     n = x.size
 
     for i in range(num_probes):
-        match ad_mode:
+        match ref_mode:
             case "fwd":
                 v = jax.random.normal(keys[i], shape=(n,))
                 sparse_result = (J_sparse @ v).ravel()
@@ -264,8 +221,12 @@ def _check_jacobian_matvec(
                 _, vjp_fn = jax.vjp(f, x)
                 (ref_result,) = vjp_fn(v.reshape(out_shape))
                 ref_result = jnp.asarray(ref_result).ravel()
-            case _ as unreachable:
-                assert_never(unreachable)  # type: ignore[type-assertion-failure]
+            case _:
+                # Default to fwd for unknown modes
+                v = jax.random.normal(keys[i], shape=(n,))
+                sparse_result = (J_sparse @ v).ravel()
+                _, ref_result = jax.jvp(f, (x,), (v.reshape(x.shape),))
+                ref_result = jnp.asarray(ref_result).ravel()
 
         _check_matvec_allclose(
             sparse_result,
@@ -283,7 +244,7 @@ def _check_hessian_matvec(
     x: jax.Array,
     H_sparse: BCOO,
     *,
-    ad_mode: HessianMode,
+    hessian_mode: str,
     num_probes: int,
     seed: int,
     rtol: float | None = None,
@@ -296,7 +257,7 @@ def _check_hessian_matvec(
     key = jax.random.key(seed)
     keys = jax.random.split(key, num_probes)
 
-    match ad_mode:
+    match hessian_mode:
         case "fwd_over_rev":
 
             def hvp(v: jax.Array) -> jax.Array:
@@ -319,8 +280,11 @@ def _check_hessian_matvec(
                 )(x)
                 return jnp.asarray(result).ravel()
 
-        case _ as unreachable:
-            assert_never(unreachable)  # type: ignore[type-assertion-failure]
+        case _:
+            # Default to fwd_over_rev for unknown modes
+            def hvp(v: jax.Array) -> jax.Array:
+                _, result = jax.jvp(jax.grad(f), (x,), (v.reshape(x.shape),))
+                return jnp.asarray(result).ravel()
 
     for i in range(num_probes):
         v = jax.random.normal(keys[i], shape=(n,))

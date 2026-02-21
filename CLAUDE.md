@@ -55,7 +55,6 @@ jacobian(f, colored_pattern)(x)
   └─ 3. DECOMPRESSION
         One VJP or JVP per color
 
-Shorthand:  jacobian(f, input_shape=shape) = detect + color + return decompress fn
 Precompute: jacobian_coloring(f, shape) = detect + color
 ```
 
@@ -74,7 +73,6 @@ hessian(f, colored_pattern)(x)
   └─ 3. DECOMPRESSION
         One HVP per color (fwd-over-rev)
 
-Shorthand:  hessian(f, input_shape=shape) = detect + color + return decompress fn
 Precompute: hessian_coloring(f, shape) = detect + color_symmetric
 ```
 
