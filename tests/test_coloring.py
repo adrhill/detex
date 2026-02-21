@@ -799,10 +799,10 @@ def test_color_auto_picks_row_for_wide():
 
 @pytest.mark.coloring
 def test_color_force_row():
-    """color_jacobian_pattern(sparsity, "row") forces row partition."""
+    """color_jacobian_pattern(sparsity, "rev") forces row coloring."""
     sparsity = _make_pattern([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
 
-    result = color_jacobian_pattern(sparsity, "row")
+    result = color_jacobian_pattern(sparsity, "rev")
 
     assert result.mode == "VJP"
     assert len(result.colors) == 4  # m=4
@@ -811,10 +811,10 @@ def test_color_force_row():
 
 @pytest.mark.coloring
 def test_color_force_column():
-    """color_jacobian_pattern(sparsity, "column") forces column partition."""
+    """color_jacobian_pattern(sparsity, "fwd") forces column coloring."""
     sparsity = _make_pattern([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
 
-    result = color_jacobian_pattern(sparsity, "column")
+    result = color_jacobian_pattern(sparsity, "fwd")
 
     assert result.mode == "JVP"
     assert len(result.colors) == 4  # n=4
@@ -839,14 +839,14 @@ def test_jacobian_coloring_basic():
 
 
 @pytest.mark.coloring
-def test_jacobian_coloring_partition():
-    """jacobian_coloring respects the partition argument."""
+def test_jacobian_coloring_mode():
+    """jacobian_coloring respects the mode argument."""
 
     def f(x):
         return x**2
 
-    result_row = jacobian_coloring(f, (3,), partition="row")
-    result_col = jacobian_coloring(f, (3,), partition="column")
+    result_row = jacobian_coloring(f, (3,), mode="rev")
+    result_col = jacobian_coloring(f, (3,), mode="fwd")
 
     assert result_row.mode == "VJP"
     assert result_col.mode == "JVP"
@@ -896,7 +896,7 @@ def test_compressed_pattern_column():
             [1, 0, 0],
         ]
     )
-    result = color_jacobian_pattern(sparsity, partition="column")
+    result = color_jacobian_pattern(sparsity, "fwd")
     compressed = _compressed_pattern(result)
 
     assert compressed.shape == (3, result.num_colors)
@@ -919,7 +919,7 @@ def test_compressed_pattern_row():
             [1, 0, 0],
         ]
     )
-    result = color_jacobian_pattern(sparsity, partition="row")
+    result = color_jacobian_pattern(sparsity, "rev")
     compressed = _compressed_pattern(result)
 
     assert compressed.shape == (result.num_colors, 3)
@@ -937,7 +937,7 @@ def test_compressed_pattern_row():
 
 @pytest.mark.coloring
 def test_str_column_contains_arrow():
-    """Column partition __str__ contains → for side-by-side display."""
+    """Forward mode __str__ contains → for side-by-side display."""
     sparsity = _from_dense(
         [
             [1, 0, 1],
@@ -945,7 +945,7 @@ def test_str_column_contains_arrow():
             [1, 0, 0],
         ]
     )
-    result = color_jacobian_pattern(sparsity, partition="column")
+    result = color_jacobian_pattern(sparsity, "fwd")
     s = str(result)
 
     assert "→" in s
@@ -954,7 +954,7 @@ def test_str_column_contains_arrow():
 
 @pytest.mark.coloring
 def test_str_row_contains_downarrow():
-    """Row partition __str__ contains ↓ for stacked display."""
+    """Row mode __str__ contains ↓ for stacked display."""
     sparsity = _from_dense(
         [
             [1, 0, 1],
@@ -962,7 +962,7 @@ def test_str_row_contains_downarrow():
             [1, 0, 0],
         ]
     )
-    result = color_jacobian_pattern(sparsity, partition="row")
+    result = color_jacobian_pattern(sparsity, "rev")
     s = str(result)
 
     assert "↓" in s
@@ -1034,7 +1034,7 @@ def test_repr_colored_pattern():
 def test_color_empty_pattern():
     """Coloring an empty sparsity pattern returns 0 colors."""
     sparsity = _make_pattern([], [], (0, 3))
-    result = color_jacobian_pattern(sparsity, partition="row")
+    result = color_jacobian_pattern(sparsity, "rev")
 
     assert result.num_colors == 0
     assert len(result.colors) == 0
