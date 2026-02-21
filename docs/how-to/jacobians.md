@@ -8,7 +8,7 @@ using [row or column coloring](../explanation/coloring.md) with forward- or reve
 
     asdex's [sparsity patterns](../explanation/global-sparsity.md) should always be conservative,
     but a bug in [sparsity detection](../explanation/sparsity-detection.md) could cause missing nonzeros.
-    Always verify against JAX's dense Jacobian at least once on a new function.
+    Always verify against vanilla JAX at least once on a new function.
     See [Verifying Results](#verifying-results) below.
 
 ## One-Call API
@@ -200,7 +200,7 @@ print(f"```\n{colored_pattern}\n```")
 ## Verifying Results
 
 Use [`check_jacobian_correctness`][asdex.check_jacobian_correctness]
-to verify that the sparse Jacobian matches JAX's dense reference:
+to verify the sparse Jacobian against vanilla JAX.
 
 ```python
 from asdex import check_jacobian_correctness
@@ -208,20 +208,31 @@ from asdex import check_jacobian_correctness
 check_jacobian_correctness(f, x)
 ```
 
-This compares `asdex.jacobian(f)(x)` against `jax.jacobian(f)(x)`.
+Use verification for debugging and initial setup, not in production loops.
+A good place to call it is in your test suite.
+
+By default, this uses randomized matrix-vector products (`method="matvec"`)
+to check `asdex.jacobian(f)(x)` against JVPs or VJPs,
+automatically picking forward or reverse mode based on the input and output sizes.
+This is cheap — O(k) in the number of probes — and scales to large problems.
 If the results match, the function returns silently.
 If they disagree, it raises a [`VerificationError`][asdex.VerificationError].
 
-You can also pass a pre-computed colored pattern
-and custom tolerances:
+You can also pass a pre-computed colored pattern, control the AD mode used for the reference computation, 
+set custom tolerances, the number of probes, and the PRNG seed:
 
 ```python
-check_jacobian_correctness(f, x, colored_pattern=colored_pattern, rtol=1e-5, atol=1e-5)
+check_jacobian_correctness(f, x, colored_pattern=colored_pattern, ad_mode="reverse", rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
+```
+
+For an exact element-wise comparison against the full dense Jacobian,
+use `method="dense"`:
+
+```python
+check_jacobian_correctness(f, x, method="dense")
 ```
 
 !!! warning "Dense computation"
 
-    Verification computes the full dense Jacobian using JAX,
+    `method="dense"` materializes the full dense Jacobian,
     which is computationally very expensive for large problems.
-    Use this for debugging and initial setup,
-    not in production loops.

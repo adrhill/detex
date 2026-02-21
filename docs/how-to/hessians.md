@@ -8,7 +8,7 @@ using symmetric coloring and forward-over-reverse AD.
 
     asdex's [sparsity patterns](../explanation/global-sparsity.md) should always be conservative,
     but a bug in [sparsity detection](../explanation/sparsity-detection.md) could cause missing nonzeros.
-    Always verify against JAX's dense Hessian at least once on a new function.
+    Always verify against vanilla JAX at least once on a new function.
     See [Verifying Results](#verifying-results) below.
 
 ## One-Call API
@@ -225,7 +225,7 @@ print(f"```\n{colored_pattern}\n```")
 ## Verifying Results
 
 Use [`check_hessian_correctness`][asdex.check_hessian_correctness]
-to verify that the sparse Hessian matches JAX's dense reference:
+to verify the sparse Hessian against vanilla JAX.
 
 ```python
 from asdex import check_hessian_correctness
@@ -233,20 +233,34 @@ from asdex import check_hessian_correctness
 check_hessian_correctness(g, x)
 ```
 
-This compares `asdex.hessian(g)(x)` against `jax.hessian(g)(x)`.
+Use verification for debugging and initial setup, not in production loops.
+A good place to call it is in your test suite.
+
+By default, this uses randomized matrix-vector products (`method="matvec"`)
+to check `asdex.hessian(g)(x)` against a forward-over-reverse HVP reference.
+This is cheap — O(k) in the number of probes — and scales to large problems.
 If the results match, the function returns silently.
 If they disagree, it raises a [`VerificationError`][asdex.VerificationError].
 
-You can also pass a pre-computed colored pattern
-and custom tolerances:
+You can also pass a pre-computed colored pattern, control the AD mode used for the reference computation,
+set custom tolerances, the number of probes, and the PRNG seed:
 
 ```python
-check_hessian_correctness(g, x, colored_pattern=colored_pattern, rtol=1e-5, atol=1e-5)
+check_hessian_correctness(g, x, colored_pattern=colored_pattern, ad_mode="rev_over_rev", rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
+```
+
+The `ad_mode` parameter accepts the same values as the
+[`hvp_mode` parameter](#choosing-an-hvp-mode) on `hessian`:
+`"fwd_over_rev"`, `"rev_over_fwd"`, and `"rev_over_rev"`.
+
+For an exact element-wise comparison against the full dense Hessian,
+use `method="dense"`:
+
+```python
+check_hessian_correctness(g, x, method="dense")
 ```
 
 !!! warning "Dense computation"
 
-    Verification computes the full dense Hessian using JAX,
+    `method="dense"` materializes the full dense Hessian,
     which is computationally very expensive for large problems.
-    Use this for debugging and initial setup,
-    not in production loops.
