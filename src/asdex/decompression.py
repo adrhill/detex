@@ -135,11 +135,8 @@ def _eval_jacobian(
     n = x.size
 
     if colored_pattern is None:
-        # Resolve coloring_mode from ad_mode if coloring is auto but ad is specific.
-        if coloring_mode == "auto" and ad_mode != "auto":
-            coloring_mode = "row" if ad_mode == "rev" else "column"
         sparsity = _detect_sparsity(f, x.shape)
-        colored_pattern = color_jacobian_pattern(sparsity, coloring_mode)
+        colored_pattern = color_jacobian_pattern(sparsity, coloring_mode, ad_mode)
     else:
         expected = colored_pattern.sparsity.input_shape
         if x.shape != expected:
@@ -160,8 +157,8 @@ def _eval_jacobian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
-    resolved_ad = resolve_ad_mode(colored_pattern.mode, ad_mode)
-    if resolved_ad == "rev":
+    resolved_ad_mode = resolve_ad_mode(colored_pattern.mode, ad_mode)
+    if resolved_ad_mode == "rev":
         return _jacobian_rows(f, x, colored_pattern, out_shape)
     return _jacobian_cols(f, x, colored_pattern)
 
@@ -183,10 +180,7 @@ def _eval_hessian(
 
     if colored_pattern is None:
         sparsity = _detect_hessian_sparsity(f, x.shape)
-        if coloring_mode in ("auto", "symmetric"):
-            colored_pattern = color_hessian_pattern(sparsity)
-        else:
-            colored_pattern = color_jacobian_pattern(sparsity, coloring_mode)
+        colored_pattern = color_hessian_pattern(sparsity, coloring_mode)
     else:
         expected = colored_pattern.sparsity.input_shape
         if x.shape != expected:
@@ -201,8 +195,8 @@ def _eval_hessian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n))
 
-    resolved_ad = resolve_hessian_mode(ad_mode)
-    grads = _compute_hvps(f, x, colored_pattern, resolved_ad)
+    resolved_ad_mode = resolve_hessian_mode(ad_mode)
+    grads = _compute_hvps(f, x, colored_pattern, resolved_ad_mode)
     return _decompress(colored_pattern, grads)
 
 

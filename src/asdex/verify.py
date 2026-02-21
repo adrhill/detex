@@ -11,7 +11,12 @@ from numpy.typing import ArrayLike
 
 from asdex.coloring import hessian_coloring, jacobian_coloring
 from asdex.decompression import hessian, jacobian
-from asdex.modes import HessianMode, JacobianMode
+from asdex.modes import (
+    HessianMode,
+    JacobianMode,
+    assert_hessian_mode,
+    assert_jacobian_mode,
+)
 from asdex.pattern import ColoredPattern
 
 
@@ -68,10 +73,7 @@ def check_jacobian_correctness(
     """
     if method not in ("matvec", "dense"):
         raise ValueError(f"Unknown method {method!r}. Expected 'matvec' or 'dense'.")
-    if ad_mode not in ("fwd", "rev", "auto"):
-        raise ValueError(
-            f"Unknown ad_mode {ad_mode!r}. Expected 'fwd', 'rev', or 'auto'."
-        )
+    assert_jacobian_mode(ad_mode)
 
     x = jnp.asarray(x)
 
@@ -143,11 +145,7 @@ def check_hessian_correctness(
     """
     if method not in ("matvec", "dense"):
         raise ValueError(f"Unknown method {method!r}. Expected 'matvec' or 'dense'.")
-    if ad_mode not in ("fwd_over_rev", "rev_over_fwd", "rev_over_rev", "auto"):
-        raise ValueError(
-            f"Unknown ad_mode {ad_mode!r}. "
-            'Expected "fwd_over_rev", "rev_over_fwd", "rev_over_rev", or "auto".'
-        )
+    assert_hessian_mode(ad_mode)
 
     x = jnp.asarray(x)
 

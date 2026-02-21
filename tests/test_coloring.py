@@ -843,8 +843,8 @@ def test_jacobian_coloring_mode():
     def f(x):
         return x**2
 
-    result_row = jacobian_coloring(f, (3,), mode="row")
-    result_col = jacobian_coloring(f, (3,), mode="column")
+    result_row = jacobian_coloring(f, (3,), coloring_mode="row")
+    result_col = jacobian_coloring(f, (3,), coloring_mode="column")
 
     assert result_row.mode == "row"
     assert result_col.mode == "column"
