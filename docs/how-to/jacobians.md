@@ -11,31 +11,32 @@ using [row or column coloring](../explanation/coloring.md) with forward- or reve
     Always verify against vanilla JAX at least once on a new function.
     See [Verifying Results](#verifying-results) below.
 
-## One-Call API
+## Basic Usage
 
-The simplest way to compute a sparse Jacobian:
+The simplest way to compute a sparse Jacobian is to pass `input_shape`:
 
 ```python
 from asdex import jacobian
 
-J = jacobian(f)(x)
+jac_fn = jacobian(f, input_shape=1000)
+J = jac_fn(x)
 ```
 
-This detects sparsity, colors the pattern, and decompresses — all in one call.
+This detects sparsity and colors the pattern once at definition time,
+then each call to `jac_fn` only performs the cheap decompression step.
 The result is a JAX [BCOO](https://docs.jax.dev/en/latest/jax.experimental.sparse.html) sparse matrix.
 
-!!! warning "Precompute the colored pattern"
+The same function can be reused across evaluations at different inputs:
 
-    Without a precomputed colored pattern,
-    `jacobian` re-detects sparsity and re-colors on every call.
-    These steps are computationally expensive.
-    If you call `jacobian` more than once for the same function,
-    precompute the colored pattern and reuse it — see below.
+```python
+for x in inputs:
+    J = jac_fn(x)
+```
 
 ## Precomputing the Colored Pattern
 
-When computing Jacobians at many different inputs,
-precompute the colored pattern once:
+For more control,
+precompute the colored pattern explicitly and pass it to `jacobian`:
 
 ```python
 from asdex import jacobian_coloring, jacobian
@@ -47,9 +48,9 @@ for x in inputs:
     J = jac_fn(x)
 ```
 
-The colored pattern depends only on the function structure,
-not the input values,
-so it can be reused across evaluations.
+This is useful when you want to inspect the colored pattern,
+save it to disk,
+or use a specific coloring mode.
 
 !!! tip
 
@@ -212,7 +213,7 @@ Use verification for debugging and initial setup, not in production loops.
 A good place to call it is in your test suite.
 
 By default, this uses randomized matrix-vector products (`method="matvec"`)
-to check `asdex.jacobian(f)(x)` against JVPs or VJPs,
+to check `asdex.jacobian(f, input_shape=...)(x)` against JVPs or VJPs,
 automatically picking forward or reverse mode based on the input and output sizes.
 This is cheap — O(k) in the number of probes — and scales to large problems.
 If the results match, the function returns silently.

@@ -11,32 +11,32 @@ using symmetric coloring and forward-over-reverse AD.
     Always verify against vanilla JAX at least once on a new function.
     See [Verifying Results](#verifying-results) below.
 
-## One-Call API
+## Basic Usage
 
-The simplest way to compute a sparse Hessian:
+The simplest way to compute a sparse Hessian is to pass `input_shape`:
 
 ```python
 from asdex import hessian
 
-H = hessian(f)(x)
+hess_fn = hessian(f, input_shape=100)
+H = hess_fn(x)
 ```
 
-This detects sparsity, colors the pattern symmetrically, and decompresses.
+This detects sparsity and colors the pattern symmetrically once at definition time,
+then each call to `hess_fn` only performs the cheap decompression step.
 The result is a JAX [BCOO](https://docs.jax.dev/en/latest/jax.experimental.sparse.html) sparse matrix.
 
+The same function can be reused across evaluations at different inputs:
 
-!!! warning "Precompute the colored pattern"
-
-    Without a precomputed colored pattern,
-    `hessian` re-detects sparsity and re-colors on every call.
-    These steps are computationally expensive.
-    If you call `hessian` more than once for the same function,
-    precompute the colored pattern and reuse it — see below.
+```python
+for x in inputs:
+    H = hess_fn(x)
+```
 
 ## Precomputing the Colored Pattern
 
-When computing Hessians at many different inputs,
-precompute the colored pattern once:
+For more control,
+precompute the colored pattern explicitly and pass it to `hessian`:
 
 ```python
 from asdex import hessian_coloring, hessian
@@ -48,9 +48,9 @@ for x in inputs:
     H = hess_fn(x)
 ```
 
-The colored pattern depends only on the function structure,
-not the input values,
-so it can be reused across evaluations.
+This is useful when you want to inspect the colored pattern,
+save it to disk,
+or use a specific coloring mode.
 
 !!! tip
 
@@ -180,9 +180,9 @@ You can select a different AD composition strategy via the `ad_mode` parameter:
 ```python
 from asdex import hessian
 
-h_for = hessian(f, ad_mode="fwd_over_rev")(x)  # default
-h_rof = hessian(f, ad_mode="rev_over_fwd")(x)
-h_ror = hessian(f, ad_mode="rev_over_rev")(x)
+hess_fn_for = hessian(f, input_shape=100, ad_mode="fwd_over_rev")  # default
+hess_fn_rof = hessian(f, input_shape=100, ad_mode="rev_over_fwd")
+hess_fn_ror = hessian(f, input_shape=100, ad_mode="rev_over_rev")
 ```
 
 All three modes produce the same mathematical result.
@@ -237,7 +237,7 @@ Use verification for debugging and initial setup, not in production loops.
 A good place to call it is in your test suite.
 
 By default, this uses randomized matrix-vector products (`method="matvec"`)
-to check `asdex.hessian(g)(x)` against a forward-over-reverse HVP reference.
+to check `asdex.hessian(g, input_shape=...)(x)` against a forward-over-reverse HVP reference.
 This is cheap — O(k) in the number of probes — and scales to large problems.
 If the results match, the function returns silently.
 If they disagree, it raises a [`VerificationError`][asdex.VerificationError].

@@ -187,7 +187,7 @@ def test_heat_materialization(benchmark):
 def test_heat_end_to_end(benchmark):
     """Heat equation: full pipeline."""
     x = np.ones(N)
-    jac_fn = jacobian(heat_equation_rhs)
+    jac_fn = jacobian(heat_equation_rhs, input_shape=N)
     benchmark(jac_fn, x)
 
 
@@ -224,7 +224,7 @@ def test_convnet_materialization(benchmark):
 def test_convnet_end_to_end(benchmark):
     """ConvNet: full pipeline."""
     x = np.ones(N)
-    jac_fn = jacobian(convnet)
+    jac_fn = jacobian(convnet, input_shape=N)
     benchmark(jac_fn, x)
 
 
@@ -262,7 +262,7 @@ def test_rosenbrock_materialization(benchmark):
 def test_rosenbrock_end_to_end(benchmark):
     """Rosenbrock: full pipeline."""
     x = np.ones(N)
-    hess_fn = hessian(rosenbrock)
+    hess_fn = hessian(rosenbrock, input_shape=N)
     benchmark(hess_fn, x)
 
 
@@ -300,5 +300,5 @@ def test_gnn_materialization(benchmark):
 def test_gnn_end_to_end(benchmark):
     """GNN: full pipeline."""
     x = np.ones(_gnn_input_shape)
-    hess_fn = hessian(gnn_energy)
+    hess_fn = hessian(gnn_energy, input_shape=_gnn_input_shape)
     benchmark(hess_fn, x)

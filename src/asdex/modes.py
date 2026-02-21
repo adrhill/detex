@@ -58,17 +58,21 @@ def _assert_hessian_mode(ad_mode: str) -> None:
 
 def _assert_jacobian_args(
     colored_pattern: object | None,
+    input_shape: object | None,
     coloring_mode: ColoringMode,
     ad_mode: JacobianMode,
 ) -> None:
     """Validate and warn for Jacobian input arguments.
 
     Asserts that ``coloring_mode`` and ``ad_mode`` are valid,
+    checks mutual exclusivity of ``colored_pattern`` and ``input_shape``,
     and warns if ``coloring_mode`` is set but will be ignored
     because a pre-computed pattern was provided.
     """
     _assert_coloring_mode(coloring_mode)
     _assert_jacobian_mode(ad_mode)
+    if colored_pattern is not None and input_shape is not None:
+        raise TypeError("Cannot specify both colored_pattern and input_shape.")
     if colored_pattern is not None and coloring_mode != "auto":
         warnings.warn(
             "coloring_mode is ignored when colored_pattern is provided.",
@@ -78,17 +82,21 @@ def _assert_jacobian_args(
 
 def _assert_hessian_args(
     colored_pattern: object | None,
+    input_shape: object | None,
     coloring_mode: ColoringMode,
     ad_mode: HessianMode,
 ) -> None:
     """Validate and warn for Hessian input arguments.
 
     Asserts that ``coloring_mode`` and ``ad_mode`` are valid,
+    checks mutual exclusivity of ``colored_pattern`` and ``input_shape``,
     and warns if ``coloring_mode`` is set but will be ignored
     because a pre-computed pattern was provided.
     """
     _assert_coloring_mode(coloring_mode)
     _assert_hessian_mode(ad_mode)
+    if colored_pattern is not None and input_shape is not None:
+        raise TypeError("Cannot specify both colored_pattern and input_shape.")
     if colored_pattern is not None and coloring_mode != "auto":
         warnings.warn(
             "coloring_mode is ignored when colored_pattern is provided.",

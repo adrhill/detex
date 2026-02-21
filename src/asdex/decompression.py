@@ -30,6 +30,7 @@ def jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     colored_pattern: ColoredPattern | None = None,
     *,
+    input_shape: int | tuple[int, ...] | None = None,
     coloring_mode: ColoringMode = "auto",
     ad_mode: JacobianMode = "auto",
 ) -> Callable[[ArrayLike], BCOO]:
@@ -38,12 +39,18 @@ def jacobian(
     Uses row coloring + VJPs or column coloring + JVPs,
     depending on which needs fewer colors.
 
+    Either ``colored_pattern`` or ``input_shape`` must be provided.
+    When ``input_shape`` is given,
+    sparsity detection and coloring are performed once at definition time.
+
     Args:
         f: Function taking an array and returning an array.
             Input and output may be multi-dimensional.
-        colored_pattern: Optional pre-computed [`ColoredPattern`][asdex.ColoredPattern]
+        colored_pattern: Pre-computed [`ColoredPattern`][asdex.ColoredPattern]
             from [`jacobian_coloring`][asdex.jacobian_coloring].
-            If None, sparsity is detected and colored automatically on each call.
+        input_shape: Shape of the input array (int or tuple).
+            When provided, sparsity is detected and colored automatically
+            once at definition time.
         coloring_mode: Coloring mode (used only when ``colored_pattern`` is None).
             ``"row"`` for row coloring,
             ``"column"`` for column coloring,
@@ -62,17 +69,22 @@ def jacobian(
             the sparse Jacobian as BCOO of shape ``(m, n)``
             where ``n = x.size`` and ``m = prod(output_shape)``.
     """
-    _assert_jacobian_args(colored_pattern, coloring_mode, ad_mode)
+    _assert_jacobian_args(colored_pattern, input_shape, coloring_mode, ad_mode)
+    if colored_pattern is None and input_shape is None:
+        raise TypeError("Either colored_pattern or input_shape must be provided.")
     if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
         raise TypeError(
             f"Expected ColoredPattern, got {type(colored_pattern).__name__}. "
-            "The API changed: use jacobian(f)(x) instead of jacobian(f, x)."
+            "Use jacobian(f, input_shape=...) for automatic coloring."
         )
+    if input_shape is not None:
+        sparsity = _detect_sparsity(f, input_shape)
+        colored_pattern = color_jacobian_pattern(sparsity, coloring_mode, ad_mode)
+
+    assert colored_pattern is not None  # guaranteed by checks above
 
     def jac_fn(x: ArrayLike) -> BCOO:
-        return _eval_jacobian(
-            f, jnp.asarray(x), colored_pattern, coloring_mode, ad_mode
-        )
+        return _eval_jacobian(f, jnp.asarray(x), colored_pattern, ad_mode)
 
     return jac_fn
 
@@ -81,6 +93,7 @@ def hessian(
     f: Callable[[ArrayLike], ArrayLike],
     colored_pattern: ColoredPattern | None = None,
     *,
+    input_shape: int | tuple[int, ...] | None = None,
     coloring_mode: ColoringMode = "auto",
     ad_mode: HessianMode = "auto",
 ) -> Callable[[ArrayLike], BCOO]:
@@ -91,12 +104,18 @@ def hessian(
     If ``f`` returns a squeezable shape like ``(1,)`` or ``(1, 1)``,
     it is automatically squeezed to scalar.
 
+    Either ``colored_pattern`` or ``input_shape`` must be provided.
+    When ``input_shape`` is given,
+    sparsity detection and coloring are performed once at definition time.
+
     Args:
         f: Scalar-valued function taking an array.
             Input may be multi-dimensional.
-        colored_pattern: Optional pre-computed [`ColoredPattern`][asdex.ColoredPattern]
+        colored_pattern: Pre-computed [`ColoredPattern`][asdex.ColoredPattern]
             from [`hessian_coloring`][asdex.hessian_coloring].
-            If None, sparsity is detected and colored automatically on each call.
+        input_shape: Shape of the input array (int or tuple).
+            When provided, sparsity is detected and colored automatically
+            once at definition time.
         coloring_mode: Coloring mode (used only when ``colored_pattern`` is None).
             ``"row"`` for row coloring,
             ``"column"`` for column coloring,
@@ -113,15 +132,22 @@ def hessian(
             the sparse Hessian as BCOO of shape ``(n, n)``
             where ``n = x.size``.
     """
-    _assert_hessian_args(colored_pattern, coloring_mode, ad_mode)
+    _assert_hessian_args(colored_pattern, input_shape, coloring_mode, ad_mode)
+    if colored_pattern is None and input_shape is None:
+        raise TypeError("Either colored_pattern or input_shape must be provided.")
     if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
         raise TypeError(
             f"Expected ColoredPattern, got {type(colored_pattern).__name__}. "
-            "The API changed: use hessian(f)(x) instead of hessian(f, x)."
+            "Use hessian(f, input_shape=...) for automatic coloring."
         )
+    if input_shape is not None:
+        sparsity = _detect_hessian_sparsity(f, input_shape)
+        colored_pattern = color_hessian_pattern(sparsity, coloring_mode)
+
+    assert colored_pattern is not None  # guaranteed by checks above
 
     def hess_fn(x: ArrayLike) -> BCOO:
-        return _eval_hessian(f, jnp.asarray(x), colored_pattern, coloring_mode, ad_mode)
+        return _eval_hessian(f, jnp.asarray(x), colored_pattern, ad_mode)
 
     return hess_fn
 
@@ -132,23 +158,18 @@ def hessian(
 def _eval_jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
-    colored_pattern: ColoredPattern | None,
-    coloring_mode: ColoringMode,
+    colored_pattern: ColoredPattern,
     ad_mode: JacobianMode,
 ) -> BCOO:
     """Evaluate the sparse Jacobian of f at x."""
     n = x.size
 
-    if colored_pattern is None:
-        sparsity = _detect_sparsity(f, x.shape)
-        colored_pattern = color_jacobian_pattern(sparsity, coloring_mode, ad_mode)
-    else:
-        expected = colored_pattern.sparsity.input_shape
-        if x.shape != expected:
-            raise ValueError(
-                f"Input shape {x.shape} does not match the colored pattern, "
-                f"which expects shape {expected}."
-            )
+    expected = colored_pattern.sparsity.input_shape
+    if x.shape != expected:
+        raise ValueError(
+            f"Input shape {x.shape} does not match the colored pattern, "
+            f"which expects shape {expected}."
+        )
 
     sparsity = colored_pattern.sparsity
     m = sparsity.m
@@ -175,8 +196,7 @@ def _eval_jacobian(
 def _eval_hessian(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
-    colored_pattern: ColoredPattern | None,
-    coloring_mode: ColoringMode,
+    colored_pattern: ColoredPattern,
     ad_mode: HessianMode,
 ) -> BCOO:
     """Evaluate the sparse Hessian of f at x.
@@ -187,16 +207,12 @@ def _eval_hessian(
     f = _ensure_scalar(f, x.shape)
     n = x.size
 
-    if colored_pattern is None:
-        sparsity = _detect_hessian_sparsity(f, x.shape)
-        colored_pattern = color_hessian_pattern(sparsity, coloring_mode)
-    else:
-        expected = colored_pattern.sparsity.input_shape
-        if x.shape != expected:
-            raise ValueError(
-                f"Input shape {x.shape} does not match the colored pattern, "
-                f"which expects shape {expected}."
-            )
+    expected = colored_pattern.sparsity.input_shape
+    if x.shape != expected:
+        raise ValueError(
+            f"Input shape {x.shape} does not match the colored pattern, "
+            f"which expects shape {expected}."
+        )
 
     sparsity = colored_pattern.sparsity
 

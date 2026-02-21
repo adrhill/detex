@@ -352,7 +352,7 @@ def test_scan_jacobian_values():
         return jnp.concatenate([jnp.array([carry_out]), ys])
 
     x = jnp.array([1.0, 2.0, 3.0])
-    sparse_jac = jacobian(f)(x).todense()
+    sparse_jac = jacobian(f, input_shape=x.shape)(x).todense()
     dense_jac = np.array(jax.jacobian(f)(x))
     np.testing.assert_allclose(sparse_jac, dense_jac)
 
@@ -634,6 +634,6 @@ def test_scan_jacobian_values_pytree_xs():
         return jnp.concatenate([jnp.array([carry_out]), ys])
 
     x = jnp.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
-    sparse_jac = jacobian(f)(x).todense()
+    sparse_jac = jacobian(f, input_shape=x.shape)(x).todense()
     dense_jac = np.array(jax.jacobian(f)(x))
     np.testing.assert_allclose(sparse_jac, dense_jac)

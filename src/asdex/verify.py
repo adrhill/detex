@@ -80,7 +80,7 @@ def check_jacobian_correctness(
     """
     if method not in ("matvec", "dense"):
         raise ValueError(f"Unknown method {method!r}. Expected 'matvec' or 'dense'.")
-    _assert_jacobian_args(colored_pattern, coloring_mode, ad_mode)
+    _assert_jacobian_args(colored_pattern, None, coloring_mode, ad_mode)
 
     x = jnp.asarray(x)
 
@@ -170,7 +170,7 @@ def check_hessian_correctness(
     """
     if method not in ("matvec", "dense"):
         raise ValueError(f"Unknown method {method!r}. Expected 'matvec' or 'dense'.")
-    _assert_hessian_args(colored_pattern, coloring_mode, ad_mode)
+    _assert_hessian_args(colored_pattern, None, coloring_mode, ad_mode)
 
     x = jnp.asarray(x)
 
