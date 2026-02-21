@@ -5,3 +5,7 @@
 ::: asdex.hessian_sparsity
 ::: asdex.color_hessian_pattern
 ::: asdex.check_hessian_correctness
+
+---
+
+::: asdex.HessianMode
