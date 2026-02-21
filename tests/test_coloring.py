@@ -1142,3 +1142,12 @@ def test_color_jacobian_symmetric_non_square_raises():
 
     with pytest.raises(ValueError, match="square"):
         color_jacobian_pattern(sparsity, "symmetric")
+
+
+@pytest.mark.coloring
+def test_color_jacobian_symmetric_empty_non_square_raises():
+    """Empty non-square pattern with "symmetric" coloring raises ValueError."""
+    sparsity = _make_pattern([], [], (3, 4))
+
+    with pytest.raises(ValueError, match="square"):
+        color_jacobian_pattern(sparsity, "symmetric")
