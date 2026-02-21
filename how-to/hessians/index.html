@@ -1453,12 +1453,12 @@ Create a <code>SparsityPattern</code> from coordinate arrays, a dense matrix, or
 </code></pre></div></p>
 <h2 id="choosing-an-hvp-mode">Choosing an HVP Mode<a class="headerlink" href="#choosing-an-hvp-mode" title="Permanent link">&para;</a></h2>
 <p>By default, <code>hessian</code> uses forward-over-reverse AD to compute Hessian-vector products.
-You can select a different AD composition strategy via the <code>hvp_mode</code> parameter:</p>
+You can select a different AD composition strategy via the <code>ad_mode</code> parameter:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">hessian</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">h_for</span> <span class="o">=</span> <span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">hvp_mode</span><span class="o">=</span><span class="s2">&quot;fwd_over_rev&quot;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># default</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">h_rof</span> <span class="o">=</span> <span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">hvp_mode</span><span class="o">=</span><span class="s2">&quot;rev_over_fwd&quot;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">h_ror</span> <span class="o">=</span> <span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">hvp_mode</span><span class="o">=</span><span class="s2">&quot;rev_over_rev&quot;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">h_for</span> <span class="o">=</span> <span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s2">&quot;fwd_over_rev&quot;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># default</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">h_rof</span> <span class="o">=</span> <span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s2">&quot;rev_over_fwd&quot;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">h_ror</span> <span class="o">=</span> <span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s2">&quot;rev_over_rev&quot;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
 </code></pre></div>
 <p>All three modes produce the same mathematical result.
 They differ in how JAX's AD primitives are composed:</p>
@@ -1513,7 +1513,7 @@ of shape <span class="arithmatex">\((n, n)\)</span> where <span class="arithmate
 <a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⎦   ⎣⡇⎦
 </code></pre></div>
 <h2 id="verifying-results">Verifying Results<a class="headerlink" href="#verifying-results" title="Permanent link">&para;</a></h2>
-<p>Use <a class="autorefs autorefs-internal" title="asdex.check_hessian_correctness(f, x, *, colored_pattern=None, method='matvec', ad_mode='fwd_over_rev', num_probes=25, seed=0, rtol=None, atol=None)" href="../../reference/hessian/#asdex.check_hessian_correctness"><code>check_hessian_correctness</code></a>
+<p>Use <a class="autorefs autorefs-internal" title="asdex.check_hessian_correctness(f, x, *, colored_pattern=None, coloring_mode='auto', method='matvec', ad_mode='auto', num_probes=25, seed=0, rtol=None, atol=None)" href="../../reference/hessian/#asdex.check_hessian_correctness"><code>check_hessian_correctness</code></a>
 to verify the sparse Hessian against vanilla JAX.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_hessian_correctness</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
@@ -1531,8 +1531,8 @@ set custom tolerances, the number of probes, and the PRNG seed:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">check_hessian_correctness</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="n">colored_pattern</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s2">&quot;rev_over_rev&quot;</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">num_probes</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
 </code></pre></div>
 <p>The <code>ad_mode</code> parameter accepts the same values as the
-<a href="#choosing-an-hvp-mode"><code>hvp_mode</code> parameter</a> on <code>hessian</code>:
-<code>"fwd_over_rev"</code>, <code>"rev_over_fwd"</code>, and <code>"rev_over_rev"</code>.</p>
+<a href="#choosing-an-hvp-mode"><code>ad_mode</code> parameter</a> on <code>hessian</code>:
+<code>"fwd_over_rev"</code>, <code>"rev_over_fwd"</code>, <code>"rev_over_rev"</code>, and <code>"auto"</code>.</p>
 <p>For an exact element-wise comparison against the full dense Hessian,
 use <code>method="dense"</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">check_hessian_correctness</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;dense&quot;</span><span class="p">)</span>

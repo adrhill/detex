@@ -1020,6 +1020,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#asdex.ColoredPattern.__post_init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __post_init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#asdex.ColoredPattern.save" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1343,6 +1354,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#asdex.ColoredPattern.__post_init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __post_init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#asdex.ColoredPattern.save" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1663,8 +1685,8 @@
             <td>
               <div class="doc-md-description">
                 <p>Color assignment array.
-Shape <code>(m,)</code> for <code>"VJP"</code> mode,
-<code>(n,)</code> for <code>"JVP"</code> and <code>"HVP"</code> modes.</p>
+Shape <code>(m,)</code> for <code>"row"</code> mode,
+<code>(n,)</code> for <code>"column"</code> and <code>"symmetric"</code> modes.</p>
               </div>
             </td>
           </tr>
@@ -1682,14 +1704,18 @@ Shape <code>(m,)</code> for <code>"VJP"</code> mode,
           <tr class="doc-section-item">
             <td><code><span title="asdex.ColoredPattern.mode">mode</span></code></td>
             <td>
-                  <code><span title="typing.Literal">Literal</span>[&#39;JVP&#39;, &#39;VJP&#39;, &#39;HVP&#39;]</code>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.ColoringMode)" href="../#asdex.ColoringMode">ColoringMode</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The AD primitive used per color.
-<code>"VJP"</code> for row-colored Jacobians,
-<code>"JVP"</code> for column-colored Jacobians,
-<code>"HVP"</code> for symmetrically colored Hessians.</p>
+                <p>The coloring mode.
+<code>"row"</code> for row-colored patterns (uses VJPs),
+<code>"column"</code> for column-colored patterns (uses JVPs),
+<code>"symmetric"</code> for symmetrically colored patterns (uses HVPs).</p>
               </div>
             </td>
           </tr>
@@ -1716,6 +1742,24 @@ Shape <code>(m,)</code> for <code>"VJP"</code> mode,
 
 
 
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="asdex.ColoredPattern.__post_init__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">__post_init__</span><span class="p">()</span></code>
+
+<a href="#asdex.ColoredPattern.__post_init__" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Validate that mode has been resolved.</p>
+
+
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-function">
 

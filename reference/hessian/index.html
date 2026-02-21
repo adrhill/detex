@@ -980,6 +980,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#asdex.HessianMode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HessianMode
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1188,6 +1199,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#asdex.HessianMode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HessianMode
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1215,7 +1237,7 @@
 
 
 <h2 id="asdex.hessian" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hvp_mode</span><span class="o">=</span><span class="s1">&#39;fwd_over_rev&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span></code>
 
 <a href="#asdex.hessian" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1223,7 +1245,7 @@
     <div class="doc doc-contents first">
 
         <p>Build a sparse Hessian function using coloring and HVPs.</p>
-<p>Uses symmetric (star) coloring and Hessian-vector products.</p>
+<p>Uses symmetric (star) coloring and Hessian-vector products by default.</p>
 <p>If <code>f</code> returns a squeezable shape like <code>(1,)</code> or <code>(1, 1)</code>,
 it is automatically squeezed to scalar.</p>
 
@@ -1276,7 +1298,7 @@ Input may be multi-dimensional.</p>
   
       dataclass
   " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a>
-from <a class="autorefs autorefs-internal" title="asdex.hessian_coloring(f, input_shape)" href="#asdex.hessian_coloring"><code>hessian_coloring</code></a>.
+from <a class="autorefs autorefs-internal" title="asdex.hessian_coloring(f, input_shape, coloring_mode='auto')" href="#asdex.hessian_coloring"><code>hessian_coloring</code></a>.
 If None, sparsity is detected and colored automatically on each call.</p>
               </div>
             </td>
@@ -1286,23 +1308,50 @@ If None, sparsity is detected and colored automatically on each call.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>hvp_mode</code>
+                <code>coloring_mode</code>
             </td>
             <td>
-                  <code><span title="asdex.decompression.HvpMode">HvpMode</span></code>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.ColoringMode)" href="../#asdex.ColoringMode">ColoringMode</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Coloring mode (used only when <code>colored_pattern</code> is None).
+<code>"row"</code> for row coloring,
+<code>"column"</code> for column coloring,
+<code>"symmetric"</code> for symmetric (star) coloring,
+<code>"auto"</code> defaults to <code>"symmetric"</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;auto&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>ad_mode</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.HessianMode)" href="#asdex.HessianMode">HessianMode</a></code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>AD composition strategy for Hessian-vector products.
-<code>"fwd_over_rev"</code> (default) uses forward-over-reverse,
+<code>"fwd_over_rev"</code> uses forward-over-reverse,
 <code>"rev_over_fwd"</code> uses reverse-over-forward,
-and <code>"rev_over_rev"</code> uses reverse-over-reverse.
-All three produce the same result;
-they differ in memory and performance characteristics.</p>
+<code>"rev_over_rev"</code> uses reverse-over-reverse,
+<code>"auto"</code> defaults to <code>"fwd_over_rev"</code>.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;fwd_over_rev&#39;</code>
+                  <code>&#39;auto&#39;</code>
             </td>
           </tr>
       </tbody>
@@ -1342,7 +1391,7 @@ where <code>n = x.size</code>.</p>
 
 
 <h2 id="asdex.hessian_coloring" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span></code>
 
 <a href="#asdex.hessian_coloring" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1350,8 +1399,6 @@ where <code>n = x.size</code>.</p>
     <div class="doc doc-contents first">
 
         <p>Detect Hessian sparsity and color in one step.</p>
-<p>Uses symmetric coloring,
-which exploits Hessian symmetry for fewer colors.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1386,7 +1433,7 @@ which exploits Hessian symmetry for fewer colors.</p>
                 <code>input_shape</code>
             </td>
             <td>
-                  <code><span title="tuple">tuple</span>[<span title="int">int</span>, ...]</code>
+                  <code><span title="int">int</span> | <span title="tuple">tuple</span>[<span title="int">int</span>, ...]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1395,6 +1442,31 @@ which exploits Hessian symmetry for fewer colors.</p>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>coloring_mode</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.ColoringMode)" href="../#asdex.ColoringMode">ColoringMode</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Coloring mode.
+<code>"row"</code> for row coloring,
+<code>"column"</code> for column coloring,
+<code>"symmetric"</code> for symmetric (star) coloring
+(exploits Hessian symmetry for fewer colors),
+<code>"auto"</code> defaults to <code>"symmetric"</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;auto&#39;</code>
             </td>
           </tr>
       </tbody>
@@ -1426,7 +1498,7 @@ which exploits Hessian symmetry for fewer colors.</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None, *, hvp_mode='fwd_over_rev')" href="#asdex.hessian"><code>hessian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None, *, coloring_mode='auto', ad_mode='auto')" href="#asdex.hessian"><code>hessian</code></a>.</p>
               </div>
             </td>
           </tr>
@@ -1543,7 +1615,7 @@ Entry <code>(i, j)</code> is present if <code>H[i, j]</code> may be nonzero.</p>
 
 
 <h2 id="asdex.color_hessian_pattern" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">color_hessian_pattern</span><span class="p">(</span><span class="n">sparsity</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">color_hessian_pattern</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span></code>
 
 <a href="#asdex.color_hessian_pattern" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1551,8 +1623,6 @@ Entry <code>(i, j)</code> is present if <code>H[i, j]</code> may be nonzero.</p>
     <div class="doc doc-contents first">
 
         <p>Color a sparsity pattern for sparse Hessian computation.</p>
-<p>Uses symmetric coloring,
-which exploits Hessian symmetry for fewer colors than row coloring.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1580,11 +1650,36 @@ which exploits Hessian symmetry for fewer colors than row coloring.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Symmetric sparsity pattern of shape (n, n).</p>
+                <p>Sparsity pattern of shape (n, n).</p>
               </div>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>coloring_mode</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.ColoringMode)" href="../#asdex.ColoringMode">ColoringMode</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Coloring mode.
+<code>"row"</code> colors rows,
+<code>"column"</code> colors columns,
+<code>"symmetric"</code> uses symmetric (star) coloring
+(exploits Hessian symmetry for fewer colors),
+<code>"auto"</code> defaults to <code>"symmetric"</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;auto&#39;</code>
             </td>
           </tr>
       </tbody>
@@ -1616,7 +1711,30 @@ which exploits Hessian symmetry for fewer colors than row coloring.</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None, *, hvp_mode='fwd_over_rev')" href="#asdex.hessian"><code>hessian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None, *, coloring_mode='auto', ad_mode='auto')" href="#asdex.hessian"><code>hessian</code></a>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If coloring_mode is unknown.</p>
               </div>
             </td>
           </tr>
@@ -1632,7 +1750,7 @@ which exploits Hessian symmetry for fewer colors than row coloring.</p>
 
 
 <h2 id="asdex.check_hessian_correctness" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">check_hessian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;matvec&#39;</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s1">&#39;fwd_over_rev&#39;</span><span class="p">,</span> <span class="n">num_probes</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">check_hessian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;matvec&#39;</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">num_probes</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#asdex.check_hessian_correctness" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1709,6 +1827,30 @@ If None, sparsity is detected and colored automatically.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
+                <code>coloring_mode</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.ColoringMode)" href="../#asdex.ColoringMode">ColoringMode</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Coloring mode (used only when <code>colored_pattern</code> is None).
+<code>"row"</code> for row coloring,
+<code>"column"</code> for column coloring,
+<code>"symmetric"</code> for symmetric (star) coloring,
+<code>"auto"</code> defaults to <code>"symmetric"</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;auto&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                 <code>method</code>
             </td>
             <td>
@@ -1732,18 +1874,23 @@ which is O(n^2).</p>
                 <code>ad_mode</code>
             </td>
             <td>
-                  <code><span title="asdex.decompression.HvpMode">HvpMode</span></code>
+                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.HessianMode)" href="#asdex.HessianMode">HessianMode</a></code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>AD mode for the reference computation.
-<code>"fwd_over_rev"</code> (default) uses forward-over-reverse,
+<code>"fwd_over_rev"</code> uses forward-over-reverse,
 <code>"rev_over_fwd"</code> uses reverse-over-forward,
-and <code>"rev_over_rev"</code> uses reverse-over-reverse.</p>
+<code>"rev_over_rev"</code> uses reverse-over-reverse,
+<code>"auto"</code> defaults to <code>"fwd_over_rev"</code>.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;fwd_over_rev&#39;</code>
+                  <code>&#39;auto&#39;</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1838,6 +1985,33 @@ Defaults to 1e-5 for <code>"matvec"</code> and 1e-7 for <code>"dense"</code>.</p
       </tbody>
     </table>
 
+
+    </div>
+
+</div><hr />
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="asdex.HessianMode" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">HessianMode</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;fwd_over_rev&#39;</span><span class="p">,</span> <span class="s1">&#39;rev_over_fwd&#39;</span><span class="p">,</span> <span class="s1">&#39;rev_over_rev&#39;</span><span class="p">,</span> <span class="s1">&#39;auto&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#asdex.HessianMode" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+        <p>AD composition strategy for Hessian-vector products.</p>
+<p><code>"fwd_over_rev"</code> uses forward-over-reverse,
+<code>"rev_over_fwd"</code> uses reverse-over-forward,
+<code>"rev_over_rev"</code> uses reverse-over-reverse,
+<code>"auto"</code> defaults to <code>"fwd_over_rev"</code>.</p>
 
     </div>
 

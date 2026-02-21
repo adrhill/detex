@@ -963,6 +963,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#asdex.JacobianMode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JacobianMode
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1210,6 +1221,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#asdex.JacobianMode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JacobianMode
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1237,7 +1259,7 @@
 
 
 <h2 id="asdex.jacobian" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span></code>
 
 <a href="#asdex.jacobian" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1297,12 +1319,62 @@ Input and output may be multi-dimensional.</p>
   
       dataclass
   " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a>
-from <a class="autorefs autorefs-internal" title="asdex.jacobian_coloring(f, input_shape, partition='auto')" href="#asdex.jacobian_coloring"><code>jacobian_coloring</code></a>.
+from <a class="autorefs autorefs-internal" title="asdex.jacobian_coloring(f, input_shape, coloring_mode='auto')" href="#asdex.jacobian_coloring"><code>jacobian_coloring</code></a>.
 If None, sparsity is detected and colored automatically on each call.</p>
               </div>
             </td>
             <td>
                   <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>coloring_mode</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.ColoringMode)" href="../#asdex.ColoringMode">ColoringMode</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Coloring mode (used only when <code>colored_pattern</code> is None).
+<code>"row"</code> for row coloring,
+<code>"column"</code> for column coloring,
+<code>"symmetric"</code> for symmetric (star) coloring,
+<code>"auto"</code> picks automatically.
+When <code>"auto"</code> but <code>ad_mode</code> is specific,
+resolves to the natural coloring:
+<code>"fwd"</code> implies <code>"column"</code>, <code>"rev"</code> implies <code>"row"</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;auto&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>ad_mode</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.JacobianMode = Literal['fwd', 'rev', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.JacobianMode)" href="#asdex.JacobianMode">JacobianMode</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>AD mode for Jacobian computation.
+<code>"fwd"</code> uses JVPs (forward-mode AD),
+<code>"rev"</code> uses VJPs (reverse-mode AD),
+<code>"auto"</code> selects based on the coloring mode.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;auto&#39;</code>
             </td>
           </tr>
       </tbody>
@@ -1342,7 +1414,7 @@ where <code>n = x.size</code> and <code>m = prod(output_shape)</code>.</p>
 
 
 <h2 id="asdex.jacobian_coloring" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="n">partition</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span></code>
 
 <a href="#asdex.jacobian_coloring" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1384,7 +1456,7 @@ where <code>n = x.size</code> and <code>m = prod(output_shape)</code>.</p>
                 <code>input_shape</code>
             </td>
             <td>
-                  <code><span title="tuple">tuple</span>[<span title="int">int</span>, ...]</code>
+                  <code><span title="int">int</span> | <span title="tuple">tuple</span>[<span title="int">int</span>, ...]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1397,15 +1469,22 @@ where <code>n = x.size</code> and <code>m = prod(output_shape)</code>.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>partition</code>
+                <code>coloring_mode</code>
             </td>
             <td>
-                  <code><span title="typing.Literal">Literal</span>[&#39;row&#39;, &#39;column&#39;, &#39;auto&#39;]</code>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.ColoringMode)" href="../#asdex.ColoringMode">ColoringMode</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Which partition to color
-(<code>"row"</code>, <code>"column"</code>, or <code>"auto"</code>).</p>
+                <p>Coloring mode.
+<code>"row"</code> for row coloring (uses VJPs),
+<code>"column"</code> for column coloring (uses JVPs),
+<code>"symmetric"</code> for symmetric (star) coloring,
+<code>"auto"</code> picks whichever of row/column needs fewer colors.</p>
               </div>
             </td>
             <td>
@@ -1441,7 +1520,7 @@ where <code>n = x.size</code> and <code>m = prod(output_shape)</code>.</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.jacobian(f, colored_pattern=None)" href="#asdex.jacobian"><code>jacobian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.jacobian(f, colored_pattern=None, *, coloring_mode='auto', ad_mode='auto')" href="#asdex.jacobian"><code>jacobian</code></a>.</p>
               </div>
             </td>
           </tr>
@@ -1556,7 +1635,7 @@ Entry <code>(i, j)</code> is present if output <code>i</code> depends on input <
 
 
 <h2 id="asdex.color_jacobian_pattern" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">color_jacobian_pattern</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="n">partition</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">color_jacobian_pattern</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span></code>
 
 <a href="#asdex.color_jacobian_pattern" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1602,18 +1681,50 @@ computed together in a single VJP (or JVP).</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>partition</code>
+                <code>coloring_mode</code>
             </td>
             <td>
-                  <code><span title="typing.Literal">Literal</span>[&#39;row&#39;, &#39;column&#39;, &#39;auto&#39;]</code>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.ColoringMode)" href="../#asdex.ColoringMode">ColoringMode</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Which partition to color.
+                <p>Coloring mode.
 <code>"row"</code> colors rows (uses VJPs),
 <code>"column"</code> colors columns (uses JVPs),
-<code>"auto"</code> picks whichever needs fewer colors
-(ties go to column coloring since JVPs are cheaper).</p>
+<code>"symmetric"</code> uses symmetric (star) coloring
+(requires a square pattern),
+<code>"auto"</code> picks automatically.
+When <code>"auto"</code> but <code>ad_mode</code> is specific,
+resolves to the natural coloring:
+<code>"fwd"</code> implies <code>"column"</code>, <code>"rev"</code> implies <code>"row"</code>.
+When both are <code>"auto"</code>,
+picks whichever of row/column needs fewer colors
+(ties go to <code>"column"</code> since JVPs are cheaper).</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;auto&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>ad_mode</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.JacobianMode = Literal['fwd', 'rev', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.JacobianMode)" href="#asdex.JacobianMode">JacobianMode</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>AD mode hint used to resolve <code>"auto"</code> coloring.
+Only used when <code>coloring_mode</code> is <code>"auto"</code>.</p>
               </div>
             </td>
             <td>
@@ -1649,7 +1760,30 @@ computed together in a single VJP (or JVP).</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.jacobian(f, colored_pattern=None)" href="#asdex.jacobian"><code>jacobian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.jacobian(f, colored_pattern=None, *, coloring_mode='auto', ad_mode='auto')" href="#asdex.jacobian"><code>jacobian</code></a>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If coloring_mode or ad_mode is unknown.</p>
               </div>
             </td>
           </tr>
@@ -1665,7 +1799,7 @@ computed together in a single VJP (or JVP).</p>
 
 
 <h2 id="asdex.check_jacobian_correctness" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;matvec&#39;</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">num_probes</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;matvec&#39;</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">num_probes</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#asdex.check_jacobian_correctness" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1742,6 +1876,30 @@ If None, sparsity is detected and colored automatically.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
+                <code>coloring_mode</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.ColoringMode)" href="../#asdex.ColoringMode">ColoringMode</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Coloring mode (used only when <code>colored_pattern</code> is None).
+<code>"row"</code> for row coloring,
+<code>"column"</code> for column coloring,
+<code>"symmetric"</code> for symmetric (star) coloring,
+<code>"auto"</code> picks automatically.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;auto&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                 <code>method</code>
             </td>
             <td>
@@ -1765,20 +1923,23 @@ which is O(n^2).</p>
                 <code>ad_mode</code>
             </td>
             <td>
-                  <code><span title="asdex.verify.JvpMode">JvpMode</span> | None</code>
+                  <code><a class="autorefs autorefs-internal" title="asdex.JacobianMode = Literal['fwd', 'rev', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.JacobianMode)" href="#asdex.JacobianMode">JacobianMode</a></code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>AD mode for the reference computation.
-<code>"forward"</code> uses <code>jax.jacfwd</code> / <code>jax.jvp</code>.
-<code>"reverse"</code> uses <code>jax.jacrev</code> / <code>jax.vjp</code>.
-If None (default),
-picks <code>"forward"</code> when m &gt;= n and <code>"reverse"</code> when m &lt; n,
-where m and n are the output and input sizes.</p>
+<code>"fwd"</code> uses <code>jax.jacfwd</code> / <code>jax.jvp</code>.
+<code>"rev"</code> uses <code>jax.jacrev</code> / <code>jax.vjp</code>.
+<code>"auto"</code> picks <code>"fwd"</code> when m &gt;= n
+and <code>"rev"</code> when m &lt; n.</p>
               </div>
             </td>
             <td>
-                  <code>None</code>
+                  <code>&#39;auto&#39;</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1910,6 +2071,32 @@ https://github.com/adrhill/asdex/issues.</p>
 
 
 
+
+    </div>
+
+</div><hr />
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="asdex.JacobianMode" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">JacobianMode</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;fwd&#39;</span><span class="p">,</span> <span class="s1">&#39;rev&#39;</span><span class="p">,</span> <span class="s1">&#39;auto&#39;</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#asdex.JacobianMode" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+        <p>AD mode for Jacobian computation.</p>
+<p><code>"fwd"</code> uses JVPs (forward-mode AD),
+<code>"rev"</code> uses VJPs (reverse-mode AD),
+<code>"auto"</code> selects automatically based on the coloring mode.</p>
 
     </div>
 

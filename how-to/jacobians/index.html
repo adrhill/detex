@@ -1368,14 +1368,14 @@ and picks whichever needs fewer colors:</p>
 <a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⎥   ⎢⣿⎥
 <a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⎦   ⎣⣿⎦
 </code></pre></div>
-<p>You can also force a specific coloring strategy.
-Row coloring uses VJPs (reverse-mode AD),
-column coloring uses JVPs (forward-mode AD):</p>
+<p>You can also force a specific coloring mode.
+<code>"row"</code> colors rows (uses VJPs, reverse-mode AD),
+<code>"column"</code> colors columns (uses JVPs, forward-mode AD):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Force column coloring (uses JVPs):</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">colored_pattern</span> <span class="o">=</span> <span class="n">jacobian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">partition</span><span class="o">=</span><span class="s2">&quot;column&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">colored_pattern</span> <span class="o">=</span> <span class="n">jacobian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s2">&quot;column&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Force row coloring (uses VJPs):</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">colored_pattern</span> <span class="o">=</span> <span class="n">jacobian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">partition</span><span class="o">=</span><span class="s2">&quot;row&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">colored_pattern</span> <span class="o">=</span> <span class="n">jacobian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s2">&quot;row&quot;</span><span class="p">)</span>
 </code></pre></div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ColoredPattern(99×100, nnz=198, sparsity=98.0%, VJP, 2 colors)
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  2 VJPs (instead of 99 VJPs or 100 JVPs)
@@ -1409,7 +1409,7 @@ column coloring uses JVPs (forward-mode AD):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">jacobian_sparsity</span><span class="p">,</span> <span class="n">color_jacobian_pattern</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">sparsity</span> <span class="o">=</span> <span class="n">jacobian_sparsity</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">colored_pattern</span> <span class="o">=</span> <span class="n">color_jacobian_pattern</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="n">partition</span><span class="o">=</span><span class="s2">&quot;column&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">colored_pattern</span> <span class="o">=</span> <span class="n">color_jacobian_pattern</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s2">&quot;column&quot;</span><span class="p">)</span>
 </code></pre></div>
 <p>This is useful when you want to inspect the sparsity pattern (<code>print(sparsity)</code>)
 before deciding on a coloring strategy.</p>
@@ -1489,7 +1489,7 @@ and <span class="arithmatex">\(m\)</span> is the total number of output elements
 <a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢄⠀⠀⠘⢄⎦   ⎣⣿⎦
 </code></pre></div>
 <h2 id="verifying-results">Verifying Results<a class="headerlink" href="#verifying-results" title="Permanent link">&para;</a></h2>
-<p>Use <a class="autorefs autorefs-internal" title="asdex.check_jacobian_correctness(f, x, *, colored_pattern=None, method='matvec', ad_mode=None, num_probes=25, seed=0, rtol=None, atol=None)" href="../../reference/jacobian/#asdex.check_jacobian_correctness"><code>check_jacobian_correctness</code></a>
+<p>Use <a class="autorefs autorefs-internal" title="asdex.check_jacobian_correctness(f, x, *, colored_pattern=None, coloring_mode='auto', method='matvec', ad_mode='auto', num_probes=25, seed=0, rtol=None, atol=None)" href="../../reference/jacobian/#asdex.check_jacobian_correctness"><code>check_jacobian_correctness</code></a>
 to verify the sparse Jacobian against vanilla JAX.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_jacobian_correctness</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
@@ -1505,7 +1505,7 @@ If the results match, the function returns silently.
 If they disagree, it raises a <a class="autorefs autorefs-internal" title="asdex.VerificationError" href="../../reference/jacobian/#asdex.VerificationError"><code>VerificationError</code></a>.</p>
 <p>You can also pass a pre-computed colored pattern, control the AD mode used for the reference computation, 
 set custom tolerances, the number of probes, and the PRNG seed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="n">colored_pattern</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s2">&quot;reverse&quot;</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">num_probes</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="n">colored_pattern</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s2">&quot;rev&quot;</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">num_probes</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
 </code></pre></div>
 <p>For an exact element-wise comparison against the full dense Jacobian,
 use <code>method="dense"</code>:</p>
