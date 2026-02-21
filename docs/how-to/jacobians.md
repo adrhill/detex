@@ -96,16 +96,16 @@ colored_pattern = jacobian_coloring(f, input_shape=100)
 print(f"```\n{colored_pattern}\n```")
 ```
 
-You can also force a specific coloring strategy.
-Row coloring uses VJPs (reverse-mode AD),
-column coloring uses JVPs (forward-mode AD):
+You can also force a specific AD mode.
+``"rev"`` uses VJPs (reverse-mode AD, row coloring),
+``"fwd"`` uses JVPs (forward-mode AD, column coloring):
 
 ```python exec="true" session="jac" source="above"
-# Force column coloring (uses JVPs):
-colored_pattern = jacobian_coloring(f, input_shape=100, partition="column")
+# Force forward mode (column coloring, uses JVPs):
+colored_pattern = jacobian_coloring(f, input_shape=100, mode="fwd")
 
-# Force row coloring (uses VJPs):
-colored_pattern = jacobian_coloring(f, input_shape=100, partition="row")
+# Force reverse mode (row coloring, uses VJPs):
+colored_pattern = jacobian_coloring(f, input_shape=100, mode="rev")
 ```
 
 ```python exec="true" session="jac"
@@ -113,7 +113,7 @@ print(f"```\n{colored_pattern}\n```")
 ```
 
 When the number of colors is equal,
-`asdex` prefers column coloring since JVPs are generally cheaper in JAX.
+`asdex` prefers ``"fwd"`` since JVPs are generally cheaper in JAX.
 
 ## Separate Detection and Coloring
 
@@ -123,7 +123,7 @@ For more control, you can split detection and coloring:
 from asdex import jacobian_sparsity, color_jacobian_pattern
 
 sparsity = jacobian_sparsity(f, input_shape=1000)
-colored_pattern = color_jacobian_pattern(sparsity, partition="column")
+colored_pattern = color_jacobian_pattern(sparsity, mode="fwd")
 ```
 
 This is useful when you want to inspect the sparsity pattern (`print(sparsity)`)
@@ -222,7 +222,7 @@ You can also pass a pre-computed colored pattern, control the AD mode used for t
 set custom tolerances, the number of probes, and the PRNG seed:
 
 ```python
-check_jacobian_correctness(f, x, colored_pattern=colored_pattern, ad_mode="reverse", rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
+check_jacobian_correctness(f, x, colored_pattern=colored_pattern, mode="rev", rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
 ```
 
 For an exact element-wise comparison against the full dense Jacobian,
