@@ -45,21 +45,21 @@ def jacobian_coloring(
     f: Callable,
     input_shape: int | tuple[int, ...],
     *,
-    symmetric: bool = False,
     mode: JacobianMode = "auto",
+    symmetric: bool = False,
 ) -> ColoredPattern:
     """Detect Jacobian sparsity and color in one step.
 
     Args:
         f: Function taking an array and returning an array.
         input_shape: Shape of the input array.
-        symmetric: Whether to use symmetric (star) coloring.
-            Requires a square Jacobian.
         mode: AD mode.
             ``"fwd"`` uses JVPs (forward-mode AD),
             ``"rev"`` uses VJPs (reverse-mode AD),
             ``"auto"`` picks whichever of fwd/rev needs fewer colors
             (unless ``symmetric`` is True, in which case defaults to ``"fwd"``).
+        symmetric: Whether to use symmetric (star) coloring.
+            Requires a square Jacobian.
 
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian`][asdex.jacobian].
@@ -72,21 +72,21 @@ def hessian_coloring(
     f: Callable,
     input_shape: int | tuple[int, ...],
     *,
-    symmetric: bool = True,
     mode: HessianMode = "auto",
+    symmetric: bool = True,
 ) -> ColoredPattern:
     """Detect Hessian sparsity and color in one step.
 
     Args:
         f: Scalar-valued function taking an array.
         input_shape: Shape of the input array.
-        symmetric: Whether to use symmetric (star) coloring.
-            Defaults to True (exploits H = H^T for fewer colors).
         mode: AD composition strategy for Hessian-vector products.
             ``"fwd_over_rev"`` uses forward-over-reverse,
             ``"rev_over_fwd"`` uses reverse-over-forward,
             ``"rev_over_rev"`` uses reverse-over-reverse,
             ``"auto"`` defaults to ``"fwd_over_rev"``.
+        symmetric: Whether to use symmetric (star) coloring.
+            Defaults to True (exploits H = H^T for fewer colors).
 
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian`][asdex.hessian].
@@ -101,8 +101,8 @@ def hessian_coloring(
 def color_jacobian_pattern(
     sparsity: SparsityPattern,
     *,
-    symmetric: bool = False,
     mode: JacobianMode = "auto",
+    symmetric: bool = False,
 ) -> ColoredPattern:
     """Color a sparsity pattern for sparse Jacobian computation.
 
@@ -111,13 +111,13 @@ def color_jacobian_pattern(
 
     Args:
         sparsity: Sparsity pattern of shape (m, n).
-        symmetric: Whether to use symmetric (star) coloring.
-            Requires a square pattern.
         mode: AD mode.
             ``"fwd"`` uses JVPs (column coloring),
             ``"rev"`` uses VJPs (row coloring),
             ``"auto"`` picks whichever of fwd/rev needs fewer colors
             (unless ``symmetric`` is True, in which case defaults to ``"fwd"``).
+        symmetric: Whether to use symmetric (star) coloring.
+            Requires a square pattern.
 
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian`][asdex.jacobian].
@@ -193,20 +193,20 @@ def color_jacobian_pattern(
 def color_hessian_pattern(
     sparsity: SparsityPattern,
     *,
-    symmetric: bool = True,
     mode: HessianMode = "auto",
+    symmetric: bool = True,
 ) -> ColoredPattern:
     """Color a sparsity pattern for sparse Hessian computation.
 
     Args:
         sparsity: Sparsity pattern of shape (n, n).
-        symmetric: Whether to use symmetric (star) coloring.
-            Defaults to True (exploits Hessian symmetry for fewer colors).
         mode: AD composition strategy for Hessian-vector products.
             ``"fwd_over_rev"`` uses forward-over-reverse,
             ``"rev_over_fwd"`` uses reverse-over-forward,
             ``"rev_over_rev"`` uses reverse-over-reverse,
             ``"auto"`` defaults to ``"fwd_over_rev"``.
+        symmetric: Whether to use symmetric (star) coloring.
+            Defaults to True (exploits Hessian symmetry for fewer colors).
 
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian`][asdex.hessian].
