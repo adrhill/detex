@@ -1001,8 +1001,8 @@ def test_hessian_colored_pattern_zero_hessian():
 
 
 @pytest.mark.coloring
-def test_str_hvp_mode():
-    """HVP-mode ColoredPattern __str__ shows 'instead of N HVPs'."""
+def test_str_hvp_display():
+    """Symmetric ColoredPattern __str__ shows 'instead of N HVPs'."""
 
     def f(x):
         return jnp.sum(x**2)

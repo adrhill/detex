@@ -650,19 +650,19 @@ def test_hessian_arrow_pattern():
     assert_allclose(result, expected, rtol=1e-5)
 
 
-# HVP mode tests
+# Hessian AD mode tests
 
 
 @pytest.mark.hessian
-@pytest.mark.parametrize("mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
-def test_hessian_hvp_modes(mode):
-    """All three HVP modes produce the same sparse Hessian on Rosenbrock."""
+@pytest.mark.parametrize("ad_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_hessian_ad_modes(ad_mode):
+    """All three AD modes produce the same sparse Hessian on Rosenbrock."""
 
     def f(x):
         return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
 
     x = np.array([1.0, 2.0, 0.5, -1.0])
-    result = hessian(f, ad_mode=mode)(x).todense()
+    result = hessian(f, ad_mode=ad_mode)(x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -746,6 +746,18 @@ def test_jacobian_incompatible_modes_raises():
     x = np.array([1.0, 2.0, 3.0])
     with pytest.raises(ValueError, match="Row coloring is only compatible"):
         jacobian(f, coloring_mode="row", ad_mode="fwd")(x)
+
+
+@pytest.mark.jacobian
+def test_jacobian_incompatible_column_rev_raises():
+    """Jacobian with coloring_mode='column' and ad_mode='rev' raises ValueError."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match="Column coloring is only compatible"):
+        jacobian(f, coloring_mode="column", ad_mode="rev")(x)
 
 
 # Hessian coloring mode tests

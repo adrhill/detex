@@ -1,4 +1,4 @@
-"""Public type aliases and validation for AD mode selection."""
+"""Type aliases and validation for AD mode selection."""
 
 import warnings
 from typing import Literal, assert_never, get_args

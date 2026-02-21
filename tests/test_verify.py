@@ -119,7 +119,7 @@ def test_check_jacobian_custom_seed_and_num_probes():
 
 @pytest.mark.jacobian
 def test_check_jacobian_forward_mode():
-    """check_jacobian_correctness works with mode='fwd'."""
+    """check_jacobian_correctness works with ad_mode='fwd'."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
@@ -130,7 +130,7 @@ def test_check_jacobian_forward_mode():
 
 @pytest.mark.jacobian
 def test_check_jacobian_reverse_mode():
-    """check_jacobian_correctness works with mode='rev'."""
+    """check_jacobian_correctness works with ad_mode='rev'."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
@@ -141,7 +141,7 @@ def test_check_jacobian_reverse_mode():
 
 @pytest.mark.jacobian
 def test_check_jacobian_reverse_mode_raises_on_mismatch():
-    """check_jacobian_correctness raises with mode='rev' on wrong results."""
+    """check_jacobian_correctness raises with ad_mode='rev' on wrong results."""
 
     def f_dense(x):
         return jnp.array([x[0] + x[1] + x[2], x[0] + x[1] + x[2], x[0] + x[1] + x[2]])
