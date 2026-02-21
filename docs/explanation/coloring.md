@@ -56,8 +56,7 @@ Handling high-degree vertices first tends to produce fewer colors in practice,
 because the most constrained vertices are colored while the most options are still available.
 
 The greedy algorithm does not guarantee an optimal coloring,
-but it is fast — \(O(|V| + |E|)\) in the size of the conflict graph —
-and produces good results for the sparsity patterns
+but it is fast and produces good results for the sparsity patterns
 typically encountered in scientific computing.
 
 ## From Coloring to Decompression

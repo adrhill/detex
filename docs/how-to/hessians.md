@@ -247,6 +247,6 @@ check_hessian_correctness(g, x, colored_pattern=colored_pattern, rtol=1e-5, atol
 !!! warning "Dense computation"
 
     Verification computes the full dense Hessian using JAX,
-    which scales as \(O(n^2)\).
+    which is computationally very expensive for large problems.
     Use this for debugging and initial setup,
     not in production loops.

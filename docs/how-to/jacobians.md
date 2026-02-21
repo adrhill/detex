@@ -222,6 +222,6 @@ check_jacobian_correctness(f, x, colored_pattern=colored_pattern, rtol=1e-5, ato
 !!! warning "Dense computation"
 
     Verification computes the full dense Jacobian using JAX,
-    which scales as \(O(mn)\).
+    which is computationally very expensive for large problems.
     Use this for debugging and initial setup,
     not in production loops.
