@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771692883994,
+  "lastUpdate": 1771706937822,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -7022,6 +7022,142 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.027870070656709094",
             "extra": "mean: 129.04419000000544 msec\nrounds: 8"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d11498e51cc45cde5c5d4b8998485e824808f573",
+          "message": "feat!: unify AD mode API (#63)\n\n* feat!: unify AD mode API\n\nConsistent `mode` parameter everywhere, replacing the mix of\n`partition`, `hvp_mode`, and `ad_mode`. Rename `HvpMode` to\n`HessianMode` and introduce `JacobianMode` with `\"fwd\"`/`\"rev\"`\nvalues (matching JAX's `jacfwd`/`jacrev` naming). Add validation\nfor unknown mode values in `color_jacobian_pattern`.\n\nBREAKING CHANGE: `partition=\"row\"/\"column\"` is now `mode=\"rev\"/\"fwd\"`,\n`hvp_mode` is now `mode`, `ad_mode` is now `mode`,\n`HvpMode` is renamed to `HessianMode`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* feat!: separate coloring mode from AD mode\n\nRename `ColoringMode` to domain-appropriate values\n(`\"row\"`, `\"column\"`, `\"symmetric\"`) and add `\"auto\"` to all mode types.\n\nReplace the single `mode` kwarg on `jacobian()` and `hessian()` with\nseparate `coloring_mode` and `ad_mode` kwargs, decoupling the coloring\nstrategy from the AD primitive selection.\n\nKey changes:\n- `modes.py`: add `resolve_ad_mode()` and `resolve_hessian_mode()`\n- `coloring.py`: `color_jacobian_pattern` accepts `\"symmetric\"`\n- `decompression.py`: `hessian()` accepts `coloring_mode` for\n  row/column coloring with HVPs\n- `verify.py`: rename `mode` → `ad_mode`\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(coloring): centralize mode validation and resolution\n\nAdd `assert_coloring_mode`, `assert_jacobian_mode`, `assert_hessian_mode`\nvalidators and `resolve_coloring_mode` to `modes.py` as single source of truth.\n\n- Derive valid mode sets from `Literal` types via `get_args`\n- Push coloring-from-AD resolution into `resolve_coloring_mode`\n- Push coloring dispatch into `color_hessian_pattern` (accepts `coloring_mode`)\n- Extract `_empty_colored_pattern` helper for zero-nnz patterns\n- Rename bare `mode` parameters to `coloring_mode` everywhere\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor: exhaustive match/case with `assert_never`\n\nReplace `if`/`elif` chains on mode arguments with exhaustive\n`match`/`case` using `assert_never` for unreachable branches.\nValidate `coloring_mode` and `ad_mode` eagerly in `jacobian()`\nand `hessian()` so typos raise at construction time.\n\nSuppresses `ty` false positives where match/case narrowing on\nattribute access is not yet supported (`@Todo`).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: update for new `coloring_mode`/`ad_mode` API\n\nFix parameter names in how-to guides (`mode` → `coloring_mode`/`ad_mode`)\nand update reference pages to reflect the new public API:\nremove `color_rows`, `color_cols`, `color_symmetric` and add\n`ColoringMode`, `JacobianMode`, `HessianMode`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(modes): centralize input validation and mark helpers private\n\nAdd `_assert_jacobian_args` and `_assert_hessian_args` to centralize\nthe shared validation (mode assertions + coloring_mode-ignored warning)\nused by `jacobian`, `hessian`, `check_jacobian_correctness`, and\n`check_hessian_correctness`.\n\nPrefix all helper functions in `modes.py` with underscore since only\nthe type aliases are part of the public API.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: fix stale mode terminology and add missing mode tests\n\nRename test names and docstrings that still referenced `hvp_mode` or\nbare `mode` to use the new `ad_mode`/`coloring_mode` API.  Add tests\nfor column+rev incompatibility, invalid mode validation, and the\ncoloring_mode-ignored warning.  Also include the minor modes.py\ndocstring fix.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: cover remaining reachable mode validation paths\n\nAdd tests for:\n- Hessian coloring_mode-ignored warning (_assert_hessian_args)\n- _resolve_ad_mode raising on unresolved coloring_mode=\"auto\"\n- Empty non-square pattern with symmetric coloring (_empty_colored_pattern)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: exclude unreachable branches from coverage\n\nExclude `assert_never()`, `case _ as unreachable:`, and\n`if TYPE_CHECKING:` lines from coverage reports via\n`[tool.coverage.report]` in pyproject.toml.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-21T21:48:17+01:00",
+          "tree_id": "5e28607067564842f4e4033909344a1dbf9acb23",
+          "url": "https://github.com/adrhill/asdex/commit/d11498e51cc45cde5c5d4b8998485e824808f573"
+        },
+        "date": 1771706937208,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 840.3929546409895,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0030180598920961886",
+            "extra": "mean: 1.1899195423731195 msec\nrounds: 177"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3253.506438144869,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000039471492691002934",
+            "extra": "mean: 307.3606949953338 usec\nrounds: 2118"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 59.734561590613104,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005078685265224629",
+            "extra": "mean: 16.740727199999128 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 77.11610446455897,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0014559462925232151",
+            "extra": "mean: 12.96746000000013 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 20.51922044937148,
+            "unit": "iter/sec",
+            "range": "stddev: 0.015784789925303182",
+            "extra": "mean: 48.7347948947364 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 250.74193693615496,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004433561243032252",
+            "extra": "mean: 3.988164134883526 msec\nrounds: 215"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 30.520557344200146,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00034150235812334856",
+            "extra": "mean: 32.764801399999044 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 9.859623667195766,
+            "unit": "iter/sec",
+            "range": "stddev: 0.031092635241702502",
+            "extra": "mean: 101.4237494000028 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 96.25429082543451,
+            "unit": "iter/sec",
+            "range": "stddev: 0.011225842022172068",
+            "extra": "mean: 10.38914724137947 msec\nrounds: 58"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3280.0620544069498,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000009027701532782302",
+            "extra": "mean: 304.87228089372366 usec\nrounds: 2193"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 25.13158937896158,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007454069748235143",
+            "extra": "mean: 39.7905594000008 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 18.641544443978404,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01646206413038489",
+            "extra": "mean: 53.643623950000574 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_detection",
+            "value": 29.087698091103135,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025251434226442687",
+            "extra": "mean: 34.37879466666575 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_coloring",
+            "value": 602.7417219896561,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005062357630874591",
+            "extra": "mean: 1.6590854150580294 msec\nrounds: 518"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_materialization",
+            "value": 11.784882266291937,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007492966099061322",
+            "extra": "mean: 84.85447520000093 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
+            "value": 7.623254137941214,
+            "unit": "iter/sec",
+            "range": "stddev: 0.029446146115757826",
+            "extra": "mean: 131.17757612499935 msec\nrounds: 8"
           }
         ]
       }
