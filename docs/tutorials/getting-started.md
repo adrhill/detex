@@ -32,7 +32,9 @@ from asdex import jacobian_coloring
 def f(x):
     return (x[1:] - x[:-1]) ** 2
 
-coloring = jacobian_coloring(f, input_shape=50)
+x = jnp.ones(50)
+
+coloring = jacobian_coloring(f, input_shape=x.shape)
 ```
 
 ```python exec="true" session="gs"
@@ -65,7 +67,6 @@ Now we can compute the sparse Jacobian using the colored pattern:
 import jax.numpy as jnp
 from asdex import jacobian_from_coloring
 
-x = jnp.ones(50)
 jac_fn = jacobian_from_coloring(f, coloring)
 J = jac_fn(x)
 ```
@@ -78,8 +79,10 @@ We can verify that `asdex` produces the same result as `jax.jacobian`:
 import jax
 import numpy as np
 
-J_dense = jax.jacobian(f)(x)
-np.testing.assert_allclose(J.todense(), J_dense, atol=1e-6)
+J_asdex = J.todense()
+J_jax = jax.jacobian(f)(x)
+
+np.testing.assert_allclose(J_asdex, J_jax, atol=1e-6)
 ```
 
 `asdex` also provides [`check_jacobian_correctness`][asdex.check_jacobian_correctness]
@@ -88,16 +91,18 @@ see [Verifying Results](../how-to/jacobians.md#verifying-results).
 
 On larger problems, the speedup from coloring becomes significant.
 Let's benchmark on a 5000-dimensional input
-(note that timings may vary as part of the doc-building process):
+(note that timings may vary as part of the doc-building process).
+This time, we use `asdex.jacobian`, which calls `jacobian_coloring` and `jacobian_from_coloring`:
 
 ```python exec="true" session="gs" source="above"
+import asdex
+import jax
 import timeit
 
 n = 5000
-coloring = jacobian_coloring(f, input_shape=n)
 x = jnp.ones(n)
 
-jac_fn_asdex = jacobian_from_coloring(f, coloring)
+jac_fn_asdex = asdex.jacobian(f, input_shape=n)
 jac_fn_jax = jax.jacobian(f)
 
 # Warm up JIT caches
