@@ -331,7 +331,7 @@ def test_save_load_sparsity_roundtrip(tmp_path):
     np.testing.assert_array_equal(loaded.cols, original.cols)
 
 
-@pytest.mark.parametrize("mode", ["VJP", "JVP", "HVP"])
+@pytest.mark.parametrize("mode", ["row", "column", "symmetric"])
 def test_save_load_colored_roundtrip(tmp_path, mode):
     """ColoredPattern survives a save/load roundtrip for each mode."""
     sparsity = SparsityPattern.from_coordinates([0, 1, 2], [0, 1, 2], (3, 3))

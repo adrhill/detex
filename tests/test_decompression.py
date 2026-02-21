@@ -129,7 +129,7 @@ def test_precomputed_colors():
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
     sparsity = jacobian_sparsity(f, input_shape=5)
-    colored_pattern = color_jacobian_pattern(sparsity, "rev")
+    colored_pattern = color_jacobian_pattern(sparsity, "row")
 
     result1 = jacobian(f, colored_pattern)(x).todense()
     result2 = jacobian(f)(x).todense()  # Auto-detect
@@ -315,7 +315,7 @@ def test_column_partition_diagonal():
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = jacobian(f, color_jacobian_pattern(sparsity, "fwd"))(x).todense()
+    result = jacobian(f, color_jacobian_pattern(sparsity, "column"))(x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -330,7 +330,7 @@ def test_column_partition_mixed():
 
     x = np.array([1.0, 2.0, 0.5])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = jacobian(f, color_jacobian_pattern(sparsity, "fwd"))(x).todense()
+    result = jacobian(f, color_jacobian_pattern(sparsity, "column"))(x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -354,7 +354,7 @@ def test_column_partition_tridiagonal():
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = jacobian(f, color_jacobian_pattern(sparsity, "fwd"))(x).todense()
+    result = jacobian(f, color_jacobian_pattern(sparsity, "column"))(x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -368,7 +368,9 @@ def test_precomputed_col_colors():
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
-    colored_pattern = color_jacobian_pattern(jacobian_sparsity(f, input_shape=5), "fwd")
+    colored_pattern = color_jacobian_pattern(
+        jacobian_sparsity(f, input_shape=5), "column"
+    )
 
     result = jacobian(f, colored_pattern)(x).todense()
     expected = jax.jacobian(f)(x)
@@ -393,7 +395,7 @@ def test_auto_picks_column_for_tall():
 
     # Auto should give same result as explicit column
     result_auto = jacobian(f)(x).todense()
-    result_col = jacobian(f, color_jacobian_pattern(sparsity, "fwd"))(x).todense()
+    result_col = jacobian(f, color_jacobian_pattern(sparsity, "column"))(x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result_auto, expected, rtol=1e-5)
@@ -417,7 +419,7 @@ def test_auto_picks_row_for_wide():
 
     # Auto and row should give same result
     result_auto = jacobian(f)(x).todense()
-    result_row = jacobian(f, color_jacobian_pattern(sparsity, "rev"))(x).todense()
+    result_row = jacobian(f, color_jacobian_pattern(sparsity, "row"))(x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result_auto, expected, rtol=1e-5)
@@ -660,7 +662,105 @@ def test_hessian_hvp_modes(mode):
         return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
 
     x = np.array([1.0, 2.0, 0.5, -1.0])
-    result = hessian(f, mode=mode)(x).todense()
+    result = hessian(f, ad_mode=mode)(x).todense()
+    expected = jax.hessian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+# Jacobian mode tests
+
+
+@pytest.mark.jacobian
+@pytest.mark.parametrize("ad_mode", ["fwd", "rev"])
+def test_jacobian_ad_mode(ad_mode):
+    """jacobian(f, ad_mode=...) forces the specified AD mode."""
+
+    def f(x):
+        return (x[1:] - x[:-1]) ** 2
+
+    x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
+    result = jacobian(f, ad_mode=ad_mode)(x).todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.jacobian
+def test_jacobian_coloring_mode_ignored_with_colored_pattern():
+    """coloring_mode parameter is ignored when colored_pattern is provided."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0])
+    colored_pattern = color_jacobian_pattern(
+        jacobian_sparsity(f, input_shape=3), "column"
+    )
+
+    # coloring_mode="row" should be ignored since colored_pattern is provided
+    result = jacobian(f, colored_pattern, coloring_mode="row")(x).todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+# Symmetric coloring for Jacobian tests
+
+
+@pytest.mark.jacobian
+def test_jacobian_symmetric_coloring():
+    """Jacobian with coloring_mode="symmetric" works on a symmetric Jacobian."""
+
+    def f(x):
+        return jax.grad(lambda y: jnp.sum(y**3))(x)
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    result = jacobian(f, coloring_mode="symmetric")(x).todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.jacobian
+def test_jacobian_symmetric_coloring_rev():
+    """Jacobian with coloring_mode="symmetric" and ad_mode="rev" works."""
+
+    def f(x):
+        return jax.grad(lambda y: jnp.sum(y**3))(x)
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    result = jacobian(f, coloring_mode="symmetric", ad_mode="rev")(x).todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.jacobian
+def test_jacobian_incompatible_modes_raises():
+    """Jacobian with incompatible coloring_mode and ad_mode raises ValueError."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match="Row coloring is only compatible"):
+        jacobian(f, coloring_mode="row", ad_mode="fwd")(x)
+
+
+# Hessian coloring mode tests
+
+
+@pytest.mark.hessian
+@pytest.mark.parametrize("coloring_mode", ["row", "column"])
+def test_hessian_row_column_coloring(coloring_mode):
+    """Hessian with coloring_mode="row" or "column" works."""
+
+    def f(x):
+        return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
+
+    x = np.array([1.0, 2.0, 0.5, -1.0])
+    result = hessian(f, coloring_mode=coloring_mode)(x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)

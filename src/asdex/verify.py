@@ -9,8 +9,9 @@ import numpy as np
 from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike
 
-from asdex.coloring import JacobianMode, hessian_coloring, jacobian_coloring
-from asdex.decompression import HessianMode, hessian, jacobian
+from asdex.coloring import hessian_coloring, jacobian_coloring
+from asdex.decompression import hessian, jacobian
+from asdex.modes import HessianMode, JacobianMode
 from asdex.pattern import ColoredPattern
 
 
@@ -32,7 +33,7 @@ def check_jacobian_correctness(
     *,
     colored_pattern: ColoredPattern | None = None,
     method: Literal["matvec", "dense"] = "matvec",
-    mode: JacobianMode | None = None,
+    ad_mode: JacobianMode = "auto",
     num_probes: int = 25,
     seed: int = 0,
     rtol: float | None = None,
@@ -50,12 +51,11 @@ def check_jacobian_correctness(
             which is O(k) in the number of probes.
             ``"dense"`` materializes the full dense Jacobian,
             which is O(n^2).
-        mode: AD mode for the reference computation.
+        ad_mode: AD mode for the reference computation.
             ``"fwd"`` uses ``jax.jacfwd`` / ``jax.jvp``.
             ``"rev"`` uses ``jax.jacrev`` / ``jax.vjp``.
-            If None (default),
-            picks ``"fwd"`` when m >= n and ``"rev"`` when m < n,
-            where m and n are the output and input sizes.
+            ``"auto"`` picks ``"fwd"`` when m >= n
+            and ``"rev"`` when m < n.
         num_probes: Number of random probe vectors (only used by ``"matvec"``).
         seed: PRNG seed for reproducibility (only used by ``"matvec"``).
         rtol: Relative tolerance for comparison.
@@ -68,23 +68,25 @@ def check_jacobian_correctness(
     """
     if method not in ("matvec", "dense"):
         raise ValueError(f"Unknown method {method!r}. Expected 'matvec' or 'dense'.")
-    if mode is not None and mode not in ("fwd", "rev"):
-        raise ValueError(f"Unknown mode {mode!r}. Expected 'fwd' or 'rev'.")
+    if ad_mode not in ("fwd", "rev", "auto"):
+        raise ValueError(
+            f"Unknown ad_mode {ad_mode!r}. Expected 'fwd', 'rev', or 'auto'."
+        )
 
     x = jnp.asarray(x)
 
     if colored_pattern is None:
         colored_pattern = jacobian_coloring(f, input_shape=x.shape)
 
-    if mode is None:
+    if ad_mode == "auto":
         m = colored_pattern.sparsity.m
         n = colored_pattern.sparsity.n
-        mode = "fwd" if m >= n else "rev"
+        ad_mode = "fwd" if m >= n else "rev"
 
     J_sparse = jacobian(f, colored_pattern)(x)
 
     if method == "dense":
-        jac_fn = jax.jacfwd if mode == "fwd" else jax.jacrev
+        jac_fn = jax.jacfwd if ad_mode == "fwd" else jax.jacrev
         J_dense = jac_fn(f)(x)
         _check_allclose(J_sparse.todense(), J_dense, "Jacobian", rtol=rtol, atol=atol)
     else:
@@ -92,7 +94,7 @@ def check_jacobian_correctness(
             f,
             x,
             J_sparse,
-            mode=mode,
+            ad_mode=ad_mode,
             num_probes=num_probes,
             seed=seed,
             rtol=rtol,
@@ -106,7 +108,7 @@ def check_hessian_correctness(
     *,
     colored_pattern: ColoredPattern | None = None,
     method: Literal["matvec", "dense"] = "matvec",
-    mode: HessianMode = "fwd_over_rev",
+    ad_mode: HessianMode = "auto",
     num_probes: int = 25,
     seed: int = 0,
     rtol: float | None = None,
@@ -124,10 +126,11 @@ def check_hessian_correctness(
             which is O(k) in the number of probes.
             ``"dense"`` materializes the full dense Hessian,
             which is O(n^2).
-        mode: AD mode for the reference computation.
-            ``"fwd_over_rev"`` (default) uses forward-over-reverse,
+        ad_mode: AD mode for the reference computation.
+            ``"fwd_over_rev"`` uses forward-over-reverse,
             ``"rev_over_fwd"`` uses reverse-over-forward,
-            and ``"rev_over_rev"`` uses reverse-over-reverse.
+            ``"rev_over_rev"`` uses reverse-over-reverse,
+            ``"auto"`` defaults to ``"fwd_over_rev"``.
         num_probes: Number of random probe vectors (only used by ``"matvec"``).
         seed: PRNG seed for reproducibility (only used by ``"matvec"``).
         rtol: Relative tolerance for comparison.
@@ -140,10 +143,10 @@ def check_hessian_correctness(
     """
     if method not in ("matvec", "dense"):
         raise ValueError(f"Unknown method {method!r}. Expected 'matvec' or 'dense'.")
-    if mode not in ("fwd_over_rev", "rev_over_fwd", "rev_over_rev"):
+    if ad_mode not in ("fwd_over_rev", "rev_over_fwd", "rev_over_rev", "auto"):
         raise ValueError(
-            f"Unknown mode {mode!r}. "
-            'Expected "fwd_over_rev", "rev_over_fwd", or "rev_over_rev".'
+            f"Unknown ad_mode {ad_mode!r}. "
+            'Expected "fwd_over_rev", "rev_over_fwd", "rev_over_rev", or "auto".'
         )
 
     x = jnp.asarray(x)
@@ -151,17 +154,20 @@ def check_hessian_correctness(
     if colored_pattern is None:
         colored_pattern = hessian_coloring(f, input_shape=x.shape)
 
+    if ad_mode == "auto":
+        ad_mode = "fwd_over_rev"
+
     H_sparse = hessian(f, colored_pattern)(x)
 
     if method == "dense":
-        H_dense = _dense_hessian(f, x, mode)
+        H_dense = _dense_hessian(f, x, ad_mode)
         _check_allclose(H_sparse.todense(), H_dense, "Hessian", rtol=rtol, atol=atol)
     else:
         _check_hessian_matvec(
             f,
             x,
             H_sparse,
-            mode=mode,
+            ad_mode=ad_mode,
             num_probes=num_probes,
             seed=seed,
             rtol=rtol,
@@ -175,17 +181,17 @@ def check_hessian_correctness(
 def _dense_hessian(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
-    mode: HessianMode,
+    ad_mode: HessianMode,
 ) -> jax.Array:
     """Compute a dense Hessian using the specified AD composition."""
-    if mode == "fwd_over_rev":
+    if ad_mode == "fwd_over_rev":
         return jax.jacfwd(jax.grad(f))(x)
-    if mode == "rev_over_fwd":
+    if ad_mode == "rev_over_fwd":
         return jax.jacrev(jax.jacfwd(f))(x)
-    if mode == "rev_over_rev":
+    if ad_mode == "rev_over_rev":
         return jax.jacrev(jax.grad(f))(x)
     raise ValueError(
-        f"Unknown mode {mode!r}. "
+        f"Unknown ad_mode {ad_mode!r}. "
         'Expected "fwd_over_rev", "rev_over_fwd", or "rev_over_rev".'
     )
 
@@ -195,7 +201,7 @@ def _check_jacobian_matvec(
     x: jax.Array,
     J_sparse: BCOO,
     *,
-    mode: JacobianMode,
+    ad_mode: JacobianMode,
     num_probes: int,
     seed: int,
     rtol: float | None = None,
@@ -212,7 +218,7 @@ def _check_jacobian_matvec(
     n = x.size
 
     for i in range(num_probes):
-        if mode == "fwd":
+        if ad_mode == "fwd":
             v = jax.random.normal(keys[i], shape=(n,))
             sparse_result = (J_sparse @ v).ravel()
             _, ref_result = jax.jvp(f, (x,), (v.reshape(x.shape),))
@@ -240,7 +246,7 @@ def _check_hessian_matvec(
     x: jax.Array,
     H_sparse: BCOO,
     *,
-    mode: HessianMode,
+    ad_mode: HessianMode,
     num_probes: int,
     seed: int,
     rtol: float | None = None,
@@ -253,19 +259,19 @@ def _check_hessian_matvec(
     key = jax.random.key(seed)
     keys = jax.random.split(key, num_probes)
 
-    if mode == "fwd_over_rev":
+    if ad_mode == "fwd_over_rev":
 
         def hvp(v: jax.Array) -> jax.Array:
             _, result = jax.jvp(jax.grad(f), (x,), (v.reshape(x.shape),))
             return jnp.asarray(result).ravel()
 
-    elif mode == "rev_over_fwd":
+    elif ad_mode == "rev_over_fwd":
 
         def hvp(v: jax.Array) -> jax.Array:
             result = jax.grad(lambda p: jax.jvp(f, (p,), (v.reshape(x.shape),))[1])(x)
             return jnp.asarray(result).ravel()
 
-    elif mode == "rev_over_rev":
+    elif ad_mode == "rev_over_rev":
 
         def hvp(v: jax.Array) -> jax.Array:
             result = jax.grad(lambda y: jnp.vdot(jax.grad(f)(y), v.reshape(x.shape)))(x)
@@ -273,7 +279,7 @@ def _check_hessian_matvec(
 
     else:
         raise ValueError(
-            f"Unknown mode {mode!r}. "
+            f"Unknown ad_mode {ad_mode!r}. "
             'Expected "fwd_over_rev", "rev_over_fwd", or "rev_over_rev".'
         )
 

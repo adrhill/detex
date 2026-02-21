@@ -9,12 +9,12 @@ import pytest
 from asdex import (
     color_hessian_pattern,
     color_jacobian_pattern,
-    color_rows,
     hessian,
     hessian_sparsity,
     jacobian,
     jacobian_sparsity,
 )
+from asdex.coloring import color_rows
 
 N = 200  # Problem size for benchmarks
 
@@ -176,7 +176,7 @@ def test_heat_materialization(benchmark):
     """Heat equation: VJP computation (with known sparsity/colors)."""
     x = np.ones(N)
     colored_pattern = color_jacobian_pattern(
-        jacobian_sparsity(heat_equation_rhs, N), "rev"
+        jacobian_sparsity(heat_equation_rhs, N), "row"
     )
     jac_fn = jacobian(heat_equation_rhs, colored_pattern)
     benchmark(jac_fn, x)
@@ -214,7 +214,7 @@ def test_convnet_coloring(benchmark):
 def test_convnet_materialization(benchmark):
     """ConvNet: VJP computation (with known sparsity/colors)."""
     x = np.ones(N)
-    colored_pattern = color_jacobian_pattern(jacobian_sparsity(convnet, N), "rev")
+    colored_pattern = color_jacobian_pattern(jacobian_sparsity(convnet, N), "row")
     jac_fn = jacobian(convnet, colored_pattern)
     benchmark(jac_fn, x)
 
