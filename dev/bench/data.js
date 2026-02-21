@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771684487749,
+  "lastUpdate": 1771692883994,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -6886,6 +6886,142 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0285564851875041",
             "extra": "mean: 127.07979774999778 msec\nrounds: 8"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "047a2b185b2f53e55b204f7a1937b48a228371ec",
+          "message": "feat(verify): add randomized matrix-vector product verification (#62)\n\n* feat(verify): add randomized matvec verification and AD mode selection\n\nReplace the O(n²) dense-only verification with a cheap O(k) randomized\nmatvec default path. Both `check_jacobian_correctness` and\n`check_hessian_correctness` gain `method`, `ad_mode`, `num_probes`, and\n`seed` parameters.\n\n- `method=\"matvec\"` (default) checks via randomized matrix-vector\n  products against `jax.jvp` / HVP references\n- `method=\"dense\"` preserves the original full-matrix comparison\n- `ad_mode` controls the reference AD mode for both paths:\n  Jacobian accepts \"forward\" / \"reverse\",\n  Hessian accepts \"fwd_over_rev\" / \"rev_over_fwd\" / \"rev_over_rev\"\n- Tolerances default to 1e-5 (matvec) or 1e-7 (dense)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* feat(verify): auto-select forward/reverse based on Jacobian shape\n\nWhen `ad_mode` is not specified, pick the mode that maximizes\ndetection power per probe: forward (JVP) when m >= n,\nreverse (VJP) when m < n.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: update verification how-to guides for new API\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-21T17:54:05+01:00",
+          "tree_id": "644803c127208018560db850614293401d23b5dc",
+          "url": "https://github.com/adrhill/asdex/commit/047a2b185b2f53e55b204f7a1937b48a228371ec"
+        },
+        "date": 1771692883596,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 858.2120155152836,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00284591083532933",
+            "extra": "mean: 1.1652132362649161 msec\nrounds: 182"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3342.9018981078243,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000008635629963343361",
+            "extra": "mean: 299.14129414507437 usec\nrounds: 2152"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 58.330897532256415,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004313517798775312",
+            "extra": "mean: 17.143573000004153 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 80.46179405274155,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020676027131089758",
+            "extra": "mean: 12.428258800002823 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 23.51532895109647,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005572506799835429",
+            "extra": "mean: 42.52545231579132 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 249.30826799805723,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002790900360007633",
+            "extra": "mean: 4.011098420561779 msec\nrounds: 214"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 30.098099457922675,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005043319718440923",
+            "extra": "mean: 33.22468919999437 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 11.497921265517627,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010883339343599088",
+            "extra": "mean: 86.97224280001024 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 123.21532828263939,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001670011528503709",
+            "extra": "mean: 8.115873357137307 msec\nrounds: 14"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3361.375335158679,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000012717556775682645",
+            "extra": "mean: 297.4972742675859 usec\nrounds: 2184"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 25.35023350252607,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005257201125525064",
+            "extra": "mean: 39.447368399993366 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 19.097500883274197,
+            "unit": "iter/sec",
+            "range": "stddev: 0.014398258752199822",
+            "extra": "mean: 52.36287229999874 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_detection",
+            "value": 28.451730312964294,
+            "unit": "iter/sec",
+            "range": "stddev: 0.026505638035503324",
+            "extra": "mean: 35.14724724999733 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_coloring",
+            "value": 616.7694732988044,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000026757114173097193",
+            "extra": "mean: 1.6213513205371193 msec\nrounds: 521"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_materialization",
+            "value": 11.824401190921979,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00100947603123344",
+            "extra": "mean: 84.57087879999676 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
+            "value": 7.74928340439006,
+            "unit": "iter/sec",
+            "range": "stddev: 0.027870070656709094",
+            "extra": "mean: 129.04419000000544 msec\nrounds: 8"
           }
         ]
       }
