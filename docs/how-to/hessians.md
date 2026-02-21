@@ -13,7 +13,7 @@ using symmetric coloring and forward-over-reverse AD.
 
 ## Basic Usage
 
-The simplest way to compute a sparse Hessian is to pass `input_shape`:
+Pass your scalar-valued function and its `input_shape` to [`hessian`](../reference/index.md#asdex.hessian):
 
 ```python
 from asdex import hessian
@@ -22,8 +22,8 @@ hess_fn = hessian(f, input_shape=100)
 H = hess_fn(x)
 ```
 
-This detects sparsity and colors the pattern symmetrically once at definition time,
-then each call to `hess_fn` only performs the cheap decompression step.
+This runs the computationally expensive sparsity detection and coloring steps when defining `hess_fn`.
+Subsequent calls to `hess_fn` only need to perform the cheap decompression step.
 The result is a JAX [BCOO](https://docs.jax.dev/en/latest/jax.experimental.sparse.html) sparse matrix.
 
 The same function can be reused across evaluations at different inputs:
@@ -33,24 +33,39 @@ for x in inputs:
     H = hess_fn(x)
 ```
 
+`asdex` supports multi-dimensional input arrays.
+The Hessian is always returned as a 2D matrix
+of shape \((n, n)\) where \(n\) is the total number of input elements.
+
 ## Precomputing the Colored Pattern
 
 For more control,
-precompute the colored pattern explicitly and pass it to `hessian`:
+precompute the coloring explicitly:
 
-```python
+```python exec="true" session="hess-precompute" source="above"
+import jax.numpy as jnp
 from asdex import hessian_coloring, hessian_from_coloring
 
+def g(x):
+    return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
+
 coloring = hessian_coloring(g, input_shape=100)
+```
+
+```python exec="true" session="hess-precompute"
+print(f"```\n{coloring}\n```")
+```
+
+This is useful when you want to visually inspect the coloring for correctness,
+or save it to disk to avoid recomputation.
+Pass the coloring to [`hessian_from_coloring`](../reference/index.md#asdex.hessian_from_coloring) to compute the Hessian:
+
+```python
 hess_fn = hessian_from_coloring(g, coloring)
 
 for x in inputs:
     H = hess_fn(x)
 ```
-
-This is useful when you want to inspect the colored pattern,
-save it to disk,
-or use a specific coloring mode.
 
 !!! tip
 
@@ -62,15 +77,17 @@ or use a specific coloring mode.
 
 ## Saving and Loading Patterns
 
-Save a colored pattern to disk and reload it in a later session:
+Save a coloring to disk and reload it in a later session:
 
 ```python
+from asdex import hessian_coloring
+
 coloring = hessian_coloring(g, input_shape=100)
 coloring.save("colored.npz")
 ```
 
 ```python
-from asdex import ColoredPattern
+from asdex import ColoredPattern, hessian_from_coloring
 
 coloring = ColoredPattern.load("colored.npz")
 hess_fn = hessian_from_coloring(g, coloring)
@@ -86,7 +103,7 @@ and `asdex` exploits this with *star coloring*
 Symmetric coloring typically needs fewer colors than row or column coloring,
 since both \(H_{ij}\) and \(H_{ji}\) can be recovered from a single coloring.
 
-The convenience functions `hessian_coloring` and `hessian` use symmetric coloring automatically.
+The convenience functions [`hessian_coloring`](../reference/index.md#asdex.hessian_coloring) and [`hessian`](../reference/index.md#asdex.hessian) use symmetric coloring automatically.
 Here we use the [Rosenbrock function](https://en.wikipedia.org/wiki/Rosenbrock_function),
 a classic optimization benchmark whose Hessian is tridiagonal:
 
@@ -108,7 +125,7 @@ print(f"```\n{coloring}\n```")
 
 ## Separate Detection and Coloring
 
-For more control, you can split detection and coloring:
+For even more control, you can split detection and coloring:
 
 ```python
 from asdex import hessian_sparsity, color_hessian_pattern
@@ -117,12 +134,11 @@ sparsity = hessian_sparsity(g, input_shape=100)
 coloring = color_hessian_pattern(sparsity)
 ```
 
-This is useful when you want to inspect the sparsity pattern (`print(sparsity)`)
-before deciding on a coloring strategy.
-
 Since the Hessian is the Jacobian of the gradient,
 `hessian_sparsity` simply calls `jacobian_sparsity(jax.grad(f), input_shape)`.
 The [sparsity interpreter](../explanation/sparsity-detection.md) composes naturally with JAX's autodiff transforms.
+
+This is useful when you want to manually provide a sparsity pattern.
 
 ## Manually Providing a Sparsity Pattern
 
@@ -201,31 +217,10 @@ They differ in how JAX's AD primitives are composed:
     When in doubt, stick with the default `"fwd_over_rev"`.
     It is the most widely used and typically the most efficient under `jax.jit`.
 
-## Multi-Dimensional Inputs
-
-`asdex` supports multi-dimensional input arrays.
-The Hessian is always returned as a 2D matrix
-of shape \((n, n)\) where \(n\) is the total number of input elements:
-
-```python exec="true" session="hess-multi" source="above"
-import jax.numpy as jnp
-from asdex import hessian_coloring
-
-def g(x):
-    # x has shape (5, 20)
-    return jnp.sum(x ** 3)
-
-coloring = hessian_coloring(g, input_shape=(5, 20))
-```
-
-```python exec="true" session="hess-multi"
-print(f"```\n{coloring}\n```")
-```
-
 ## Verifying Results
 
 Use [`check_hessian_correctness`][asdex.check_hessian_correctness]
-to verify the sparse Hessian against vanilla JAX.
+to verify `asdex`'s sparse Hessian against vanilla JAX.
 
 ```python
 from asdex import check_hessian_correctness
@@ -242,7 +237,7 @@ This is cheap — O(k) in the number of probes — and scales to large problems.
 If the results match, the function returns silently.
 If they disagree, it raises a [`VerificationError`][asdex.VerificationError].
 
-You can also pass a pre-computed colored pattern, control the AD mode used for the reference computation,
+You can also pass a pre-computed coloring, control the AD mode used for the reference computation,
 set custom tolerances, the number of probes, and the PRNG seed:
 
 ```python

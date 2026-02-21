@@ -76,7 +76,7 @@ Instead of 2048 JVPs or VJPs,
 
 ## Computing the Jacobian
 
-With the colored pattern precomputed,
+With the coloring precomputed,
 evaluate the sparse Jacobian at any state:
 
 ```python exec="true" session="bruss" source="above"

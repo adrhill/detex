@@ -27,6 +27,7 @@ which has a banded Jacobian.
 Detect the sparsity pattern and color it in one step:
 
 ```python exec="true" session="gs" source="above"
+import jax.numpy as jnp
 from asdex import jacobian_coloring
 
 def f(x):
@@ -61,10 +62,9 @@ as the decompression overhead dominates.
     and are one of the most impactful ways to contribute.
 
 
-Now we can compute the sparse Jacobian using the colored pattern:
+Now we can compute the sparse Jacobian using the coloring:
 
 ```python exec="true" session="gs" source="above"
-import jax.numpy as jnp
 from asdex import jacobian_from_coloring
 
 jac_fn = jacobian_from_coloring(f, coloring)
@@ -92,7 +92,7 @@ see [Verifying Results](../how-to/jacobians.md#verifying-results).
 On larger problems, the speedup from coloring becomes significant.
 Let's benchmark on a 5000-dimensional input
 (note that timings may vary as part of the doc-building process).
-This time, we use `asdex.jacobian`, which calls `jacobian_coloring` and `jacobian_from_coloring`:
+This time, we use [`asdex.jacobian`](../reference/index.md#asdex.jacobian), which calls [`jacobian_coloring`](../reference/index.md#asdex.jacobian_coloring) and [`jacobian_from_coloring`](../reference/index.md#asdex.jacobian_from_coloring):
 
 ```python exec="true" session="gs" source="above"
 import asdex
@@ -124,10 +124,10 @@ print("```\n" + "\n".join(lines) + "\n```")
 
 !!! tip "Precompute for Repeated Evaluations"
 
-    The colored pattern depends only on the function structure,
+    The coloring depends only on the function structure,
     not the input values.
     When computing Jacobians at many different inputs,
-    precompute the colored pattern once and reuse it:
+    precompute the coloring once and reuse it:
 
     ```python
     jac_fn = jacobian(f, input_shape=5000)

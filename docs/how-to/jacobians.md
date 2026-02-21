@@ -13,7 +13,7 @@ using [row or column coloring](../explanation/coloring.md) with forward- or reve
 
 ## Basic Usage
 
-The simplest way to compute a sparse Jacobian is to pass `input_shape`:
+Pass your function and its `input_shape` to [`jacobian`](../reference/index.md#asdex.jacobian):
 
 ```python
 from asdex import jacobian
@@ -22,8 +22,8 @@ jac_fn = jacobian(f, input_shape=1000)
 J = jac_fn(x)
 ```
 
-This detects sparsity and colors the pattern once at definition time,
-then each call to `jac_fn` only performs the cheap decompression step.
+This runs the computationally expensive sparsity detection and coloring steps when defining `jac_fn`.
+Subsequent calls to `jac_fn` only need to perform the cheap decompression step.
 The result is a JAX [BCOO](https://docs.jax.dev/en/latest/jax.experimental.sparse.html) sparse matrix.
 
 The same function can be reused across evaluations at different inputs:
@@ -33,24 +33,39 @@ for x in inputs:
     J = jac_fn(x)
 ```
 
+`asdex` supports multi-dimensional input and output arrays.
+The Jacobian is always returned as a 2D matrix
+of shape \((m, n)\) where \(n\) is the total number of input elements
+and \(m\) is the total number of output elements
+
 ## Precomputing the Colored Pattern
 
 For more control,
-precompute the colored pattern explicitly and pass it to `jacobian`:
+precompute the coloring explicitly:
 
-```python
+```python exec="true" session="jac-precompute" source="above"
 from asdex import jacobian_coloring, jacobian_from_coloring
 
-coloring = jacobian_coloring(f, input_shape=1000)
+def f(x):
+    return (x[1:] - x[:-1]) ** 2
+
+coloring = jacobian_coloring(f, input_shape=100)
+```
+
+```python exec="true" session="jac-precompute"
+print(f"```\n{coloring}\n```")
+```
+
+This is useful when you want to visually inspect the coloring for correctness,
+or save it to disk to avoid recomputation.
+Pass the coloring to [`jacobian_from_coloring`](../reference/index.md#asdex.jacobian_from_coloring) to compute the Jacobian:
+
+```python
 jac_fn = jacobian_from_coloring(f, coloring)
 
 for x in inputs:
     J = jac_fn(x)
 ```
-
-This is useful when you want to inspect the colored pattern,
-save it to disk,
-or use a specific coloring mode.
 
 !!! tip
 
@@ -62,15 +77,17 @@ or use a specific coloring mode.
 
 ## Saving and Loading Patterns
 
-Save a colored pattern to disk and reload it in a later session:
+Save a coloring to disk and reload it in a later session:
 
 ```python
+from asdex import jacobian_coloring
+
 coloring = jacobian_coloring(f, input_shape=1000)
 coloring.save("colored.npz")
 ```
 
 ```python
-from asdex import ColoredPattern
+from asdex import ColoredPattern, jacobian_from_coloring
 
 coloring = ColoredPattern.load("colored.npz")
 jac_fn = jacobian_from_coloring(f, coloring)
@@ -113,12 +130,18 @@ coloring = jacobian_coloring(f, input_shape=100, mode="rev")
 print(f"```\n{coloring}\n```")
 ```
 
+The one-call [`jacobian`](../reference/index.md#asdex.jacobian) API accepts the same `mode` parameter:
+
+```python
+jac_fn = jacobian(f, input_shape=100, mode="rev")
+```
+
 When the number of colors is equal,
-`asdex` prefers column coloring since JVPs are generally cheaper in JAX.
+`asdex` prefers column coloring since JVPs are generally cheaper to compute in JAX.
 
 ## Separate Detection and Coloring
 
-For more control, you can split detection and coloring:
+For even more control, you can split detection and coloring:
 
 ```python
 from asdex import jacobian_sparsity, color_jacobian_pattern
@@ -127,8 +150,7 @@ sparsity = jacobian_sparsity(f, input_shape=1000)
 coloring = color_jacobian_pattern(sparsity, mode="fwd")
 ```
 
-This is useful when you want to inspect the sparsity pattern (`print(sparsity)`)
-before deciding on a coloring strategy.
+This is useful when you want to manually provide a sparsity pattern.
 
 ## Manually Providing a Sparsity Pattern
 
@@ -177,31 +199,10 @@ jac_fn = jacobian_from_coloring(f, coloring)
 J = jac_fn(x)
 ```
 
-## Multi-Dimensional Inputs
-
-`asdex` supports multi-dimensional input and output arrays.
-The Jacobian is always returned as a 2D matrix
-of shape \((m, n)\) where \(n\) is the total number of input elements
-and \(m\) is the total number of output elements:
-
-```python exec="true" session="jac-multi" source="above"
-from asdex import jacobian_coloring
-
-def f(x):
-    # x has shape (10, 10), output has shape (9, 10)
-    return x[1:, :] - x[:-1, :]
-
-coloring = jacobian_coloring(f, input_shape=(10, 10))
-```
-
-```python exec="true" session="jac-multi"
-print(f"```\n{coloring}\n```")
-```
-
 ## Verifying Results
 
 Use [`check_jacobian_correctness`][asdex.check_jacobian_correctness]
-to verify the sparse Jacobian against vanilla JAX.
+to verify `asdex`'s sparse Jacobian against vanilla JAX.
 
 ```python
 from asdex import check_jacobian_correctness
@@ -219,7 +220,7 @@ This is cheap — O(k) in the number of probes — and scales to large problems.
 If the results match, the function returns silently.
 If they disagree, it raises a [`VerificationError`][asdex.VerificationError].
 
-You can also pass a pre-computed colored pattern, control the AD mode used for the reference computation, 
+You can also pass a pre-computed coloring, control the AD mode used for the reference computation, 
 set custom tolerances, the number of probes, and the PRNG seed:
 
 ```python
