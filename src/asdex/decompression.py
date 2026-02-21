@@ -16,7 +16,7 @@ from asdex.pattern import ColoredPattern
 
 def jacobian(
     f: Callable[[ArrayLike], ArrayLike],
-    colored_pattern: ColoredPattern,
+    coloring: ColoredPattern,
 ) -> Callable[[ArrayLike], BCOO]:
     """Build a sparse Jacobian function using coloring and AD.
 
@@ -26,7 +26,7 @@ def jacobian(
     Args:
         f: Function taking an array and returning an array.
             Input and output may be multi-dimensional.
-        colored_pattern: Pre-computed [`ColoredPattern`][asdex.ColoredPattern]
+        coloring: Pre-computed [`ColoredPattern`][asdex.ColoredPattern]
             from [`jacobian_coloring`][asdex.jacobian_coloring].
 
     Returns:
@@ -36,14 +36,14 @@ def jacobian(
     """
 
     def jac_fn(x: ArrayLike) -> BCOO:
-        return _eval_jacobian(f, jnp.asarray(x), colored_pattern)
+        return _eval_jacobian(f, jnp.asarray(x), coloring)
 
     return jac_fn
 
 
 def hessian(
     f: Callable[[ArrayLike], ArrayLike],
-    colored_pattern: ColoredPattern,
+    coloring: ColoredPattern,
 ) -> Callable[[ArrayLike], BCOO]:
     """Build a sparse Hessian function using coloring and HVPs.
 
@@ -55,7 +55,7 @@ def hessian(
     Args:
         f: Scalar-valued function taking an array.
             Input may be multi-dimensional.
-        colored_pattern: Pre-computed [`ColoredPattern`][asdex.ColoredPattern]
+        coloring: Pre-computed [`ColoredPattern`][asdex.ColoredPattern]
             from [`hessian_coloring`][asdex.hessian_coloring].
 
     Returns:
@@ -65,7 +65,7 @@ def hessian(
     """
 
     def hess_fn(x: ArrayLike) -> BCOO:
-        return _eval_hessian(f, jnp.asarray(x), colored_pattern)
+        return _eval_hessian(f, jnp.asarray(x), coloring)
 
     return hess_fn
 
@@ -76,19 +76,19 @@ def hessian(
 def _eval_jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
-    colored_pattern: ColoredPattern,
+    coloring: ColoredPattern,
 ) -> BCOO:
     """Evaluate the sparse Jacobian of f at x."""
     n = x.size
 
-    expected = colored_pattern.sparsity.input_shape
+    expected = coloring.sparsity.input_shape
     if x.shape != expected:
         raise ValueError(
             f"Input shape {x.shape} does not match the colored pattern, "
             f"which expects shape {expected}."
         )
 
-    sparsity = colored_pattern.sparsity
+    sparsity = coloring.sparsity
     m = sparsity.m
     out_shape = jax.eval_shape(f, jnp.zeros_like(x)).shape
 
@@ -100,11 +100,11 @@ def _eval_jacobian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
-    match colored_pattern.mode:
+    match coloring.mode:
         case "rev":
-            return _jacobian_rows(f, x, colored_pattern, out_shape)
+            return _jacobian_rows(f, x, coloring, out_shape)
         case "fwd":
-            return _jacobian_cols(f, x, colored_pattern)
+            return _jacobian_cols(f, x, coloring)
         case _ as unreachable:
             assert_never(unreachable)  # type: ignore[type-assertion-failure]
 
@@ -112,7 +112,7 @@ def _eval_jacobian(
 def _eval_hessian(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
-    colored_pattern: ColoredPattern,
+    coloring: ColoredPattern,
 ) -> BCOO:
     """Evaluate the sparse Hessian of f at x.
 
@@ -122,21 +122,21 @@ def _eval_hessian(
     f = _ensure_scalar(f, x.shape)
     n = x.size
 
-    expected = colored_pattern.sparsity.input_shape
+    expected = coloring.sparsity.input_shape
     if x.shape != expected:
         raise ValueError(
             f"Input shape {x.shape} does not match the colored pattern, "
             f"which expects shape {expected}."
         )
 
-    sparsity = colored_pattern.sparsity
+    sparsity = coloring.sparsity
 
     # Handle edge case: all-zero Hessian
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n))
 
-    grads = _compute_hvps(f, x, colored_pattern)
-    return _decompress(colored_pattern, grads)
+    grads = _compute_hvps(f, x, coloring)
+    return _decompress(coloring, grads)
 
 
 # Private helpers: Jacobian
@@ -145,33 +145,33 @@ def _eval_hessian(
 def _jacobian_rows(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
-    colored_pattern: ColoredPattern,
+    coloring: ColoredPattern,
     out_shape: tuple[int, ...],
 ) -> BCOO:
     """Compute sparse Jacobian via row coloring + VJPs."""
-    seeds = jnp.asarray(colored_pattern._seed_matrix, dtype=x.dtype)
+    seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
     _, vjp_fn = jax.vjp(f, x)
 
     def single_vjp(seed: jax.Array) -> jax.Array:
         (grad,) = vjp_fn(seed.reshape(out_shape))
         return grad.ravel()
 
-    return _decompress(colored_pattern, jax.vmap(single_vjp)(seeds))
+    return _decompress(coloring, jax.vmap(single_vjp)(seeds))
 
 
 def _jacobian_cols(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
-    colored_pattern: ColoredPattern,
+    coloring: ColoredPattern,
 ) -> BCOO:
     """Compute sparse Jacobian via column coloring + JVPs."""
-    seeds = jnp.asarray(colored_pattern._seed_matrix, dtype=x.dtype)
+    seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
 
     def single_jvp(seed: jax.Array) -> jax.Array:
         _, jvp_out = jax.jvp(f, (x,), (seed.reshape(x.shape),))
         return jvp_out.ravel()
 
-    return _decompress(colored_pattern, jax.vmap(single_jvp)(seeds))
+    return _decompress(coloring, jax.vmap(single_jvp)(seeds))
 
 
 # Private helpers: Hessian
@@ -180,12 +180,12 @@ def _jacobian_cols(
 def _compute_hvps(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
-    colored_pattern: ColoredPattern,
+    coloring: ColoredPattern,
 ) -> jax.Array:
     """Compute one HVP per color using pre-computed seed matrix."""
-    seeds = jnp.asarray(colored_pattern._seed_matrix, dtype=x.dtype)
+    seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
 
-    match colored_pattern.mode:
+    match coloring.mode:
         case "fwd_over_rev":
 
             def single_hvp(v: jax.Array) -> jax.Array:
@@ -215,7 +215,7 @@ def _compute_hvps(
 # Private helpers: decompression
 
 
-def _decompress(colored_pattern: ColoredPattern, compressed: jax.Array) -> BCOO:
+def _decompress(coloring: ColoredPattern, compressed: jax.Array) -> BCOO:
     """Extract sparse entries from compressed gradient rows.
 
     Uses pre-computed extraction indices on the ``ColoredPattern``
@@ -223,13 +223,13 @@ def _decompress(colored_pattern: ColoredPattern, compressed: jax.Array) -> BCOO:
     (no Python loop over nnz entries).
 
     Args:
-        colored_pattern: Colored sparsity pattern with cached indices.
+        coloring: Colored sparsity pattern with cached indices.
         compressed: JAX array of shape (num_colors, vector_len),
             one row per color.
 
     Returns:
         Sparse matrix as BCOO in sparsity-pattern order.
     """
-    color_idx, elem_idx = colored_pattern._extraction_indices
+    color_idx, elem_idx = coloring._extraction_indices
     data = compressed[jnp.asarray(color_idx), jnp.asarray(elem_idx)]
-    return colored_pattern.sparsity.to_bcoo(data=data)
+    return coloring.sparsity.to_bcoo(data=data)

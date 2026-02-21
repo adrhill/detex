@@ -131,9 +131,9 @@ def test_precomputed_colors():
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
     sparsity = jacobian_sparsity(f, input_shape=5)
-    colored_pattern = color_jacobian_pattern(sparsity, mode="rev")
+    coloring = color_jacobian_pattern(sparsity, mode="rev")
 
-    result1 = jacobian(f, colored_pattern)(x).todense()
+    result1 = jacobian(f, coloring)(x).todense()
     result2 = jacobian(f, jacobian_coloring(f, x.shape))(x).todense()
     expected = jax.jacobian(f)(x)
 
@@ -370,11 +370,9 @@ def test_precomputed_col_colors():
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
-    colored_pattern = color_jacobian_pattern(
-        jacobian_sparsity(f, input_shape=5), mode="fwd"
-    )
+    coloring = color_jacobian_pattern(jacobian_sparsity(f, input_shape=5), mode="fwd")
 
-    result = jacobian(f, colored_pattern)(x).todense()
+    result = jacobian(f, coloring)(x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -436,9 +434,9 @@ def test_precomputed_auto_coloring():
         return x**2
 
     x = np.array([1.0, 2.0, 3.0])
-    colored_pattern = color_jacobian_pattern(jacobian_sparsity(f, input_shape=3))
+    coloring = color_jacobian_pattern(jacobian_sparsity(f, input_shape=3))
 
-    result = jacobian(f, colored_pattern)(x).todense()
+    result = jacobian(f, coloring)(x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -686,8 +684,8 @@ def test_jacobian_symmetric_coloring_rev():
         return jax.grad(lambda y: jnp.sum(y**3))(x)
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    cp = jacobian_coloring(f, x.shape, symmetric=True, mode="rev")
-    result = jacobian(f, cp)(x).todense()
+    coloring = jacobian_coloring(f, x.shape, symmetric=True, mode="rev")
+    result = jacobian(f, coloring)(x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)

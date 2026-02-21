@@ -41,8 +41,8 @@ precompute the colored pattern explicitly and pass it to `hessian`:
 ```python
 from asdex import hessian_coloring, hessian
 
-colored_pattern = hessian_coloring(g, input_shape=100)
-hess_fn = hessian(g, colored_pattern)
+coloring = hessian_coloring(g, input_shape=100)
+hess_fn = hessian(g, coloring)
 
 for x in inputs:
     H = hess_fn(x)
@@ -54,7 +54,7 @@ or use a specific coloring mode.
 
 !!! tip
 
-    If your `colored_pattern` looks wrong or overly dense,
+    If your `coloring` looks wrong or overly dense,
     please help out `asdex`'s development by
     [reporting it](https://github.com/adrhill/asdex/issues).
     These reports directly drive improvements
@@ -65,15 +65,15 @@ or use a specific coloring mode.
 Save a colored pattern to disk and reload it in a later session:
 
 ```python
-colored_pattern = hessian_coloring(g, input_shape=100)
-colored_pattern.save("colored.npz")
+coloring = hessian_coloring(g, input_shape=100)
+coloring.save("colored.npz")
 ```
 
 ```python
 from asdex import ColoredPattern
 
-colored_pattern = ColoredPattern.load("colored.npz")
-hess_fn = hessian(g, colored_pattern)
+coloring = ColoredPattern.load("colored.npz")
+hess_fn = hessian(g, coloring)
 ```
 
 [`SparsityPattern`](../reference/index.md#asdex.SparsityPattern) supports the same `save`/`load` interface.
@@ -99,11 +99,11 @@ from asdex import hessian_coloring
 def rosenbrock(x):
     return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
 
-colored_pattern = hessian_coloring(rosenbrock, input_shape=100)
+coloring = hessian_coloring(rosenbrock, input_shape=100)
 ```
 
 ```python exec="true" session="hess"
-print(f"```\n{colored_pattern}\n```")
+print(f"```\n{coloring}\n```")
 ```
 
 ## Separate Detection and Coloring
@@ -114,7 +114,7 @@ For more control, you can split detection and coloring:
 from asdex import hessian_sparsity, color_hessian_pattern
 
 sparsity = hessian_sparsity(g, input_shape=100)
-colored_pattern = color_hessian_pattern(sparsity)
+coloring = color_hessian_pattern(sparsity)
 ```
 
 This is useful when you want to inspect the sparsity pattern (`print(sparsity)`)
@@ -167,8 +167,8 @@ Finally, color the sparsity pattern and compute the Hessian:
 ```python
 from asdex import color_hessian_pattern, hessian
 
-colored_pattern = color_hessian_pattern(sparsity)
-hess_fn = hessian(f, colored_pattern)
+coloring = color_hessian_pattern(sparsity)
+hess_fn = hessian(f, coloring)
 H = hess_fn(x)
 ```
 
@@ -215,11 +215,11 @@ def g(x):
     # x has shape (5, 20)
     return jnp.sum(x ** 3)
 
-colored_pattern = hessian_coloring(g, input_shape=(5, 20))
+coloring = hessian_coloring(g, input_shape=(5, 20))
 ```
 
 ```python exec="true" session="hess-multi"
-print(f"```\n{colored_pattern}\n```")
+print(f"```\n{coloring}\n```")
 ```
 
 ## Verifying Results
@@ -246,7 +246,7 @@ You can also pass a pre-computed colored pattern, control the AD mode used for t
 set custom tolerances, the number of probes, and the PRNG seed:
 
 ```python
-check_hessian_correctness(g, x, colored_pattern=colored_pattern, ad_mode="rev_over_rev", rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
+check_hessian_correctness(g, x, coloring=coloring, ad_mode="rev_over_rev", rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
 ```
 
 The `ad_mode` parameter accepts the same values as the

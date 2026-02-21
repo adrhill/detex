@@ -968,34 +968,34 @@ def test_str_row_contains_downarrow():
     assert "●" in s
 
 
-# hessian with colored_pattern tests
+# hessian with coloring tests
 
 
 @pytest.mark.hessian
-def test_hessian_with_colored_pattern():
+def test_hessian_with_coloring():
     """Hessian works with a pre-computed ColoredPattern."""
 
     def f(x):
         return jnp.sum(x**2) + x[0] * x[1]
 
     x = np.array([1.0, 2.0, 3.0])
-    cp = hessian_coloring(f, x.shape)
-    result = hessian(f, cp)(x).todense()
+    coloring = hessian_coloring(f, x.shape)
+    result = hessian(f, coloring)(x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
 @pytest.mark.hessian
-def test_hessian_colored_pattern_zero_hessian():
-    """Hessian with colored_pattern handles all-zero Hessian (nnz=0)."""
+def test_hessian_coloring_zero_hessian():
+    """Hessian with coloring handles all-zero Hessian (nnz=0)."""
 
     def f(x):
         return jnp.sum(x)
 
     x = np.array([1.0, 2.0, 3.0])
-    cp = hessian_coloring(f, x.shape)
-    result = hessian(f, cp)(x)
+    coloring = hessian_coloring(f, x.shape)
+    result = hessian(f, coloring)(x)
 
     assert result.shape == (3, 3)
     assert_allclose(result.todense(), np.zeros((3, 3)))
@@ -1008,8 +1008,8 @@ def test_str_hvp_display():
     def f(x):
         return jnp.sum(x**2)
 
-    cp = hessian_coloring(f, (3,))
-    s = str(cp)
+    coloring = hessian_coloring(f, (3,))
+    s = str(coloring)
 
     assert "HVP" in s
     assert "instead of" in s
@@ -1017,14 +1017,14 @@ def test_str_hvp_display():
 
 
 @pytest.mark.coloring
-def test_repr_colored_pattern():
+def test_repr_coloring():
     """ColoredPattern __repr__ returns a compact single-line string."""
 
     def f(x):
         return x**2
 
-    cp = jacobian_coloring(f, (3,))
-    r = repr(cp)
+    coloring = jacobian_coloring(f, (3,))
+    r = repr(coloring)
 
     assert "ColoredPattern" in r
 
@@ -1069,14 +1069,14 @@ def test_hessian_star_decompression_non_unique_branch():
     # Verify star coloring reuses colors (needs only 3 for tridiagonal)
     assert num == 3
 
-    cp = ColoredPattern(
+    coloring = ColoredPattern(
         sparsity,
         colors=colors_arr,
         num_colors=num,
         symmetric=True,
         mode="fwd_over_rev",
     )
-    result = hessian(f, cp)(x).todense()
+    result = hessian(f, coloring)(x).todense()
 
     assert_allclose(result, expected, rtol=1e-5)
 

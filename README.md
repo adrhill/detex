@@ -40,8 +40,8 @@ def f(x):
     return (x[1:] - x[:-1]) ** 2
 
 # Detect sparsity pattern and color it in one step:
-colored_pattern = jacobian_coloring(f, input_shape=50)
-print(colored_pattern)
+coloring = jacobian_coloring(f, input_shape=50)
+print(coloring)
 # ColoredPattern(49×50, nnz=98, sparsity=96.0%, JVP, 2 colors)
 #   2 JVPs (instead of 49 VJPs or 50 JVPs)
 # ⎡⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤   ⎡⣿⎤
@@ -58,7 +58,7 @@ print(colored_pattern)
 # ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⎥   ⎢⣿⎥
 # ⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⎦   ⎣⠉⎦
 
-jac_fn = jacobian(f, colored_pattern)
+jac_fn = jacobian(f, coloring)
 
 for x in inputs:
     J = jac_fn(x)

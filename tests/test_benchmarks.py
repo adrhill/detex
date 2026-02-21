@@ -177,10 +177,10 @@ def test_heat_coloring(benchmark):
 def test_heat_materialization(benchmark):
     """Heat equation: VJP computation (with known sparsity/colors)."""
     x = np.ones(N)
-    colored_pattern = color_jacobian_pattern(
+    coloring = color_jacobian_pattern(
         jacobian_sparsity(heat_equation_rhs, N), mode="rev"
     )
-    jac_fn = jacobian(heat_equation_rhs, colored_pattern)
+    jac_fn = jacobian(heat_equation_rhs, coloring)
     benchmark(jac_fn, x)
 
 
@@ -216,8 +216,8 @@ def test_convnet_coloring(benchmark):
 def test_convnet_materialization(benchmark):
     """ConvNet: VJP computation (with known sparsity/colors)."""
     x = np.ones(N)
-    colored_pattern = color_jacobian_pattern(jacobian_sparsity(convnet, N), mode="rev")
-    jac_fn = jacobian(convnet, colored_pattern)
+    coloring = color_jacobian_pattern(jacobian_sparsity(convnet, N), mode="rev")
+    jac_fn = jacobian(convnet, coloring)
     benchmark(jac_fn, x)
 
 
@@ -254,8 +254,8 @@ def test_rosenbrock_materialization(benchmark):
     """Rosenbrock: HVP computation (with known sparsity/colors)."""
     x = np.ones(N)
     sparsity = hessian_sparsity(rosenbrock, N)
-    cp = color_hessian_pattern(sparsity)
-    hess_fn = hessian(rosenbrock, cp)
+    coloring = color_hessian_pattern(sparsity)
+    hess_fn = hessian(rosenbrock, coloring)
     benchmark(hess_fn, x)
 
 
@@ -292,8 +292,8 @@ def test_gnn_materialization(benchmark):
     """GNN: HVP computation (with known sparsity/colors)."""
     x = np.ones(_gnn_input_shape)
     sparsity = hessian_sparsity(gnn_energy, _gnn_input_shape)
-    cp = color_hessian_pattern(sparsity)
-    hess_fn = hessian(gnn_energy, cp)
+    coloring = color_hessian_pattern(sparsity)
+    hess_fn = hessian(gnn_energy, coloring)
     benchmark(hess_fn, x)
 
 

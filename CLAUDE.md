@@ -41,7 +41,7 @@ uv run pytest              # run tests
 ### Jacobians
 
 ```
-jacobian(f, colored_pattern)(x)
+jacobian(f, coloring)(x)
   │
   ├─ 1. DETECTION
   │     jacobian_sparsity(f, input_shape)
@@ -61,7 +61,7 @@ Precompute: jacobian_coloring(f, shape) = detect + color
 ### Hessians
 
 ```
-hessian(f, colored_pattern)(x)
+hessian(f, coloring)(x)
   │
   ├─ 1. DETECTION
   │     hessian_sparsity(f, input_shape)

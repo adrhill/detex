@@ -69,8 +69,8 @@ def test_check_jacobian_with_precomputed_pattern():
         return x**2
 
     x = np.array([1.0, 2.0, 3.0])
-    colored_pattern = jacobian_coloring(f, input_shape=x.shape)
-    check_jacobian_correctness(f, x, colored_pattern=colored_pattern)
+    coloring = jacobian_coloring(f, input_shape=x.shape)
+    check_jacobian_correctness(f, x, coloring=coloring)
 
 
 @pytest.mark.jacobian
@@ -96,11 +96,11 @@ def test_check_jacobian_matvec_raises_on_mismatch():
         return jnp.array([x[0] + x[1] + x[2], x[0] + x[1] + x[2], x[0] + x[1] + x[2]])
 
     # Diagonal pattern misses off-diagonal Jacobian entries
-    colored_pattern = jacobian_coloring(lambda x: x**2, input_shape=(3,))
+    coloring = jacobian_coloring(lambda x: x**2, input_shape=(3,))
 
     x = np.array([1.0, 2.0, 3.0])
     with pytest.raises(VerificationError, match="matvec verification"):
-        check_jacobian_correctness(f_dense, x, colored_pattern=colored_pattern)
+        check_jacobian_correctness(f_dense, x, coloring=coloring)
 
 
 @pytest.mark.jacobian
@@ -125,8 +125,8 @@ def test_check_jacobian_forward_mode():
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    cp = jacobian_coloring(f, x.shape, mode="fwd")
-    check_jacobian_correctness(f, x, colored_pattern=cp)
+    coloring = jacobian_coloring(f, x.shape, mode="fwd")
+    check_jacobian_correctness(f, x, coloring=coloring)
 
 
 @pytest.mark.jacobian
@@ -137,8 +137,8 @@ def test_check_jacobian_reverse_mode():
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    cp = jacobian_coloring(f, x.shape, mode="rev")
-    check_jacobian_correctness(f, x, colored_pattern=cp)
+    coloring = jacobian_coloring(f, x.shape, mode="rev")
+    check_jacobian_correctness(f, x, coloring=coloring)
 
 
 @pytest.mark.jacobian
@@ -148,11 +148,11 @@ def test_check_jacobian_reverse_mode_raises_on_mismatch():
     def f_dense(x):
         return jnp.array([x[0] + x[1] + x[2], x[0] + x[1] + x[2], x[0] + x[1] + x[2]])
 
-    colored_pattern = jacobian_coloring(lambda x: x**2, input_shape=(3,))
+    coloring = jacobian_coloring(lambda x: x**2, input_shape=(3,))
 
     x = np.array([1.0, 2.0, 3.0])
     with pytest.raises(VerificationError, match="matvec verification"):
-        check_jacobian_correctness(f_dense, x, colored_pattern=colored_pattern)
+        check_jacobian_correctness(f_dense, x, coloring=coloring)
 
 
 # Jacobian verification — dense
@@ -167,8 +167,8 @@ def test_check_jacobian_dense(mode):
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    cp = jacobian_coloring(f, x.shape, mode=mode)
-    check_jacobian_correctness(f, x, colored_pattern=cp, method="dense")
+    coloring = jacobian_coloring(f, x.shape, mode=mode)
+    check_jacobian_correctness(f, x, coloring=coloring, method="dense")
 
 
 @pytest.mark.jacobian
@@ -178,13 +178,11 @@ def test_check_jacobian_dense_raises_on_mismatch():
     def f_dense(x):
         return jnp.array([x[0] + x[1] + x[2], x[0] + x[1] + x[2], x[0] + x[1] + x[2]])
 
-    colored_pattern = jacobian_coloring(lambda x: x**2, input_shape=(3,))
+    coloring = jacobian_coloring(lambda x: x**2, input_shape=(3,))
 
     x = np.array([1.0, 2.0, 3.0])
     with pytest.raises(VerificationError, match="does not match"):
-        check_jacobian_correctness(
-            f_dense, x, colored_pattern=colored_pattern, method="dense"
-        )
+        check_jacobian_correctness(f_dense, x, coloring=coloring, method="dense")
 
 
 # Hessian verification — matvec (default)
@@ -235,11 +233,11 @@ def test_check_hessian_matvec_raises_on_mismatch():
         return x[0] * x[1] + x[1] * x[2]
 
     # Diagonal pattern misses off-diagonal Hessian entries
-    colored_pattern = hessian_coloring(lambda x: jnp.sum(x**2), input_shape=(3,))
+    coloring = hessian_coloring(lambda x: jnp.sum(x**2), input_shape=(3,))
 
     x = np.array([1.0, 2.0, 3.0])
     with pytest.raises(VerificationError, match="matvec verification"):
-        check_hessian_correctness(f, x, colored_pattern=colored_pattern)
+        check_hessian_correctness(f, x, coloring=coloring)
 
 
 @pytest.mark.hessian
@@ -265,8 +263,8 @@ def test_check_hessian_modes(mode):
         return x[0] * x[1] + x[1] * x[2] + x[2] * x[3]
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    cp = hessian_coloring(f, x.shape, mode=mode)
-    check_hessian_correctness(f, x, colored_pattern=cp)
+    coloring = hessian_coloring(f, x.shape, mode=mode)
+    check_hessian_correctness(f, x, coloring=coloring)
 
 
 @pytest.mark.hessian
@@ -277,11 +275,11 @@ def test_check_hessian_modes_raise_on_mismatch(mode):
     def f(x):
         return x[0] * x[1] + x[1] * x[2]
 
-    colored_pattern = hessian_coloring(lambda x: jnp.sum(x**2), input_shape=(3,))
+    coloring = hessian_coloring(lambda x: jnp.sum(x**2), input_shape=(3,))
 
     x = np.array([1.0, 2.0, 3.0])
     with pytest.raises(VerificationError, match="matvec verification"):
-        check_hessian_correctness(f, x, colored_pattern=colored_pattern)
+        check_hessian_correctness(f, x, coloring=coloring)
 
 
 # Hessian verification — dense
@@ -296,8 +294,8 @@ def test_check_hessian_dense(mode):
         return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
 
     x = np.array([1.0, 1.0, 1.0, 1.0])
-    cp = hessian_coloring(f, x.shape, mode=mode)
-    check_hessian_correctness(f, x, colored_pattern=cp, method="dense")
+    coloring = hessian_coloring(f, x.shape, mode=mode)
+    check_hessian_correctness(f, x, coloring=coloring, method="dense")
 
 
 @pytest.mark.hessian
@@ -307,11 +305,11 @@ def test_check_hessian_dense_raises_on_mismatch():
     def f(x):
         return x[0] * x[1] + x[1] * x[2]
 
-    colored_pattern = hessian_coloring(lambda x: jnp.sum(x**2), input_shape=(3,))
+    coloring = hessian_coloring(lambda x: jnp.sum(x**2), input_shape=(3,))
 
     x = np.array([1.0, 2.0, 3.0])
     with pytest.raises(VerificationError, match="does not match"):
-        check_hessian_correctness(f, x, colored_pattern=colored_pattern, method="dense")
+        check_hessian_correctness(f, x, coloring=coloring, method="dense")
 
 
 # Invalid method

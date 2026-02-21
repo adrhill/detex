@@ -32,11 +32,11 @@ from asdex import jacobian_coloring
 def f(x):
     return (x[1:] - x[:-1]) ** 2
 
-colored_pattern = jacobian_coloring(f, input_shape=50)
+coloring = jacobian_coloring(f, input_shape=50)
 ```
 
 ```python exec="true" session="gs"
-print(f"```\n{colored_pattern}\n```")
+print(f"```\n{coloring}\n```")
 ```
 
 The print-out shows the original sparsity pattern (left) compressed into just two colors (right).
@@ -66,7 +66,7 @@ import jax.numpy as jnp
 from asdex import jacobian
 
 x = jnp.ones(50)
-jac_fn = jacobian(f, colored_pattern)
+jac_fn = jacobian(f, coloring)
 J = jac_fn(x)
 ```
 
@@ -94,10 +94,10 @@ Let's benchmark on a 5000-dimensional input
 import timeit
 
 n = 5000
-colored_pattern = jacobian_coloring(f, input_shape=n)
+coloring = jacobian_coloring(f, input_shape=n)
 x = jnp.ones(n)
 
-jac_fn_asdex = jacobian(f, colored_pattern)
+jac_fn_asdex = jacobian(f, coloring)
 jac_fn_jax = jax.jacobian(f)
 
 # Warm up JIT caches

@@ -41,8 +41,8 @@ precompute the colored pattern explicitly and pass it to `jacobian`:
 ```python
 from asdex import jacobian_coloring, jacobian
 
-colored_pattern = jacobian_coloring(f, input_shape=1000)
-jac_fn = jacobian(f, colored_pattern)
+coloring = jacobian_coloring(f, input_shape=1000)
+jac_fn = jacobian(f, coloring)
 
 for x in inputs:
     J = jac_fn(x)
@@ -54,7 +54,7 @@ or use a specific coloring mode.
 
 !!! tip
 
-    If your `colored_pattern` looks wrong or overly dense,
+    If your `coloring` looks wrong or overly dense,
     please help out `asdex`'s development by
     [reporting it](https://github.com/adrhill/asdex/issues).
     These reports directly drive improvements
@@ -65,15 +65,15 @@ or use a specific coloring mode.
 Save a colored pattern to disk and reload it in a later session:
 
 ```python
-colored_pattern = jacobian_coloring(f, input_shape=1000)
-colored_pattern.save("colored.npz")
+coloring = jacobian_coloring(f, input_shape=1000)
+coloring.save("colored.npz")
 ```
 
 ```python
 from asdex import ColoredPattern
 
-colored_pattern = ColoredPattern.load("colored.npz")
-jac_fn = jacobian(f, colored_pattern)
+coloring = ColoredPattern.load("colored.npz")
+jac_fn = jacobian(f, coloring)
 ```
 
 [`SparsityPattern`](../reference/index.md#asdex.SparsityPattern) supports the same `save`/`load` interface.
@@ -90,11 +90,11 @@ def f(x):
     return (x[1:] - x[:-1]) ** 2
 
 # Automatic selection (default):
-colored_pattern = jacobian_coloring(f, input_shape=100)
+coloring = jacobian_coloring(f, input_shape=100)
 ```
 
 ```python exec="true" session="jac"
-print(f"```\n{colored_pattern}\n```")
+print(f"```\n{coloring}\n```")
 ```
 
 You can also force a specific coloring mode.
@@ -103,14 +103,14 @@ You can also force a specific coloring mode.
 
 ```python exec="true" session="jac" source="above"
 # Force column coloring (uses JVPs):
-colored_pattern = jacobian_coloring(f, input_shape=100, coloring_mode="column")
+coloring = jacobian_coloring(f, input_shape=100, coloring_mode="column")
 
 # Force row coloring (uses VJPs):
-colored_pattern = jacobian_coloring(f, input_shape=100, coloring_mode="row")
+coloring = jacobian_coloring(f, input_shape=100, coloring_mode="row")
 ```
 
 ```python exec="true" session="jac"
-print(f"```\n{colored_pattern}\n```")
+print(f"```\n{coloring}\n```")
 ```
 
 When the number of colors is equal,
@@ -124,7 +124,7 @@ For more control, you can split detection and coloring:
 from asdex import jacobian_sparsity, color_jacobian_pattern
 
 sparsity = jacobian_sparsity(f, input_shape=1000)
-colored_pattern = color_jacobian_pattern(sparsity, coloring_mode="column")
+coloring = color_jacobian_pattern(sparsity, coloring_mode="column")
 ```
 
 This is useful when you want to inspect the sparsity pattern (`print(sparsity)`)
@@ -172,8 +172,8 @@ Finally, color the sparsity pattern and compute the Jacobian:
 ```python
 from asdex import color_jacobian_pattern, jacobian
 
-colored_pattern = color_jacobian_pattern(sparsity)
-jac_fn = jacobian(f, colored_pattern)
+coloring = color_jacobian_pattern(sparsity)
+jac_fn = jacobian(f, coloring)
 J = jac_fn(x)
 ```
 
@@ -191,11 +191,11 @@ def f(x):
     # x has shape (10, 10), output has shape (9, 10)
     return x[1:, :] - x[:-1, :]
 
-colored_pattern = jacobian_coloring(f, input_shape=(10, 10))
+coloring = jacobian_coloring(f, input_shape=(10, 10))
 ```
 
 ```python exec="true" session="jac-multi"
-print(f"```\n{colored_pattern}\n```")
+print(f"```\n{coloring}\n```")
 ```
 
 ## Verifying Results
@@ -223,7 +223,7 @@ You can also pass a pre-computed colored pattern, control the AD mode used for t
 set custom tolerances, the number of probes, and the PRNG seed:
 
 ```python
-check_jacobian_correctness(f, x, colored_pattern=colored_pattern, ad_mode="rev", rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
+check_jacobian_correctness(f, x, coloring=coloring, ad_mode="rev", rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
 ```
 
 For an exact element-wise comparison against the full dense Jacobian,

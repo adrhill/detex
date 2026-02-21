@@ -30,7 +30,7 @@ def check_jacobian_correctness(
     f: Callable[[ArrayLike], ArrayLike],
     x: ArrayLike,
     *,
-    colored_pattern: ColoredPattern | None = None,
+    coloring: ColoredPattern | None = None,
     method: Literal["matvec", "dense"] = "matvec",
     num_probes: int = 25,
     seed: int = 0,
@@ -42,7 +42,7 @@ def check_jacobian_correctness(
     Args:
         f: Function taking an array and returning an array.
         x: Input at which to evaluate the Jacobian.
-        colored_pattern: Optional pre-computed colored pattern.
+        coloring: Optional pre-computed colored pattern.
             If None, sparsity is detected and colored automatically.
         method: Verification method.
             ``"matvec"`` uses randomized matrix-vector products,
@@ -64,18 +64,18 @@ def check_jacobian_correctness(
 
     x = jnp.asarray(x)
 
-    if colored_pattern is None:
-        colored_pattern = jacobian_coloring(f, input_shape=x.shape)
+    if coloring is None:
+        coloring = jacobian_coloring(f, input_shape=x.shape)
 
     # Derive reference AD mode from the colored pattern
-    ref_mode = colored_pattern.mode
+    ref_mode = coloring.mode
     if ref_mode not in ("fwd", "rev"):
         # Hessian modes shouldn't appear here, but default to fwd
-        m = colored_pattern.sparsity.m
-        n = colored_pattern.sparsity.n
+        m = coloring.sparsity.m
+        n = coloring.sparsity.n
         ref_mode = "fwd" if m >= n else "rev"
 
-    J_sparse = jacobian(f, colored_pattern)(x)
+    J_sparse = jacobian(f, coloring)(x)
 
     match method:
         case "dense":
@@ -103,7 +103,7 @@ def check_hessian_correctness(
     f: Callable[[ArrayLike], ArrayLike],
     x: ArrayLike,
     *,
-    colored_pattern: ColoredPattern | None = None,
+    coloring: ColoredPattern | None = None,
     method: Literal["matvec", "dense"] = "matvec",
     num_probes: int = 25,
     seed: int = 0,
@@ -115,7 +115,7 @@ def check_hessian_correctness(
     Args:
         f: Scalar-valued function taking an array.
         x: Input at which to evaluate the Hessian.
-        colored_pattern: Optional pre-computed colored pattern.
+        coloring: Optional pre-computed colored pattern.
             If None, sparsity is detected and colored automatically.
         method: Verification method.
             ``"matvec"`` uses randomized matrix-vector products,
@@ -137,13 +137,13 @@ def check_hessian_correctness(
 
     x = jnp.asarray(x)
 
-    if colored_pattern is None:
-        colored_pattern = hessian_coloring(f, input_shape=x.shape)
+    if coloring is None:
+        coloring = hessian_coloring(f, input_shape=x.shape)
 
     # Derive reference AD mode from the colored pattern
-    hessian_mode = colored_pattern.mode
+    hessian_mode = coloring.mode
 
-    H_sparse = hessian(f, colored_pattern)(x)
+    H_sparse = hessian(f, coloring)(x)
 
     match method:
         case "dense":

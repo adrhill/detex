@@ -41,11 +41,11 @@ def f(x):
     return (x[1:] - x[:-1]) ** 2
 
 # Detect sparsity and color in one step:
-colored_pattern = jacobian_coloring(f, input_shape=1000)
+coloring = jacobian_coloring(f, input_shape=1000)
 
 # Compute sparse Jacobians efficiently:
 x = np.random.randn(1000)
-jac_fn = jacobian(f, colored_pattern)
+jac_fn = jacobian(f, coloring)
 J = jac_fn(x)
 ```
 

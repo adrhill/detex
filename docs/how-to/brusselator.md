@@ -64,11 +64,11 @@ Detect the sparsity and color it in one call:
 ```python exec="true" session="bruss" source="above"
 from asdex import jacobian_coloring
 
-colored_pattern = jacobian_coloring(brusselator_rhs, input_shape=2 * N * N)
+coloring = jacobian_coloring(brusselator_rhs, input_shape=2 * N * N)
 ```
 
 ```python exec="true" session="bruss"
-print(f"```\n{colored_pattern}\n```")
+print(f"```\n{coloring}\n```")
 ```
 
 Instead of 2048 JVPs or VJPs,
@@ -89,7 +89,7 @@ u0 = 22.0 * (yy * (1 - yy)) ** 1.5
 v0 = 27.0 * (xx * (1 - xx)) ** 1.5
 uv0 = jnp.concatenate([u0.ravel(), v0.ravel()])
 
-jac_fn = jacobian(brusselator_rhs, colored_pattern)
+jac_fn = jacobian(brusselator_rhs, coloring)
 J = jac_fn(uv0)
 ```
 
@@ -97,7 +97,7 @@ J = jac_fn(uv0)
 print(f"```\n{J}\n```")
 ```
 
-Make sure to reuse the `colored_pattern` across evaluations at different states,
+Make sure to reuse the `coloring` across evaluations at different states,
 such that only the decompression step is repeated.
 
 ## References

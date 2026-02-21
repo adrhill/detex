@@ -85,8 +85,8 @@ To show both the source code and the output, add `source="above"` or `source="be
 ```python exec="true" source="above"
 from asdex import jacobian_coloring
 
-colored_pattern = jacobian_coloring(lambda x: (x[1:] - x[:-1]) ** 2, input_shape=50)
-print(colored_pattern)
+coloring = jacobian_coloring(lambda x: (x[1:] - x[:-1]) ** 2, input_shape=50)
+print(coloring)
 ```
 ```
 ````
