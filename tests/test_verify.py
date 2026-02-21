@@ -12,18 +12,29 @@ from asdex import (
     jacobian_coloring,
 )
 
-# Jacobian verification
+# Jacobian verification — matvec (default)
 
 
 @pytest.mark.jacobian
 def test_check_jacobian_passes():
-    """check_jacobian_correctness returns silently on correct results."""
+    """check_jacobian_correctness returns silently on correct results (default matvec)."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
     check_jacobian_correctness(f, x)
+
+
+@pytest.mark.jacobian
+def test_check_jacobian_matvec_explicit():
+    """check_jacobian_correctness works with explicit method='matvec'."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0])
+    check_jacobian_correctness(f, x, method="matvec")
 
 
 @pytest.mark.jacobian
@@ -50,8 +61,8 @@ def test_check_jacobian_custom_tolerances():
 
 
 @pytest.mark.jacobian
-def test_check_jacobian_raises_on_mismatch():
-    """check_jacobian_correctness raises VerificationError on wrong results.
+def test_check_jacobian_matvec_raises_on_mismatch():
+    """check_jacobian_correctness raises VerificationError on wrong results (matvec).
 
     Uses a diagonal colored pattern for a function with off-diagonal entries,
     so the sparse Jacobian misses non-zeros.
@@ -64,22 +75,116 @@ def test_check_jacobian_raises_on_mismatch():
     colored_pattern = jacobian_coloring(lambda x: x**2, input_shape=(3,))
 
     x = np.array([1.0, 2.0, 3.0])
-    with pytest.raises(VerificationError, match="does not match"):
+    with pytest.raises(VerificationError, match="matvec verification"):
         check_jacobian_correctness(f_dense, x, colored_pattern=colored_pattern)
 
 
-# Hessian verification
+@pytest.mark.jacobian
+def test_check_jacobian_custom_seed_and_num_probes():
+    """check_jacobian_correctness accepts custom seed and num_probes."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0])
+    check_jacobian_correctness(f, x, seed=42, num_probes=5)
+
+
+# Jacobian verification — AD modes
+
+
+@pytest.mark.jacobian
+def test_check_jacobian_forward_mode():
+    """check_jacobian_correctness works with ad_mode='forward'."""
+
+    def f(x):
+        return (x[1:] - x[:-1]) ** 2
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    check_jacobian_correctness(f, x, ad_mode="forward")
+
+
+@pytest.mark.jacobian
+def test_check_jacobian_reverse_mode():
+    """check_jacobian_correctness works with ad_mode='reverse'."""
+
+    def f(x):
+        return (x[1:] - x[:-1]) ** 2
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    check_jacobian_correctness(f, x, ad_mode="reverse")
+
+
+@pytest.mark.jacobian
+def test_check_jacobian_reverse_mode_raises_on_mismatch():
+    """check_jacobian_correctness raises with ad_mode='reverse' on wrong results."""
+
+    def f_dense(x):
+        return jnp.array([x[0] + x[1] + x[2], x[0] + x[1] + x[2], x[0] + x[1] + x[2]])
+
+    colored_pattern = jacobian_coloring(lambda x: x**2, input_shape=(3,))
+
+    x = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(VerificationError, match="matvec verification"):
+        check_jacobian_correctness(
+            f_dense, x, colored_pattern=colored_pattern, ad_mode="reverse"
+        )
+
+
+# Jacobian verification — dense
+
+
+@pytest.mark.jacobian
+@pytest.mark.parametrize("ad_mode", ["forward", "reverse"])
+def test_check_jacobian_dense(ad_mode):
+    """check_jacobian_correctness works with method='dense' and both AD modes."""
+
+    def f(x):
+        return (x[1:] - x[:-1]) ** 2
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    check_jacobian_correctness(f, x, method="dense", ad_mode=ad_mode)
+
+
+@pytest.mark.jacobian
+def test_check_jacobian_dense_raises_on_mismatch():
+    """check_jacobian_correctness raises VerificationError on wrong results (dense)."""
+
+    def f_dense(x):
+        return jnp.array([x[0] + x[1] + x[2], x[0] + x[1] + x[2], x[0] + x[1] + x[2]])
+
+    colored_pattern = jacobian_coloring(lambda x: x**2, input_shape=(3,))
+
+    x = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(VerificationError, match="does not match"):
+        check_jacobian_correctness(
+            f_dense, x, colored_pattern=colored_pattern, method="dense"
+        )
+
+
+# Hessian verification — matvec (default)
 
 
 @pytest.mark.hessian
 def test_check_hessian_passes():
-    """check_hessian_correctness returns silently on correct results."""
+    """check_hessian_correctness returns silently on correct results (default matvec)."""
 
     def f(x):
         return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
 
     x = np.array([1.0, 1.0, 1.0, 1.0])
     check_hessian_correctness(f, x)
+
+
+@pytest.mark.hessian
+def test_check_hessian_matvec_explicit():
+    """check_hessian_correctness works with explicit method='matvec'."""
+
+    def f(x):
+        return jnp.sum(x**2)
+
+    x = np.array([1.0, 2.0, 3.0])
+    check_hessian_correctness(f, x, method="matvec")
 
 
 @pytest.mark.hessian
@@ -94,8 +199,8 @@ def test_check_hessian_custom_tolerances():
 
 
 @pytest.mark.hessian
-def test_check_hessian_raises_on_mismatch():
-    """check_hessian_correctness raises VerificationError on wrong results.
+def test_check_hessian_matvec_raises_on_mismatch():
+    """check_hessian_correctness raises VerificationError on wrong results (matvec).
 
     Uses a diagonal colored pattern for a function with off-diagonal Hessian entries,
     so the sparse Hessian misses non-zeros.
@@ -108,8 +213,105 @@ def test_check_hessian_raises_on_mismatch():
     colored_pattern = hessian_coloring(lambda x: jnp.sum(x**2), input_shape=(3,))
 
     x = np.array([1.0, 2.0, 3.0])
-    with pytest.raises(VerificationError, match="does not match"):
+    with pytest.raises(VerificationError, match="matvec verification"):
         check_hessian_correctness(f, x, colored_pattern=colored_pattern)
+
+
+@pytest.mark.hessian
+def test_check_hessian_custom_seed_and_num_probes():
+    """check_hessian_correctness accepts custom seed and num_probes."""
+
+    def f(x):
+        return jnp.sum(x**2)
+
+    x = np.array([1.0, 2.0, 3.0])
+    check_hessian_correctness(f, x, seed=42, num_probes=5)
+
+
+# Hessian verification — AD modes
+
+
+@pytest.mark.hessian
+@pytest.mark.parametrize("ad_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_check_hessian_ad_modes(ad_mode):
+    """check_hessian_correctness works with all HVP AD modes."""
+
+    def f(x):
+        return x[0] * x[1] + x[1] * x[2] + x[2] * x[3]
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    check_hessian_correctness(f, x, ad_mode=ad_mode)
+
+
+@pytest.mark.hessian
+@pytest.mark.parametrize("ad_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_check_hessian_ad_modes_raise_on_mismatch(ad_mode):
+    """check_hessian_correctness raises with all HVP AD modes on wrong results."""
+
+    def f(x):
+        return x[0] * x[1] + x[1] * x[2]
+
+    colored_pattern = hessian_coloring(lambda x: jnp.sum(x**2), input_shape=(3,))
+
+    x = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(VerificationError, match="matvec verification"):
+        check_hessian_correctness(
+            f, x, colored_pattern=colored_pattern, ad_mode=ad_mode
+        )
+
+
+# Hessian verification — dense
+
+
+@pytest.mark.hessian
+@pytest.mark.parametrize("ad_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_check_hessian_dense(ad_mode):
+    """check_hessian_correctness works with method='dense' and all AD modes."""
+
+    def f(x):
+        return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
+
+    x = np.array([1.0, 1.0, 1.0, 1.0])
+    check_hessian_correctness(f, x, method="dense", ad_mode=ad_mode)
+
+
+@pytest.mark.hessian
+def test_check_hessian_dense_raises_on_mismatch():
+    """check_hessian_correctness raises VerificationError on wrong results (dense)."""
+
+    def f(x):
+        return x[0] * x[1] + x[1] * x[2]
+
+    colored_pattern = hessian_coloring(lambda x: jnp.sum(x**2), input_shape=(3,))
+
+    x = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(VerificationError, match="does not match"):
+        check_hessian_correctness(f, x, colored_pattern=colored_pattern, method="dense")
+
+
+# Invalid method
+
+
+def test_invalid_method_jacobian():
+    """check_jacobian_correctness raises ValueError on unknown method."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0])
+    with pytest.raises(ValueError, match="Unknown method"):
+        check_jacobian_correctness(f, x, method="invalid")  # type: ignore[arg-type]
+
+
+def test_invalid_method_hessian():
+    """check_hessian_correctness raises ValueError on unknown method."""
+
+    def f(x):
+        return jnp.sum(x**2)
+
+    x = np.array([1.0, 2.0])
+    with pytest.raises(ValueError, match="Unknown method"):
+        check_hessian_correctness(f, x, method="invalid")  # type: ignore[arg-type]
 
 
 # VerificationError
