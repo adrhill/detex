@@ -1529,7 +1529,7 @@ and custom tolerances:</p>
 <div class="admonition warning">
 <p class="admonition-title">Dense computation</p>
 <p>Verification computes the full dense Hessian using JAX,
-which scales as <span class="arithmatex">\(O(n^2)\)</span>.
+which is computationally very expensive for large problems.
 Use this for debugging and initial setup,
 not in production loops.</p>
 </div>

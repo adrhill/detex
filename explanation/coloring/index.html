@@ -1277,8 +1277,7 @@ and each vertex is assigned the smallest color not already used by any of its ne
 Handling high-degree vertices first tends to produce fewer colors in practice,
 because the most constrained vertices are colored while the most options are still available.</p>
 <p>The greedy algorithm does not guarantee an optimal coloring,
-but it is fast — <span class="arithmatex">\(O(|V| + |E|)\)</span> in the size of the conflict graph —
-and produces good results for the sparsity patterns
+but it is fast and produces good results for the sparsity patterns
 typically encountered in scientific computing.</p>
 <h2 id="from-coloring-to-decompression">From Coloring to Decompression<a class="headerlink" href="#from-coloring-to-decompression" title="Permanent link">&para;</a></h2>
 <p>The coloring result is materialized as a <strong>seed matrix</strong>
