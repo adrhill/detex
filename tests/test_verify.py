@@ -27,6 +27,30 @@ def test_check_jacobian_passes():
 
 
 @pytest.mark.jacobian
+def test_check_jacobian_auto_ad_mode_tall():
+    """Auto ad_mode picks forward for tall Jacobians (m >= n)."""
+
+    def f(x):
+        return jnp.concatenate([x**2, x**3])
+
+    x = np.array([1.0, 2.0, 3.0])
+    # m=6, n=3 → should auto-select forward
+    check_jacobian_correctness(f, x)
+
+
+@pytest.mark.jacobian
+def test_check_jacobian_auto_ad_mode_wide():
+    """Auto ad_mode picks reverse for wide Jacobians (m < n)."""
+
+    def f(x):
+        return (x[1:] - x[:-1]) ** 2
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    # m=3, n=4 → should auto-select reverse
+    check_jacobian_correctness(f, x)
+
+
+@pytest.mark.jacobian
 def test_check_jacobian_matvec_explicit():
     """check_jacobian_correctness works with explicit method='matvec'."""
 

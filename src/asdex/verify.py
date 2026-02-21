@@ -34,7 +34,7 @@ def check_jacobian_correctness(
     *,
     colored_pattern: ColoredPattern | None = None,
     method: Literal["matvec", "dense"] = "matvec",
-    ad_mode: JvpMode = "forward",
+    ad_mode: JvpMode | None = None,
     num_probes: int = 25,
     seed: int = 0,
     rtol: float | None = None,
@@ -55,6 +55,9 @@ def check_jacobian_correctness(
         ad_mode: AD mode for the reference computation.
             ``"forward"`` uses ``jax.jacfwd`` / ``jax.jvp``.
             ``"reverse"`` uses ``jax.jacrev`` / ``jax.vjp``.
+            If None (default),
+            picks ``"forward"`` when m >= n and ``"reverse"`` when m < n,
+            where m and n are the output and input sizes.
         num_probes: Number of random probe vectors (only used by ``"matvec"``).
         seed: PRNG seed for reproducibility (only used by ``"matvec"``).
         rtol: Relative tolerance for comparison.
@@ -67,7 +70,7 @@ def check_jacobian_correctness(
     """
     if method not in ("matvec", "dense"):
         raise ValueError(f"Unknown method {method!r}. Expected 'matvec' or 'dense'.")
-    if ad_mode not in ("forward", "reverse"):
+    if ad_mode is not None and ad_mode not in ("forward", "reverse"):
         raise ValueError(
             f"Unknown ad_mode {ad_mode!r}. Expected 'forward' or 'reverse'."
         )
@@ -76,6 +79,11 @@ def check_jacobian_correctness(
 
     if colored_pattern is None:
         colored_pattern = jacobian_coloring(f, input_shape=x.shape)
+
+    if ad_mode is None:
+        m = colored_pattern.sparsity.m
+        n = colored_pattern.sparsity.n
+        ad_mode = "forward" if m >= n else "reverse"
 
     J_sparse = jacobian(f, colored_pattern)(x)
 
