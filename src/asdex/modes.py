@@ -1,6 +1,6 @@
 """Public type aliases and validation for AD mode selection."""
 
-from typing import Literal, get_args
+from typing import Literal, assert_never, get_args
 
 ColoringMode = Literal["row", "column", "symmetric", "auto"]
 """Coloring mode for sparse differentiation.
@@ -79,9 +79,17 @@ def resolve_coloring_mode(
     """
     assert_coloring_mode(coloring_mode)
     assert_jacobian_mode(ad_mode)
-    if coloring_mode == "auto" and ad_mode != "auto":
-        return "row" if ad_mode == "rev" else "column"
-    return coloring_mode
+    if coloring_mode != "auto":
+        return coloring_mode
+    match ad_mode:
+        case "rev":
+            return "row"
+        case "fwd":
+            return "column"
+        case "auto":
+            return coloring_mode
+        case _ as unreachable:
+            assert_never(unreachable)
 
 
 def resolve_ad_mode(coloring_mode: ColoringMode, ad_mode: JacobianMode) -> JacobianMode:
@@ -111,24 +119,34 @@ def resolve_ad_mode(coloring_mode: ColoringMode, ad_mode: JacobianMode) -> Jacob
             f"got {coloring_mode!r}."
         )
 
-    if ad_mode == "auto":
-        if coloring_mode == "row":
-            return "rev"
-        if coloring_mode == "column":
-            return "fwd"
-        # symmetric: default to fwd
-        return "fwd"
+    match ad_mode:
+        case "auto":
+            match coloring_mode:
+                case "row":
+                    return "rev"
+                case "column":
+                    return "fwd"
+                case "symmetric":
+                    return "fwd"
+                case _ as unreachable:
+                    assert_never(unreachable)
 
-    if coloring_mode == "row" and ad_mode != "rev":
-        raise ValueError(
-            f"Row coloring is only compatible with ad_mode='rev', got {ad_mode!r}."
-        )
-    if coloring_mode == "column" and ad_mode != "fwd":
-        raise ValueError(
-            f"Column coloring is only compatible with ad_mode='fwd', got {ad_mode!r}."
-        )
-    # symmetric is compatible with both fwd and rev
-    return ad_mode
+        case "fwd":
+            if coloring_mode == "row":
+                raise ValueError(
+                    f"Row coloring is only compatible with ad_mode='rev', got {ad_mode!r}."
+                )
+            return ad_mode
+
+        case "rev":
+            if coloring_mode == "column":
+                raise ValueError(
+                    f"Column coloring is only compatible with ad_mode='fwd', got {ad_mode!r}."
+                )
+            return ad_mode
+
+        case _ as unreachable:
+            assert_never(unreachable)
 
 
 def resolve_hessian_mode(ad_mode: HessianMode) -> HessianMode:
@@ -144,6 +162,10 @@ def resolve_hessian_mode(ad_mode: HessianMode) -> HessianMode:
         ValueError: If ``ad_mode`` is unknown.
     """
     assert_hessian_mode(ad_mode)
-    if ad_mode == "auto":
-        return "fwd_over_rev"
-    return ad_mode
+    match ad_mode:
+        case "auto":
+            return "fwd_over_rev"
+        case "fwd_over_rev" | "rev_over_fwd" | "rev_over_rev":
+            return ad_mode
+        case _ as unreachable:
+            assert_never(unreachable)

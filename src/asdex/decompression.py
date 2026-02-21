@@ -1,6 +1,7 @@
 """Sparse Jacobian and Hessian computation using coloring and AD."""
 
 from collections.abc import Callable
+from typing import assert_never
 
 import jax
 import jax.numpy as jnp
@@ -15,6 +16,9 @@ from asdex.modes import (
     ColoringMode,
     HessianMode,
     JacobianMode,
+    assert_coloring_mode,
+    assert_hessian_mode,
+    assert_jacobian_mode,
     resolve_ad_mode,
     resolve_hessian_mode,
 )
@@ -59,6 +63,8 @@ def jacobian(
             the sparse Jacobian as BCOO of shape ``(m, n)``
             where ``n = x.size`` and ``m = prod(output_shape)``.
     """
+    assert_coloring_mode(coloring_mode)
+    assert_jacobian_mode(ad_mode)
     if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
         raise TypeError(
             f"Expected ColoredPattern, got {type(colored_pattern).__name__}. "
@@ -109,6 +115,8 @@ def hessian(
             the sparse Hessian as BCOO of shape ``(n, n)``
             where ``n = x.size``.
     """
+    assert_coloring_mode(coloring_mode)
+    assert_hessian_mode(ad_mode)
     if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
         raise TypeError(
             f"Expected ColoredPattern, got {type(colored_pattern).__name__}. "
@@ -158,9 +166,13 @@ def _eval_jacobian(
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
     resolved_ad_mode = resolve_ad_mode(colored_pattern.mode, ad_mode)
-    if resolved_ad_mode == "rev":
-        return _jacobian_rows(f, x, colored_pattern, out_shape)
-    return _jacobian_cols(f, x, colored_pattern)
+    match resolved_ad_mode:
+        case "rev":
+            return _jacobian_rows(f, x, colored_pattern, out_shape)
+        case "fwd":
+            return _jacobian_cols(f, x, colored_pattern)
+        case _ as unreachable:
+            assert_never(unreachable)  # type: ignore[type-assertion-failure]
 
 
 def _eval_hessian(
@@ -247,31 +259,29 @@ def _compute_hvps(
     """Compute one HVP per color using pre-computed seed matrix."""
     seeds = jnp.asarray(colored_pattern._seed_matrix, dtype=x.dtype)
 
-    if ad_mode == "fwd_over_rev":
+    match ad_mode:
+        case "fwd_over_rev":
 
-        def single_hvp(v: jax.Array) -> jax.Array:
-            _, hvp = jax.jvp(jax.grad(f), (x,), (v.reshape(x.shape),))
-            return hvp.ravel()
+            def single_hvp(v: jax.Array) -> jax.Array:
+                _, hvp = jax.jvp(jax.grad(f), (x,), (v.reshape(x.shape),))
+                return hvp.ravel()
 
-    elif ad_mode == "rev_over_fwd":
+        case "rev_over_fwd":
 
-        def single_hvp(v: jax.Array) -> jax.Array:
-            return jax.grad(lambda p: jax.jvp(f, (p,), (v.reshape(x.shape),))[1])(
-                x
-            ).ravel()
+            def single_hvp(v: jax.Array) -> jax.Array:
+                return jax.grad(lambda p: jax.jvp(f, (p,), (v.reshape(x.shape),))[1])(
+                    x
+                ).ravel()
 
-    elif ad_mode == "rev_over_rev":
+        case "rev_over_rev":
 
-        def single_hvp(v: jax.Array) -> jax.Array:
-            return jax.grad(lambda y: jnp.vdot(jax.grad(f)(y), v.reshape(x.shape)))(
-                x
-            ).ravel()
+            def single_hvp(v: jax.Array) -> jax.Array:
+                return jax.grad(lambda y: jnp.vdot(jax.grad(f)(y), v.reshape(x.shape)))(
+                    x
+                ).ravel()
 
-    else:
-        raise ValueError(
-            f"Unknown ad_mode {ad_mode!r}. "
-            'Expected "fwd_over_rev", "rev_over_fwd", or "rev_over_rev".'
-        )
+        case _ as unreachable:
+            assert_never(unreachable)  # type: ignore[type-assertion-failure]
 
     return jax.vmap(single_hvp)(seeds)
 

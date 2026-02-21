@@ -14,6 +14,7 @@ See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
 
 import warnings
 from collections.abc import Callable
+from typing import assert_never
 
 import numpy as np
 from numpy.typing import NDArray
@@ -24,7 +25,6 @@ from asdex.modes import (
     ColoringMode,
     JacobianMode,
     assert_coloring_mode,
-    assert_jacobian_mode,
     resolve_coloring_mode,
 )
 from asdex.pattern import ColoredPattern, SparsityPattern
@@ -123,50 +123,57 @@ def color_jacobian_pattern(
     Raises:
         ValueError: If coloring_mode or ad_mode is unknown.
     """
-    assert_coloring_mode(coloring_mode)
-    assert_jacobian_mode(ad_mode)
     coloring_mode = resolve_coloring_mode(coloring_mode, ad_mode)
 
     # Nothing to compute when there are no nonzeros.
     if sparsity.nnz == 0:
         return _empty_colored_pattern(sparsity, coloring_mode)
 
-    if coloring_mode == "row":
-        colors_arr, num = color_rows(sparsity)
-        result = ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="row")
-        _warn_if_dense(num, sparsity.m, "Jacobian", sparsity.shape)
-        return result
+    match coloring_mode:
+        case "row":
+            colors_arr, num = color_rows(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="row"
+            )
+            _warn_if_dense(num, sparsity.m, "Jacobian", sparsity.shape)
+            return result
 
-    if coloring_mode == "column":
-        colors_arr, num = color_cols(sparsity)
-        result = ColoredPattern(
-            sparsity, colors=colors_arr, num_colors=num, mode="column"
-        )
-        _warn_if_dense(num, sparsity.n, "Jacobian", sparsity.shape)
-        return result
+        case "column":
+            colors_arr, num = color_cols(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="column"
+            )
+            _warn_if_dense(num, sparsity.n, "Jacobian", sparsity.shape)
+            return result
 
-    if coloring_mode == "symmetric":
-        colors_arr, num = color_symmetric(sparsity)
-        result = ColoredPattern(
-            sparsity, colors=colors_arr, num_colors=num, mode="symmetric"
-        )
-        _warn_if_dense(num, sparsity.n, "Jacobian", sparsity.shape)
-        return result
+        case "symmetric":
+            colors_arr, num = color_symmetric(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="symmetric"
+            )
+            _warn_if_dense(num, sparsity.n, "Jacobian", sparsity.shape)
+            return result
 
-    # Auto: pick whichever uses fewer colors.
-    # Ties go to column coloring (JVPs are cheaper than VJPs).
-    row_colors, num_row = color_rows(sparsity)
-    col_colors, num_col = color_cols(sparsity)
+        case "auto":
+            # Pick whichever uses fewer colors.
+            # Ties go to column coloring (JVPs are cheaper than VJPs).
+            row_colors, num_row = color_rows(sparsity)
+            col_colors, num_col = color_cols(sparsity)
 
-    if num_col <= num_row:
-        result = ColoredPattern(
-            sparsity, colors=col_colors, num_colors=num_col, mode="column"
-        )
-        _warn_if_dense(num_col, sparsity.n, "Jacobian", sparsity.shape)
-        return result
-    result = ColoredPattern(sparsity, colors=row_colors, num_colors=num_row, mode="row")
-    _warn_if_dense(num_row, sparsity.m, "Jacobian", sparsity.shape)
-    return result
+            if num_col <= num_row:
+                result = ColoredPattern(
+                    sparsity, colors=col_colors, num_colors=num_col, mode="column"
+                )
+                _warn_if_dense(num_col, sparsity.n, "Jacobian", sparsity.shape)
+                return result
+            result = ColoredPattern(
+                sparsity, colors=row_colors, num_colors=num_row, mode="row"
+            )
+            _warn_if_dense(num_row, sparsity.m, "Jacobian", sparsity.shape)
+            return result
+
+        case _ as unreachable:
+            assert_never(unreachable)
 
 
 def color_hessian_pattern(
@@ -197,27 +204,33 @@ def color_hessian_pattern(
     if sparsity.nnz == 0:
         return _empty_colored_pattern(sparsity, coloring_mode)
 
-    if coloring_mode == "row":
-        colors_arr, num = color_rows(sparsity)
-        result = ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="row")
-        _warn_if_dense(num, sparsity.m, "Hessian", sparsity.shape)
-        return result
+    match coloring_mode:
+        case "row":
+            colors_arr, num = color_rows(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="row"
+            )
+            _warn_if_dense(num, sparsity.m, "Hessian", sparsity.shape)
+            return result
 
-    if coloring_mode == "column":
-        colors_arr, num = color_cols(sparsity)
-        result = ColoredPattern(
-            sparsity, colors=colors_arr, num_colors=num, mode="column"
-        )
-        _warn_if_dense(num, sparsity.n, "Hessian", sparsity.shape)
-        return result
+        case "column":
+            colors_arr, num = color_cols(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="column"
+            )
+            _warn_if_dense(num, sparsity.n, "Hessian", sparsity.shape)
+            return result
 
-    # symmetric
-    colors_arr, num = color_symmetric(sparsity)
-    result = ColoredPattern(
-        sparsity, colors=colors_arr, num_colors=num, mode="symmetric"
-    )
-    _warn_if_dense(num, sparsity.n, "Hessian", sparsity.shape)
-    return result
+        case "symmetric":
+            colors_arr, num = color_symmetric(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="symmetric"
+            )
+            _warn_if_dense(num, sparsity.n, "Hessian", sparsity.shape)
+            return result
+
+        case _ as unreachable:
+            assert_never(unreachable)
 
 
 # Public API: low-level coloring algorithms
@@ -392,17 +405,23 @@ def _empty_colored_pattern(
         ValueError: If ``coloring_mode`` is ``"symmetric"``
             and the pattern is not square.
     """
-    if coloring_mode == "symmetric":
-        if sparsity.m != sparsity.n:
-            msg = f"Symmetric coloring requires a square pattern, got shape {sparsity.shape}"
-            raise ValueError(msg)
-        return ColoredPattern(
-            sparsity,
-            colors=np.full(sparsity.n, -1, dtype=np.int32),
-            num_colors=0,
-            mode="symmetric",
-        )
-    n_vertices = sparsity.m if coloring_mode == "row" else sparsity.n
+    match coloring_mode:
+        case "symmetric":
+            if sparsity.m != sparsity.n:
+                msg = f"Symmetric coloring requires a square pattern, got shape {sparsity.shape}"
+                raise ValueError(msg)
+            return ColoredPattern(
+                sparsity,
+                colors=np.full(sparsity.n, -1, dtype=np.int32),
+                num_colors=0,
+                mode="symmetric",
+            )
+        case "row":
+            n_vertices = sparsity.m
+        case "column":
+            n_vertices = sparsity.n
+        case _ as unreachable:
+            assert_never(unreachable)  # type: ignore[type-assertion-failure]
     return ColoredPattern(
         sparsity,
         colors=np.full(n_vertices, -1, dtype=np.int32),

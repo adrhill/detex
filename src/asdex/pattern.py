@@ -6,7 +6,7 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cached_property
-from typing import cast
+from typing import assert_never, cast
 
 import jax.numpy as jnp
 import numpy as np
@@ -274,18 +274,20 @@ class ColoredPattern:
         For column: ``color_idx = colors[cols]``, ``elem_idx = rows``.
         For symmetric: delegates to `_star_extraction_indices`.
         """
-        if self.mode == "symmetric":
-            return self._star_extraction_indices
-
         rows = self.sparsity.rows
         cols = self.sparsity.cols
 
-        if self.mode == "row":
-            color_idx = self.colors[rows].astype(np.intp)
-            elem_idx = cols.astype(np.intp)
-        else:  # column
-            color_idx = self.colors[cols].astype(np.intp)
-            elem_idx = rows.astype(np.intp)
+        match self.mode:
+            case "symmetric":
+                return self._star_extraction_indices
+            case "row":
+                color_idx = self.colors[rows].astype(np.intp)
+                elem_idx = cols.astype(np.intp)
+            case "column":
+                color_idx = self.colors[cols].astype(np.intp)
+                elem_idx = rows.astype(np.intp)
+            case _ as unreachable:
+                assert_never(unreachable)  # type: ignore[type-assertion-failure]
 
         return color_idx, elem_idx
 
@@ -336,7 +338,13 @@ class ColoredPattern:
         Row ``c`` is the mask ``colors == c``,
         used as the seed/tangent vector for the ``c``-th AD evaluation.
         """
-        dim = self.sparsity.m if self.mode == "row" else self.sparsity.n
+        match self.mode:
+            case "row":
+                dim = self.sparsity.m
+            case "column" | "symmetric":
+                dim = self.sparsity.n
+            case _ as unreachable:
+                assert_never(unreachable)  # type: ignore[type-assertion-failure]
         seeds = np.zeros((self.num_colors, dim), dtype=np.bool_)
         for c in range(self.num_colors):
             seeds[c] = self.colors == c

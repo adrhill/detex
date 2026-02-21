@@ -17,3 +17,4 @@ site/
 # Virtual environments
 .venv
 .claude/settings.local.json
+_context
