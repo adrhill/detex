@@ -1282,7 +1282,7 @@ using <a href="../../explanation/coloring/">row or column coloring</a> with forw
 <p class="admonition-title">Verify correctness at least once</p>
 <p>asdex's <a href="../../explanation/global-sparsity/">sparsity patterns</a> should always be conservative,
 but a bug in <a href="../../explanation/sparsity-detection/">sparsity detection</a> could cause missing nonzeros.
-Always verify against JAX's dense Jacobian at least once on a new function.
+Always verify against vanilla JAX at least once on a new function.
 See <a href="#verifying-results">Verifying Results</a> below.</p>
 </div>
 <h2 id="one-call-api">One-Call API<a class="headerlink" href="#one-call-api" title="Permanent link">&para;</a></h2>
@@ -1489,25 +1489,32 @@ and <span class="arithmatex">\(m\)</span> is the total number of output elements
 <a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢄⠀⠀⠘⢄⎦   ⎣⣿⎦
 </code></pre></div>
 <h2 id="verifying-results">Verifying Results<a class="headerlink" href="#verifying-results" title="Permanent link">&para;</a></h2>
-<p>Use <a class="autorefs autorefs-internal" title="asdex.check_jacobian_correctness(f, x, *, colored_pattern=None, rtol=1e-07, atol=1e-07)" href="../../reference/jacobian/#asdex.check_jacobian_correctness"><code>check_jacobian_correctness</code></a>
-to verify that the sparse Jacobian matches JAX's dense reference:</p>
+<p>Use <a class="autorefs autorefs-internal" title="asdex.check_jacobian_correctness(f, x, *, colored_pattern=None, method='matvec', ad_mode=None, num_probes=25, seed=0, rtol=None, atol=None)" href="../../reference/jacobian/#asdex.check_jacobian_correctness"><code>check_jacobian_correctness</code></a>
+to verify the sparse Jacobian against vanilla JAX.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">asdex</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_jacobian_correctness</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
 </code></pre></div>
-<p>This compares <code>asdex.jacobian(f)(x)</code> against <code>jax.jacobian(f)(x)</code>.
+<p>Use verification for debugging and initial setup, not in production loops.
+A good place to call it is in your test suite.</p>
+<p>By default, this uses randomized matrix-vector products (<code>method="matvec"</code>)
+to check <code>asdex.jacobian(f)(x)</code> against JVPs or VJPs,
+automatically picking forward or reverse mode based on the input and output sizes.
+This is cheap — O(k) in the number of probes — and scales to large problems.
 If the results match, the function returns silently.
 If they disagree, it raises a <a class="autorefs autorefs-internal" title="asdex.VerificationError" href="../../reference/jacobian/#asdex.VerificationError"><code>VerificationError</code></a>.</p>
-<p>You can also pass a pre-computed colored pattern
-and custom tolerances:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="n">colored_pattern</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+<p>You can also pass a pre-computed colored pattern, control the AD mode used for the reference computation, 
+set custom tolerances, the number of probes, and the PRNG seed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="n">colored_pattern</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s2">&quot;reverse&quot;</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">num_probes</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</code></pre></div>
+<p>For an exact element-wise comparison against the full dense Jacobian,
+use <code>method="dense"</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;dense&quot;</span><span class="p">)</span>
 </code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Dense computation</p>
-<p>Verification computes the full dense Jacobian using JAX,
-which is computationally very expensive for large problems.
-Use this for debugging and initial setup,
-not in production loops.</p>
+<p><code>method="dense"</code> materializes the full dense Jacobian,
+which is computationally very expensive for large problems.</p>
 </div>
 
 

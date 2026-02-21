@@ -1665,16 +1665,14 @@ computed together in a single VJP (or JVP).</p>
 
 
 <h2 id="asdex.check_jacobian_correctness" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-07</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-07</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">check_jacobian_correctness</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">colored_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;matvec&#39;</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">num_probes</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 <a href="#asdex.check_jacobian_correctness" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
 
-        <p>Verify asdex's sparse Jacobian against <code>jax.jacobian</code> at a given input.</p>
-<p>Computes the sparse Jacobian using asdex and the dense Jacobian using JAX,
-then checks that all entries match within the given tolerances.</p>
+        <p>Verify asdex's sparse Jacobian against a JAX reference at a given input.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1744,18 +1742,92 @@ If None, sparsity is detected and colored automatically.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>rtol</code>
+                <code>method</code>
             </td>
             <td>
-                  <code><span title="float">float</span></code>
+                  <code><span title="typing.Literal">Literal</span>[&#39;matvec&#39;, &#39;dense&#39;]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Relative tolerance for comparison.</p>
+                <p>Verification method.
+<code>"matvec"</code> uses randomized matrix-vector products,
+which is O(k) in the number of probes.
+<code>"dense"</code> materializes the full dense Jacobian,
+which is O(n^2).</p>
               </div>
             </td>
             <td>
-                  <code>1e-07</code>
+                  <code>&#39;matvec&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>ad_mode</code>
+            </td>
+            <td>
+                  <code><span title="asdex.verify.JvpMode">JvpMode</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>AD mode for the reference computation.
+<code>"forward"</code> uses <code>jax.jacfwd</code> / <code>jax.jvp</code>.
+<code>"reverse"</code> uses <code>jax.jacrev</code> / <code>jax.vjp</code>.
+If None (default),
+picks <code>"forward"</code> when m &gt;= n and <code>"reverse"</code> when m &lt; n,
+where m and n are the output and input sizes.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>num_probes</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of random probe vectors (only used by <code>"matvec"</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>25</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>seed</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>PRNG seed for reproducibility (only used by <code>"matvec"</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>rtol</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Relative tolerance for comparison.
+Defaults to 1e-5 for <code>"matvec"</code> and 1e-7 for <code>"dense"</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1763,15 +1835,16 @@ If None, sparsity is detected and colored automatically.</p>
                 <code>atol</code>
             </td>
             <td>
-                  <code><span title="float">float</span></code>
+                  <code><span title="float">float</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Absolute tolerance for comparison.</p>
+                <p>Absolute tolerance for comparison.
+Defaults to 1e-5 for <code>"matvec"</code> and 1e-7 for <code>"dense"</code>.</p>
               </div>
             </td>
             <td>
-                  <code>1e-07</code>
+                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -1793,7 +1866,7 @@ If None, sparsity is detected and colored automatically.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If the sparse and dense Jacobians disagree.</p>
+                <p>If the sparse and reference Jacobians disagree.</p>
               </div>
             </td>
           </tr>
