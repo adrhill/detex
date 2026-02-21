@@ -16,11 +16,10 @@ from asdex.modes import (
     ColoringMode,
     HessianMode,
     JacobianMode,
-    assert_coloring_mode,
-    assert_hessian_mode,
-    assert_jacobian_mode,
-    resolve_ad_mode,
-    resolve_hessian_mode,
+    _assert_hessian_args,
+    _assert_jacobian_args,
+    _resolve_ad_mode,
+    _resolve_hessian_mode,
 )
 from asdex.pattern import ColoredPattern
 
@@ -63,8 +62,7 @@ def jacobian(
             the sparse Jacobian as BCOO of shape ``(m, n)``
             where ``n = x.size`` and ``m = prod(output_shape)``.
     """
-    assert_coloring_mode(coloring_mode)
-    assert_jacobian_mode(ad_mode)
+    _assert_jacobian_args(colored_pattern, coloring_mode, ad_mode)
     if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
         raise TypeError(
             f"Expected ColoredPattern, got {type(colored_pattern).__name__}. "
@@ -115,8 +113,7 @@ def hessian(
             the sparse Hessian as BCOO of shape ``(n, n)``
             where ``n = x.size``.
     """
-    assert_coloring_mode(coloring_mode)
-    assert_hessian_mode(ad_mode)
+    _assert_hessian_args(colored_pattern, coloring_mode, ad_mode)
     if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
         raise TypeError(
             f"Expected ColoredPattern, got {type(colored_pattern).__name__}. "
@@ -165,7 +162,7 @@ def _eval_jacobian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
-    resolved_ad_mode = resolve_ad_mode(colored_pattern.mode, ad_mode)
+    resolved_ad_mode = _resolve_ad_mode(colored_pattern.mode, ad_mode)
     match resolved_ad_mode:
         case "rev":
             return _jacobian_rows(f, x, colored_pattern, out_shape)
@@ -207,7 +204,7 @@ def _eval_hessian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n))
 
-    resolved_ad_mode = resolve_hessian_mode(ad_mode)
+    resolved_ad_mode = _resolve_hessian_mode(ad_mode)
     grads = _compute_hvps(f, x, colored_pattern, resolved_ad_mode)
     return _decompress(colored_pattern, grads)
 

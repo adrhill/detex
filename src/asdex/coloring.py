@@ -24,8 +24,8 @@ from asdex.detection import jacobian_sparsity as _detect_jacobian_sparsity
 from asdex.modes import (
     ColoringMode,
     JacobianMode,
-    assert_coloring_mode,
-    resolve_coloring_mode,
+    _assert_coloring_mode,
+    _resolve_coloring_mode,
 )
 from asdex.pattern import ColoredPattern, SparsityPattern
 
@@ -123,7 +123,7 @@ def color_jacobian_pattern(
     Raises:
         ValueError: If coloring_mode or ad_mode is unknown.
     """
-    coloring_mode = resolve_coloring_mode(coloring_mode, ad_mode)
+    coloring_mode = _resolve_coloring_mode(coloring_mode, ad_mode)
 
     # Nothing to compute when there are no nonzeros.
     if sparsity.nnz == 0:
@@ -197,7 +197,7 @@ def color_hessian_pattern(
     Raises:
         ValueError: If coloring_mode is unknown.
     """
-    assert_coloring_mode(coloring_mode)
+    _assert_coloring_mode(coloring_mode)
     if coloring_mode == "auto":
         coloring_mode = "symmetric"
 
@@ -396,7 +396,7 @@ def _empty_colored_pattern(
 
     Args:
         sparsity: Sparsity pattern with ``nnz == 0``.
-        coloring_mode: Resolved coloring mode (must not be ``"auto"``).
+        coloring_mode: Coloring mode (``"auto"`` defaults to ``"column"``).
 
     Returns:
         A ``ColoredPattern`` with zero colors.
@@ -405,6 +405,9 @@ def _empty_colored_pattern(
         ValueError: If ``coloring_mode`` is ``"symmetric"``
             and the pattern is not square.
     """
+    if coloring_mode == "auto":
+        coloring_mode = "column"
+
     match coloring_mode:
         case "symmetric":
             if sparsity.m != sparsity.n:

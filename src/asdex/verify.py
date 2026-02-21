@@ -12,10 +12,11 @@ from numpy.typing import ArrayLike
 from asdex.coloring import hessian_coloring, jacobian_coloring
 from asdex.decompression import hessian, jacobian
 from asdex.modes import (
+    ColoringMode,
     HessianMode,
     JacobianMode,
-    assert_hessian_mode,
-    assert_jacobian_mode,
+    _assert_hessian_args,
+    _assert_jacobian_args,
 )
 from asdex.pattern import ColoredPattern
 
@@ -37,6 +38,7 @@ def check_jacobian_correctness(
     x: ArrayLike,
     *,
     colored_pattern: ColoredPattern | None = None,
+    coloring_mode: ColoringMode = "auto",
     method: Literal["matvec", "dense"] = "matvec",
     ad_mode: JacobianMode = "auto",
     num_probes: int = 25,
@@ -51,6 +53,11 @@ def check_jacobian_correctness(
         x: Input at which to evaluate the Jacobian.
         colored_pattern: Optional pre-computed colored pattern.
             If None, sparsity is detected and colored automatically.
+        coloring_mode: Coloring mode (used only when ``colored_pattern`` is None).
+            ``"row"`` for row coloring,
+            ``"column"`` for column coloring,
+            ``"symmetric"`` for symmetric (star) coloring,
+            ``"auto"`` picks automatically.
         method: Verification method.
             ``"matvec"`` uses randomized matrix-vector products,
             which is O(k) in the number of probes.
@@ -73,12 +80,14 @@ def check_jacobian_correctness(
     """
     if method not in ("matvec", "dense"):
         raise ValueError(f"Unknown method {method!r}. Expected 'matvec' or 'dense'.")
-    assert_jacobian_mode(ad_mode)
+    _assert_jacobian_args(colored_pattern, coloring_mode, ad_mode)
 
     x = jnp.asarray(x)
 
     if colored_pattern is None:
-        colored_pattern = jacobian_coloring(f, input_shape=x.shape)
+        colored_pattern = jacobian_coloring(
+            f, input_shape=x.shape, coloring_mode=coloring_mode
+        )
 
     match ad_mode:
         case "auto":
@@ -119,6 +128,7 @@ def check_hessian_correctness(
     x: ArrayLike,
     *,
     colored_pattern: ColoredPattern | None = None,
+    coloring_mode: ColoringMode = "auto",
     method: Literal["matvec", "dense"] = "matvec",
     ad_mode: HessianMode = "auto",
     num_probes: int = 25,
@@ -133,6 +143,11 @@ def check_hessian_correctness(
         x: Input at which to evaluate the Hessian.
         colored_pattern: Optional pre-computed colored pattern.
             If None, sparsity is detected and colored automatically.
+        coloring_mode: Coloring mode (used only when ``colored_pattern`` is None).
+            ``"row"`` for row coloring,
+            ``"column"`` for column coloring,
+            ``"symmetric"`` for symmetric (star) coloring,
+            ``"auto"`` defaults to ``"symmetric"``.
         method: Verification method.
             ``"matvec"`` uses randomized matrix-vector products,
             which is O(k) in the number of probes.
@@ -155,12 +170,14 @@ def check_hessian_correctness(
     """
     if method not in ("matvec", "dense"):
         raise ValueError(f"Unknown method {method!r}. Expected 'matvec' or 'dense'.")
-    assert_hessian_mode(ad_mode)
+    _assert_hessian_args(colored_pattern, coloring_mode, ad_mode)
 
     x = jnp.asarray(x)
 
     if colored_pattern is None:
-        colored_pattern = hessian_coloring(f, input_shape=x.shape)
+        colored_pattern = hessian_coloring(
+            f, input_shape=x.shape, coloring_mode=coloring_mode
+        )
 
     match ad_mode:
         case "auto":

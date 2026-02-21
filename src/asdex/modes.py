@@ -1,5 +1,6 @@
 """Public type aliases and validation for AD mode selection."""
 
+import warnings
 from typing import Literal, assert_never, get_args
 
 ColoringMode = Literal["row", "column", "symmetric", "auto"]
@@ -29,7 +30,7 @@ HessianMode = Literal["fwd_over_rev", "rev_over_fwd", "rev_over_rev", "auto"]
 """
 
 
-def assert_coloring_mode(coloring_mode: str) -> None:
+def _assert_coloring_mode(coloring_mode: str) -> None:
     """Raise ``ValueError`` if *coloring_mode* is not a valid ``ColoringMode``."""
     if coloring_mode not in get_args(ColoringMode):
         raise ValueError(
@@ -38,7 +39,7 @@ def assert_coloring_mode(coloring_mode: str) -> None:
         )
 
 
-def assert_jacobian_mode(ad_mode: str) -> None:
+def _assert_jacobian_mode(ad_mode: str) -> None:
     """Raise ``ValueError`` if *ad_mode* is not a valid ``JacobianMode``."""
     if ad_mode not in get_args(JacobianMode):
         raise ValueError(
@@ -46,7 +47,7 @@ def assert_jacobian_mode(ad_mode: str) -> None:
         )
 
 
-def assert_hessian_mode(ad_mode: str) -> None:
+def _assert_hessian_mode(ad_mode: str) -> None:
     """Raise ``ValueError`` if *ad_mode* is not a valid ``HessianMode``."""
     if ad_mode not in get_args(HessianMode):
         raise ValueError(
@@ -55,7 +56,47 @@ def assert_hessian_mode(ad_mode: str) -> None:
         )
 
 
-def resolve_coloring_mode(
+def _assert_jacobian_args(
+    colored_pattern: object | None,
+    coloring_mode: ColoringMode,
+    ad_mode: JacobianMode,
+) -> None:
+    """Validate and warn for Jacobian input arguments.
+
+    Asserts that ``coloring_mode`` and ``ad_mode`` are valid,
+    and warns if ``coloring_mode`` is set but will be ignored
+    because a pre-computed pattern was provided.
+    """
+    _assert_coloring_mode(coloring_mode)
+    _assert_jacobian_mode(ad_mode)
+    if colored_pattern is not None and coloring_mode != "auto":
+        warnings.warn(
+            "coloring_mode is ignored when colored_pattern is provided.",
+            stacklevel=3,
+        )
+
+
+def _assert_hessian_args(
+    colored_pattern: object | None,
+    coloring_mode: ColoringMode,
+    ad_mode: HessianMode,
+) -> None:
+    """Validate and warn for Hessian input arguments.
+
+    Asserts that ``coloring_mode`` and ``ad_mode`` are valid,
+    and warns if ``coloring_mode`` is set but will be ignored
+    because a pre-computed pattern was provided.
+    """
+    _assert_coloring_mode(coloring_mode)
+    _assert_hessian_mode(ad_mode)
+    if colored_pattern is not None and coloring_mode != "auto":
+        warnings.warn(
+            "coloring_mode is ignored when colored_pattern is provided.",
+            stacklevel=3,
+        )
+
+
+def _resolve_coloring_mode(
     coloring_mode: ColoringMode, ad_mode: JacobianMode
 ) -> ColoringMode:
     """Resolve ``"auto"`` coloring mode from an AD mode hint.
@@ -77,8 +118,8 @@ def resolve_coloring_mode(
     Raises:
         ValueError: If either input is unknown.
     """
-    assert_coloring_mode(coloring_mode)
-    assert_jacobian_mode(ad_mode)
+    _assert_coloring_mode(coloring_mode)
+    _assert_jacobian_mode(ad_mode)
     if coloring_mode != "auto":
         return coloring_mode
     match ad_mode:
@@ -92,7 +133,9 @@ def resolve_coloring_mode(
             assert_never(unreachable)
 
 
-def resolve_ad_mode(coloring_mode: ColoringMode, ad_mode: JacobianMode) -> JacobianMode:
+def _resolve_ad_mode(
+    coloring_mode: ColoringMode, ad_mode: JacobianMode
+) -> JacobianMode:
     """Resolve the AD mode given a coloring mode.
 
     Validates inputs, checks compatibility, and resolves ``"auto"``.
@@ -110,12 +153,12 @@ def resolve_ad_mode(coloring_mode: ColoringMode, ad_mode: JacobianMode) -> Jacob
             or if the combination is incompatible
             (e.g. ``"row"`` + ``"fwd"``).
     """
-    assert_coloring_mode(coloring_mode)
-    assert_jacobian_mode(ad_mode)
+    _assert_coloring_mode(coloring_mode)
+    _assert_jacobian_mode(ad_mode)
 
     if coloring_mode == "auto":
         raise ValueError(
-            "coloring_mode must be resolved before calling resolve_ad_mode, "
+            "coloring_mode must be resolved before calling _resolve_ad_mode, "
             f"got {coloring_mode!r}."
         )
 
@@ -149,7 +192,7 @@ def resolve_ad_mode(coloring_mode: ColoringMode, ad_mode: JacobianMode) -> Jacob
             assert_never(unreachable)
 
 
-def resolve_hessian_mode(ad_mode: HessianMode) -> HessianMode:
+def _resolve_hessian_mode(ad_mode: HessianMode) -> HessianMode:
     """Resolve ``"auto"`` Hessian mode to ``"fwd_over_rev"``.
 
     Args:
@@ -161,7 +204,7 @@ def resolve_hessian_mode(ad_mode: HessianMode) -> HessianMode:
     Raises:
         ValueError: If ``ad_mode`` is unknown.
     """
-    assert_hessian_mode(ad_mode)
+    _assert_hessian_mode(ad_mode)
     match ad_mode:
         case "auto":
             return "fwd_over_rev"
