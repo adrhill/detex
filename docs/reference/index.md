@@ -25,6 +25,5 @@
 
 ---
 
-::: asdex.ColoringMode
 ::: asdex.JacobianMode
 ::: asdex.HessianMode

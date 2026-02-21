@@ -148,7 +148,7 @@ print(f"```\n{sparsity}\n```")
 From row and column index arrays:
 
 ```python exec="true" session="hess" source="above"
-sparsity = SparsityPattern.from_coordinates(
+sparsity = SparsityPattern.from_coo(
     rows=[0, 0, 1, 1, 1, 2, 2, 2, 3, 3],
     cols=[0, 1, 0, 1, 2, 1, 2, 3, 2, 3],
     shape=(4, 4),

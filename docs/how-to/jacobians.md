@@ -97,16 +97,16 @@ coloring = jacobian_coloring(f, input_shape=100)
 print(f"```\n{coloring}\n```")
 ```
 
-You can also force a specific coloring mode.
-``"row"`` colors rows (uses VJPs, reverse-mode AD),
-``"column"`` colors columns (uses JVPs, forward-mode AD):
+You can also force a specific AD mode.
+``"fwd"`` colors columns (uses JVPs, forward-mode AD),
+``"rev"`` colors rows (uses VJPs, reverse-mode AD):
 
 ```python exec="true" session="jac" source="above"
-# Force column coloring (uses JVPs):
-coloring = jacobian_coloring(f, input_shape=100, coloring_mode="column")
+# Force forward mode (column coloring, uses JVPs):
+coloring = jacobian_coloring(f, input_shape=100, mode="fwd")
 
-# Force row coloring (uses VJPs):
-coloring = jacobian_coloring(f, input_shape=100, coloring_mode="row")
+# Force reverse mode (row coloring, uses VJPs):
+coloring = jacobian_coloring(f, input_shape=100, mode="rev")
 ```
 
 ```python exec="true" session="jac"
@@ -124,7 +124,7 @@ For more control, you can split detection and coloring:
 from asdex import jacobian_sparsity, color_jacobian_pattern
 
 sparsity = jacobian_sparsity(f, input_shape=1000)
-coloring = color_jacobian_pattern(sparsity, coloring_mode="column")
+coloring = color_jacobian_pattern(sparsity, mode="fwd")
 ```
 
 This is useful when you want to inspect the sparsity pattern (`print(sparsity)`)
@@ -153,7 +153,7 @@ print(f"```\n{sparsity}\n```")
 From row and column index arrays:
 
 ```python exec="true" session="jac" source="above"
-sparsity = SparsityPattern.from_coordinates(
+sparsity = SparsityPattern.from_coo(
     rows=[0, 0, 1, 1, 2, 2],
     cols=[0, 1, 1, 2, 2, 3],
     shape=(3, 4),
