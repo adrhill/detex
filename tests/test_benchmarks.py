@@ -9,10 +9,10 @@ import pytest
 from asdex import (
     color_hessian_pattern,
     color_jacobian_pattern,
-    hessian_coloring,
+    hessian,
     hessian_from_coloring,
     hessian_sparsity,
-    jacobian_coloring,
+    jacobian,
     jacobian_from_coloring,
     jacobian_sparsity,
 )
@@ -189,9 +189,7 @@ def test_heat_materialization(benchmark):
 def test_heat_end_to_end(benchmark):
     """Heat equation: full pipeline."""
     x = np.ones(N)
-    jac_fn = jacobian_from_coloring(
-        heat_equation_rhs, jacobian_coloring(heat_equation_rhs, N)
-    )
+    jac_fn = jacobian(heat_equation_rhs, N)
     benchmark(jac_fn, x)
 
 
@@ -228,7 +226,7 @@ def test_convnet_materialization(benchmark):
 def test_convnet_end_to_end(benchmark):
     """ConvNet: full pipeline."""
     x = np.ones(N)
-    jac_fn = jacobian_from_coloring(convnet, jacobian_coloring(convnet, N))
+    jac_fn = jacobian(convnet, N)
     benchmark(jac_fn, x)
 
 
@@ -266,7 +264,7 @@ def test_rosenbrock_materialization(benchmark):
 def test_rosenbrock_end_to_end(benchmark):
     """Rosenbrock: full pipeline."""
     x = np.ones(N)
-    hess_fn = hessian_from_coloring(rosenbrock, hessian_coloring(rosenbrock, N))
+    hess_fn = hessian(rosenbrock, N)
     benchmark(hess_fn, x)
 
 
@@ -304,7 +302,5 @@ def test_gnn_materialization(benchmark):
 def test_gnn_end_to_end(benchmark):
     """GNN: full pipeline."""
     x = np.ones(_gnn_input_shape)
-    hess_fn = hessian_from_coloring(
-        gnn_energy, hessian_coloring(gnn_energy, _gnn_input_shape)
-    )
+    hess_fn = hessian(gnn_energy, _gnn_input_shape)
     benchmark(hess_fn, x)
