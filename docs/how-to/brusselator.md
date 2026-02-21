@@ -80,7 +80,7 @@ With the colored pattern precomputed,
 evaluate the sparse Jacobian at any state:
 
 ```python exec="true" session="bruss" source="above"
-from asdex import jacobian
+from asdex import jacobian_from_coloring
 
 # Brusselator initial condition
 x = jnp.linspace(0, 1, N, endpoint=False)
@@ -89,7 +89,7 @@ u0 = 22.0 * (yy * (1 - yy)) ** 1.5
 v0 = 27.0 * (xx * (1 - xx)) ** 1.5
 uv0 = jnp.concatenate([u0.ravel(), v0.ravel()])
 
-jac_fn = jacobian(brusselator_rhs, coloring)
+jac_fn = jacobian_from_coloring(brusselator_rhs, coloring)
 J = jac_fn(uv0)
 ```
 

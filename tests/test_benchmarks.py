@@ -9,11 +9,11 @@ import pytest
 from asdex import (
     color_hessian_pattern,
     color_jacobian_pattern,
-    hessian,
     hessian_coloring,
+    hessian_from_coloring,
     hessian_sparsity,
-    jacobian,
     jacobian_coloring,
+    jacobian_from_coloring,
     jacobian_sparsity,
 )
 from asdex.coloring import color_rows
@@ -180,7 +180,7 @@ def test_heat_materialization(benchmark):
     coloring = color_jacobian_pattern(
         jacobian_sparsity(heat_equation_rhs, N), mode="rev"
     )
-    jac_fn = jacobian(heat_equation_rhs, coloring)
+    jac_fn = jacobian_from_coloring(heat_equation_rhs, coloring)
     benchmark(jac_fn, x)
 
 
@@ -189,7 +189,9 @@ def test_heat_materialization(benchmark):
 def test_heat_end_to_end(benchmark):
     """Heat equation: full pipeline."""
     x = np.ones(N)
-    jac_fn = jacobian(heat_equation_rhs, jacobian_coloring(heat_equation_rhs, N))
+    jac_fn = jacobian_from_coloring(
+        heat_equation_rhs, jacobian_coloring(heat_equation_rhs, N)
+    )
     benchmark(jac_fn, x)
 
 
@@ -217,7 +219,7 @@ def test_convnet_materialization(benchmark):
     """ConvNet: VJP computation (with known sparsity/colors)."""
     x = np.ones(N)
     coloring = color_jacobian_pattern(jacobian_sparsity(convnet, N), mode="rev")
-    jac_fn = jacobian(convnet, coloring)
+    jac_fn = jacobian_from_coloring(convnet, coloring)
     benchmark(jac_fn, x)
 
 
@@ -226,7 +228,7 @@ def test_convnet_materialization(benchmark):
 def test_convnet_end_to_end(benchmark):
     """ConvNet: full pipeline."""
     x = np.ones(N)
-    jac_fn = jacobian(convnet, jacobian_coloring(convnet, N))
+    jac_fn = jacobian_from_coloring(convnet, jacobian_coloring(convnet, N))
     benchmark(jac_fn, x)
 
 
@@ -255,7 +257,7 @@ def test_rosenbrock_materialization(benchmark):
     x = np.ones(N)
     sparsity = hessian_sparsity(rosenbrock, N)
     coloring = color_hessian_pattern(sparsity)
-    hess_fn = hessian(rosenbrock, coloring)
+    hess_fn = hessian_from_coloring(rosenbrock, coloring)
     benchmark(hess_fn, x)
 
 
@@ -264,7 +266,7 @@ def test_rosenbrock_materialization(benchmark):
 def test_rosenbrock_end_to_end(benchmark):
     """Rosenbrock: full pipeline."""
     x = np.ones(N)
-    hess_fn = hessian(rosenbrock, hessian_coloring(rosenbrock, N))
+    hess_fn = hessian_from_coloring(rosenbrock, hessian_coloring(rosenbrock, N))
     benchmark(hess_fn, x)
 
 
@@ -293,7 +295,7 @@ def test_gnn_materialization(benchmark):
     x = np.ones(_gnn_input_shape)
     sparsity = hessian_sparsity(gnn_energy, _gnn_input_shape)
     coloring = color_hessian_pattern(sparsity)
-    hess_fn = hessian(gnn_energy, coloring)
+    hess_fn = hessian_from_coloring(gnn_energy, coloring)
     benchmark(hess_fn, x)
 
 
@@ -302,5 +304,7 @@ def test_gnn_materialization(benchmark):
 def test_gnn_end_to_end(benchmark):
     """GNN: full pipeline."""
     x = np.ones(_gnn_input_shape)
-    hess_fn = hessian(gnn_energy, hessian_coloring(gnn_energy, _gnn_input_shape))
+    hess_fn = hessian_from_coloring(
+        gnn_energy, hessian_coloring(gnn_energy, _gnn_input_shape)
+    )
     benchmark(hess_fn, x)

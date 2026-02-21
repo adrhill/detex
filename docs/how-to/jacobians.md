@@ -39,10 +39,10 @@ For more control,
 precompute the colored pattern explicitly and pass it to `jacobian`:
 
 ```python
-from asdex import jacobian_coloring, jacobian
+from asdex import jacobian_coloring, jacobian_from_coloring
 
 coloring = jacobian_coloring(f, input_shape=1000)
-jac_fn = jacobian(f, coloring)
+jac_fn = jacobian_from_coloring(f, coloring)
 
 for x in inputs:
     J = jac_fn(x)
@@ -73,7 +73,7 @@ coloring.save("colored.npz")
 from asdex import ColoredPattern
 
 coloring = ColoredPattern.load("colored.npz")
-jac_fn = jacobian(f, coloring)
+jac_fn = jacobian_from_coloring(f, coloring)
 ```
 
 [`SparsityPattern`](../reference/index.md#asdex.SparsityPattern) supports the same `save`/`load` interface.
@@ -170,10 +170,10 @@ sparsity = SparsityPattern.from_bcoo(bcoo_matrix)
 
 Finally, color the sparsity pattern and compute the Jacobian:
 ```python
-from asdex import color_jacobian_pattern, jacobian
+from asdex import color_jacobian_pattern, jacobian_from_coloring
 
 coloring = color_jacobian_pattern(sparsity)
-jac_fn = jacobian(f, coloring)
+jac_fn = jacobian_from_coloring(f, coloring)
 J = jac_fn(x)
 ```
 

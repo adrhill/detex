@@ -62,7 +62,7 @@ def jacobian_coloring(
             Requires a square Jacobian.
 
     Returns:
-        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian`][asdex.jacobian].
+        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian_from_coloring`][asdex.jacobian_from_coloring].
     """
     sparsity = _detect_jacobian_sparsity(f, input_shape)
     return color_jacobian_pattern(sparsity, symmetric=symmetric, mode=mode)
@@ -89,7 +89,7 @@ def hessian_coloring(
             Defaults to True (exploits H = H^T for fewer colors).
 
     Returns:
-        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian`][asdex.hessian].
+        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian_from_coloring`][asdex.hessian_from_coloring].
     """
     sparsity = _detect_hessian_sparsity(f, input_shape)
     return color_hessian_pattern(sparsity, symmetric=symmetric, mode=mode)
@@ -120,7 +120,7 @@ def color_jacobian_pattern(
             Requires a square pattern.
 
     Returns:
-        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian`][asdex.jacobian].
+        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian_from_coloring`][asdex.jacobian_from_coloring].
 
     Raises:
         ValueError: If mode is unknown.
@@ -209,7 +209,7 @@ def color_hessian_pattern(
             Defaults to True (exploits Hessian symmetry for fewer colors).
 
     Returns:
-        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian`][asdex.hessian].
+        A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian_from_coloring`][asdex.hessian_from_coloring].
 
     Raises:
         ValueError: If mode is unknown.

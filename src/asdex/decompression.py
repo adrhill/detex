@@ -8,7 +8,10 @@ import jax.numpy as jnp
 from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike
 
+from asdex.coloring import hessian_coloring as _hessian_coloring
+from asdex.coloring import jacobian_coloring as _jacobian_coloring
 from asdex.detection import _ensure_scalar
+from asdex.modes import HessianMode, JacobianMode
 from asdex.pattern import ColoredPattern
 
 # Public API
@@ -16,9 +19,79 @@ from asdex.pattern import ColoredPattern
 
 def jacobian(
     f: Callable[[ArrayLike], ArrayLike],
+    input_shape: int | tuple[int, ...],
+    *,
+    mode: JacobianMode = "auto",
+    symmetric: bool = False,
+) -> Callable[[ArrayLike], BCOO]:
+    """Detect sparsity, color, and build a sparse Jacobian function.
+
+    Combines [`jacobian_coloring`][asdex.jacobian_coloring]
+    and [`jacobian_from_coloring`][asdex.jacobian_from_coloring]
+    in one call.
+
+    Args:
+        f: Function taking an array and returning an array.
+            Input and output may be multi-dimensional.
+        input_shape: Shape of the input array.
+        mode: AD mode.
+            ``"fwd"`` uses JVPs (forward-mode AD),
+            ``"rev"`` uses VJPs (reverse-mode AD),
+            ``"auto"`` picks whichever of fwd/rev needs fewer colors.
+        symmetric: Whether to use symmetric (star) coloring.
+            Requires a square Jacobian.
+
+    Returns:
+        A function that takes an input array and returns
+            the sparse Jacobian as BCOO of shape ``(m, n)``
+            where ``n = x.size`` and ``m = prod(output_shape)``.
+    """
+    coloring = _jacobian_coloring(f, input_shape, mode=mode, symmetric=symmetric)
+    return jacobian_from_coloring(f, coloring)
+
+
+def hessian(
+    f: Callable[[ArrayLike], ArrayLike],
+    input_shape: int | tuple[int, ...],
+    *,
+    mode: HessianMode = "auto",
+    symmetric: bool = True,
+) -> Callable[[ArrayLike], BCOO]:
+    """Detect sparsity, color, and build a sparse Hessian function.
+
+    Combines [`hessian_coloring`][asdex.hessian_coloring]
+    and [`hessian_from_coloring`][asdex.hessian_from_coloring]
+    in one call.
+
+    If ``f`` returns a squeezable shape like ``(1,)`` or ``(1, 1)``,
+    it is automatically squeezed to scalar.
+
+    Args:
+        f: Scalar-valued function taking an array.
+            Input may be multi-dimensional.
+        input_shape: Shape of the input array.
+        mode: AD composition strategy for Hessian-vector products.
+            ``"fwd_over_rev"`` uses forward-over-reverse,
+            ``"rev_over_fwd"`` uses reverse-over-forward,
+            ``"rev_over_rev"`` uses reverse-over-reverse,
+            ``"auto"`` defaults to ``"fwd_over_rev"``.
+        symmetric: Whether to use symmetric (star) coloring.
+            Defaults to True (exploits H = H^T for fewer colors).
+
+    Returns:
+        A function that takes an input array and returns
+            the sparse Hessian as BCOO of shape ``(n, n)``
+            where ``n = x.size``.
+    """
+    coloring = _hessian_coloring(f, input_shape, mode=mode, symmetric=symmetric)
+    return hessian_from_coloring(f, coloring)
+
+
+def jacobian_from_coloring(
+    f: Callable[[ArrayLike], ArrayLike],
     coloring: ColoredPattern,
 ) -> Callable[[ArrayLike], BCOO]:
-    """Build a sparse Jacobian function using coloring and AD.
+    """Build a sparse Jacobian function from a pre-computed coloring.
 
     Uses row coloring + VJPs or column coloring + JVPs,
     depending on which needs fewer colors.
@@ -41,11 +114,11 @@ def jacobian(
     return jac_fn
 
 
-def hessian(
+def hessian_from_coloring(
     f: Callable[[ArrayLike], ArrayLike],
     coloring: ColoredPattern,
 ) -> Callable[[ArrayLike], BCOO]:
-    """Build a sparse Hessian function using coloring and HVPs.
+    """Build a sparse Hessian function from a pre-computed coloring.
 
     Uses symmetric (star) coloring and Hessian-vector products by default.
 

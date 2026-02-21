@@ -35,17 +35,16 @@ uv add git+https://github.com/adrhill/asdex.git
 
 ```python
 import numpy as np
-from asdex import jacobian_coloring, jacobian
+from asdex import jacobian
 
 def f(x):
     return (x[1:] - x[:-1]) ** 2
 
-# Detect sparsity and color in one step:
-coloring = jacobian_coloring(f, input_shape=1000)
+# Detect sparsity, color, and build a sparse Jacobian function:
+jac_fn = jacobian(f, input_shape=1000)
 
 # Compute sparse Jacobians efficiently:
 x = np.random.randn(1000)
-jac_fn = jacobian(f, coloring)
 J = jac_fn(x)
 ```
 

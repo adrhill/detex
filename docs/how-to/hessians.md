@@ -39,10 +39,10 @@ For more control,
 precompute the colored pattern explicitly and pass it to `hessian`:
 
 ```python
-from asdex import hessian_coloring, hessian
+from asdex import hessian_coloring, hessian_from_coloring
 
 coloring = hessian_coloring(g, input_shape=100)
-hess_fn = hessian(g, coloring)
+hess_fn = hessian_from_coloring(g, coloring)
 
 for x in inputs:
     H = hess_fn(x)
@@ -73,7 +73,7 @@ coloring.save("colored.npz")
 from asdex import ColoredPattern
 
 coloring = ColoredPattern.load("colored.npz")
-hess_fn = hessian(g, coloring)
+hess_fn = hessian_from_coloring(g, coloring)
 ```
 
 [`SparsityPattern`](../reference/index.md#asdex.SparsityPattern) supports the same `save`/`load` interface.
@@ -165,24 +165,24 @@ sparsity = SparsityPattern.from_bcoo(bcoo_matrix)
 
 Finally, color the sparsity pattern and compute the Hessian:
 ```python
-from asdex import color_hessian_pattern, hessian
+from asdex import color_hessian_pattern, hessian_from_coloring
 
 coloring = color_hessian_pattern(sparsity)
-hess_fn = hessian(f, coloring)
+hess_fn = hessian_from_coloring(f, coloring)
 H = hess_fn(x)
 ```
 
 ## Choosing an HVP Mode
 
 By default, `hessian` uses forward-over-reverse AD to compute Hessian-vector products.
-You can select a different AD composition strategy via the `ad_mode` parameter:
+You can select a different AD composition strategy via the `mode` parameter:
 
 ```python
 from asdex import hessian
 
-hess_fn_for = hessian(f, input_shape=100, ad_mode="fwd_over_rev")  # default
-hess_fn_rof = hessian(f, input_shape=100, ad_mode="rev_over_fwd")
-hess_fn_ror = hessian(f, input_shape=100, ad_mode="rev_over_rev")
+hess_fn_for = hessian(f, input_shape=100, mode="fwd_over_rev")  # default
+hess_fn_rof = hessian(f, input_shape=100, mode="rev_over_fwd")
+hess_fn_ror = hessian(f, input_shape=100, mode="rev_over_rev")
 ```
 
 All three modes produce the same mathematical result.

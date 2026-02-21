@@ -10,7 +10,7 @@ from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike
 
 from asdex.coloring import hessian_coloring, jacobian_coloring
-from asdex.decompression import hessian, jacobian
+from asdex.decompression import hessian_from_coloring, jacobian_from_coloring
 from asdex.pattern import ColoredPattern
 
 
@@ -75,7 +75,7 @@ def check_jacobian_correctness(
         n = coloring.sparsity.n
         ref_mode = "fwd" if m >= n else "rev"
 
-    J_sparse = jacobian(f, coloring)(x)
+    J_sparse = jacobian_from_coloring(f, coloring)(x)
 
     match method:
         case "dense":
@@ -143,7 +143,7 @@ def check_hessian_correctness(
     # Derive reference AD mode from the colored pattern
     hessian_mode = coloring.mode
 
-    H_sparse = hessian(f, coloring)(x)
+    H_sparse = hessian_from_coloring(f, coloring)(x)
 
     match method:
         case "dense":

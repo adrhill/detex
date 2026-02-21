@@ -20,8 +20,8 @@ from asdex import (
     SparsityPattern,
     color_hessian_pattern,
     color_jacobian_pattern,
-    hessian,
     hessian_coloring,
+    hessian_from_coloring,
     jacobian_coloring,
 )
 from asdex._display import _compressed_pattern
@@ -980,7 +980,7 @@ def test_hessian_with_coloring():
 
     x = np.array([1.0, 2.0, 3.0])
     coloring = hessian_coloring(f, x.shape)
-    result = hessian(f, coloring)(x).todense()
+    result = hessian_from_coloring(f, coloring)(x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -995,7 +995,7 @@ def test_hessian_coloring_zero_hessian():
 
     x = np.array([1.0, 2.0, 3.0])
     coloring = hessian_coloring(f, x.shape)
-    result = hessian(f, coloring)(x)
+    result = hessian_from_coloring(f, coloring)(x)
 
     assert result.shape == (3, 3)
     assert_allclose(result.todense(), np.zeros((3, 3)))
@@ -1076,7 +1076,7 @@ def test_hessian_star_decompression_non_unique_branch():
         symmetric=True,
         mode="fwd_over_rev",
     )
-    result = hessian(f, coloring)(x).todense()
+    result = hessian_from_coloring(f, coloring)(x).todense()
 
     assert_allclose(result, expected, rtol=1e-5)
 

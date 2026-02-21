@@ -1,6 +1,7 @@
 # Jacobian
 
 ::: asdex.jacobian
+::: asdex.jacobian_from_coloring
 ::: asdex.jacobian_coloring
 ::: asdex.jacobian_sparsity
 ::: asdex.color_jacobian_pattern

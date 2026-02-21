@@ -11,7 +11,12 @@ from asdex.coloring import (
     hessian_coloring,
     jacobian_coloring,
 )
-from asdex.decompression import hessian, jacobian
+from asdex.decompression import (
+    hessian,
+    hessian_from_coloring,
+    jacobian,
+    jacobian_from_coloring,
+)
 from asdex.detection import hessian_sparsity, jacobian_sparsity
 from asdex.modes import HessianMode, JacobianMode
 from asdex.pattern import ColoredPattern, SparsityPattern
@@ -34,8 +39,10 @@ __all__ = [
     "color_jacobian_pattern",
     "hessian",
     "hessian_coloring",
+    "hessian_from_coloring",
     "hessian_sparsity",
     "jacobian",
     "jacobian_coloring",
+    "jacobian_from_coloring",
     "jacobian_sparsity",
 ]

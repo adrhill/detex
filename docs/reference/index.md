@@ -5,6 +5,11 @@
 
 ---
 
+::: asdex.jacobian_from_coloring
+::: asdex.hessian_from_coloring
+
+---
+
 ::: asdex.jacobian_coloring
 ::: asdex.hessian_coloring
 
