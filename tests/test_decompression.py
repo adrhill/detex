@@ -650,19 +650,129 @@ def test_hessian_arrow_pattern():
     assert_allclose(result, expected, rtol=1e-5)
 
 
-# HVP mode tests
+# Hessian AD mode tests
 
 
 @pytest.mark.hessian
-@pytest.mark.parametrize("hvp_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
-def test_hessian_hvp_modes(hvp_mode):
-    """All three HVP modes produce the same sparse Hessian on Rosenbrock."""
+@pytest.mark.parametrize("ad_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_hessian_ad_modes(ad_mode):
+    """All three AD modes produce the same sparse Hessian on Rosenbrock."""
 
     def f(x):
         return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
 
     x = np.array([1.0, 2.0, 0.5, -1.0])
-    result = hessian(f, hvp_mode=hvp_mode)(x).todense()
+    result = hessian(f, ad_mode=ad_mode)(x).todense()
+    expected = jax.hessian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+# Jacobian mode tests
+
+
+@pytest.mark.jacobian
+@pytest.mark.parametrize("ad_mode", ["fwd", "rev"])
+def test_jacobian_ad_mode(ad_mode):
+    """jacobian(f, ad_mode=...) forces the specified AD mode."""
+
+    def f(x):
+        return (x[1:] - x[:-1]) ** 2
+
+    x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
+    result = jacobian(f, ad_mode=ad_mode)(x).todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.jacobian
+def test_jacobian_coloring_mode_ignored_with_colored_pattern():
+    """coloring_mode parameter is ignored when colored_pattern is provided."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0])
+    colored_pattern = color_jacobian_pattern(
+        jacobian_sparsity(f, input_shape=3), "column"
+    )
+
+    # coloring_mode="row" should be ignored since colored_pattern is provided
+    result = jacobian(f, colored_pattern, coloring_mode="row")(x).todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+# Symmetric coloring for Jacobian tests
+
+
+@pytest.mark.jacobian
+def test_jacobian_symmetric_coloring():
+    """Jacobian with coloring_mode="symmetric" works on a symmetric Jacobian."""
+
+    def f(x):
+        return jax.grad(lambda y: jnp.sum(y**3))(x)
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    result = jacobian(f, coloring_mode="symmetric")(x).todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.jacobian
+def test_jacobian_symmetric_coloring_rev():
+    """Jacobian with coloring_mode="symmetric" and ad_mode="rev" works."""
+
+    def f(x):
+        return jax.grad(lambda y: jnp.sum(y**3))(x)
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    result = jacobian(f, coloring_mode="symmetric", ad_mode="rev")(x).todense()
+    expected = jax.jacobian(f)(x)
+
+    assert_allclose(result, expected, rtol=1e-5)
+
+
+@pytest.mark.jacobian
+def test_jacobian_incompatible_modes_raises():
+    """Jacobian with incompatible coloring_mode and ad_mode raises ValueError."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match="Row coloring is only compatible"):
+        jacobian(f, coloring_mode="row", ad_mode="fwd")(x)
+
+
+@pytest.mark.jacobian
+def test_jacobian_incompatible_column_rev_raises():
+    """Jacobian with coloring_mode='column' and ad_mode='rev' raises ValueError."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match="Column coloring is only compatible"):
+        jacobian(f, coloring_mode="column", ad_mode="rev")(x)
+
+
+# Hessian coloring mode tests
+
+
+@pytest.mark.hessian
+@pytest.mark.parametrize("coloring_mode", ["row", "column"])
+def test_hessian_row_column_coloring(coloring_mode):
+    """Hessian with coloring_mode="row" or "column" works."""
+
+    def f(x):
+        return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
+
+    x = np.array([1.0, 2.0, 0.5, -1.0])
+    result = hessian(f, coloring_mode=coloring_mode)(x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)

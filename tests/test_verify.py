@@ -27,8 +27,8 @@ def test_check_jacobian_passes():
 
 
 @pytest.mark.jacobian
-def test_check_jacobian_auto_ad_mode_tall():
-    """Auto ad_mode picks forward for tall Jacobians (m >= n)."""
+def test_check_jacobian_auto_mode_tall():
+    """Auto mode picks fwd for tall Jacobians (m >= n)."""
 
     def f(x):
         return jnp.concatenate([x**2, x**3])
@@ -39,8 +39,8 @@ def test_check_jacobian_auto_ad_mode_tall():
 
 
 @pytest.mark.jacobian
-def test_check_jacobian_auto_ad_mode_wide():
-    """Auto ad_mode picks reverse for wide Jacobians (m < n)."""
+def test_check_jacobian_auto_mode_wide():
+    """Auto mode picks rev for wide Jacobians (m < n)."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
@@ -119,29 +119,29 @@ def test_check_jacobian_custom_seed_and_num_probes():
 
 @pytest.mark.jacobian
 def test_check_jacobian_forward_mode():
-    """check_jacobian_correctness works with ad_mode='forward'."""
+    """check_jacobian_correctness works with ad_mode='fwd'."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    check_jacobian_correctness(f, x, ad_mode="forward")
+    check_jacobian_correctness(f, x, ad_mode="fwd")
 
 
 @pytest.mark.jacobian
 def test_check_jacobian_reverse_mode():
-    """check_jacobian_correctness works with ad_mode='reverse'."""
+    """check_jacobian_correctness works with ad_mode='rev'."""
 
     def f(x):
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
-    check_jacobian_correctness(f, x, ad_mode="reverse")
+    check_jacobian_correctness(f, x, ad_mode="rev")
 
 
 @pytest.mark.jacobian
 def test_check_jacobian_reverse_mode_raises_on_mismatch():
-    """check_jacobian_correctness raises with ad_mode='reverse' on wrong results."""
+    """check_jacobian_correctness raises with ad_mode='rev' on wrong results."""
 
     def f_dense(x):
         return jnp.array([x[0] + x[1] + x[2], x[0] + x[1] + x[2], x[0] + x[1] + x[2]])
@@ -151,7 +151,7 @@ def test_check_jacobian_reverse_mode_raises_on_mismatch():
     x = np.array([1.0, 2.0, 3.0])
     with pytest.raises(VerificationError, match="matvec verification"):
         check_jacobian_correctness(
-            f_dense, x, colored_pattern=colored_pattern, ad_mode="reverse"
+            f_dense, x, colored_pattern=colored_pattern, ad_mode="rev"
         )
 
 
@@ -159,7 +159,7 @@ def test_check_jacobian_reverse_mode_raises_on_mismatch():
 
 
 @pytest.mark.jacobian
-@pytest.mark.parametrize("ad_mode", ["forward", "reverse"])
+@pytest.mark.parametrize("ad_mode", ["fwd", "rev"])
 def test_check_jacobian_dense(ad_mode):
     """check_jacobian_correctness works with method='dense' and both AD modes."""
 
@@ -257,7 +257,7 @@ def test_check_hessian_custom_seed_and_num_probes():
 
 @pytest.mark.hessian
 @pytest.mark.parametrize("ad_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
-def test_check_hessian_ad_modes(ad_mode):
+def test_check_hessian_modes(ad_mode):
     """check_hessian_correctness works with all HVP AD modes."""
 
     def f(x):
@@ -269,7 +269,7 @@ def test_check_hessian_ad_modes(ad_mode):
 
 @pytest.mark.hessian
 @pytest.mark.parametrize("ad_mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
-def test_check_hessian_ad_modes_raise_on_mismatch(ad_mode):
+def test_check_hessian_modes_raise_on_mismatch(ad_mode):
     """check_hessian_correctness raises with all HVP AD modes on wrong results."""
 
     def f(x):

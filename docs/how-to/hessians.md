@@ -175,14 +175,14 @@ H = hess_fn(x)
 ## Choosing an HVP Mode
 
 By default, `hessian` uses forward-over-reverse AD to compute Hessian-vector products.
-You can select a different AD composition strategy via the `hvp_mode` parameter:
+You can select a different AD composition strategy via the `ad_mode` parameter:
 
 ```python
 from asdex import hessian
 
-h_for = hessian(f, hvp_mode="fwd_over_rev")(x)  # default
-h_rof = hessian(f, hvp_mode="rev_over_fwd")(x)
-h_ror = hessian(f, hvp_mode="rev_over_rev")(x)
+h_for = hessian(f, ad_mode="fwd_over_rev")(x)  # default
+h_rof = hessian(f, ad_mode="rev_over_fwd")(x)
+h_ror = hessian(f, ad_mode="rev_over_rev")(x)
 ```
 
 All three modes produce the same mathematical result.
@@ -250,8 +250,8 @@ check_hessian_correctness(g, x, colored_pattern=colored_pattern, ad_mode="rev_ov
 ```
 
 The `ad_mode` parameter accepts the same values as the
-[`hvp_mode` parameter](#choosing-an-hvp-mode) on `hessian`:
-`"fwd_over_rev"`, `"rev_over_fwd"`, and `"rev_over_rev"`.
+[`ad_mode` parameter](#choosing-an-hvp-mode) on `hessian`:
+`"fwd_over_rev"`, `"rev_over_fwd"`, `"rev_over_rev"`, and `"auto"`.
 
 For an exact element-wise comparison against the full dense Hessian,
 use `method="dense"`:

@@ -6,7 +6,7 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Literal, cast
+from typing import assert_never, cast
 
 import jax.numpy as jnp
 import numpy as np
@@ -14,6 +14,7 @@ from jax.experimental.sparse import BCOO
 from numpy.typing import NDArray
 
 from asdex._display import colored_repr, colored_str, sparsity_repr, sparsity_str
+from asdex.modes import ColoringMode
 
 
 @dataclass(frozen=True)
@@ -227,24 +228,32 @@ class ColoredPattern:
     Attributes:
         sparsity: The sparsity pattern that was colored.
         colors: Color assignment array.
-            Shape ``(m,)`` for ``"VJP"`` mode,
-            ``(n,)`` for ``"JVP"`` and ``"HVP"`` modes.
+            Shape ``(m,)`` for ``"row"`` mode,
+            ``(n,)`` for ``"column"`` and ``"symmetric"`` modes.
         num_colors: Total number of colors used.
-        mode: The AD primitive used per color.
-            ``"VJP"`` for row-colored Jacobians,
-            ``"JVP"`` for column-colored Jacobians,
-            ``"HVP"`` for symmetrically colored Hessians.
+        mode: The coloring mode.
+            ``"row"`` for row-colored patterns (uses VJPs),
+            ``"column"`` for column-colored patterns (uses JVPs),
+            ``"symmetric"`` for symmetrically colored patterns (uses HVPs).
     """
 
     sparsity: SparsityPattern
     colors: NDArray[np.int32]
     num_colors: int
-    mode: Literal["JVP", "VJP", "HVP"]
+    mode: ColoringMode
+
+    def __post_init__(self) -> None:
+        """Validate that mode has been resolved."""
+        if self.mode == "auto":
+            raise ValueError(
+                "ColoredPattern requires a resolved mode, got 'auto'. "
+                "Resolve the mode before constructing a ColoredPattern."
+            )
 
     @property
     def _compresses_columns(self) -> bool:
-        """Whether coloring compresses columns (JVP/HVP) or rows (VJP)."""
-        return self.mode in ("JVP", "HVP")
+        """Whether coloring compresses columns (column/symmetric) or rows (row)."""
+        return self.mode in ("column", "symmetric")
 
     # Cached arrays for fast decompression
 
@@ -261,22 +270,24 @@ class ColoredPattern:
 
         gives the nnz values in sparsity-pattern order.
 
-        For VJP: ``color_idx = colors[rows]``, ``elem_idx = cols``.
-        For JVP: ``color_idx = colors[cols]``, ``elem_idx = rows``.
-        For HVP: delegates to `_star_extraction_indices`.
+        For row: ``color_idx = colors[rows]``, ``elem_idx = cols``.
+        For column: ``color_idx = colors[cols]``, ``elem_idx = rows``.
+        For symmetric: delegates to `_star_extraction_indices`.
         """
-        if self.mode == "HVP":
-            return self._star_extraction_indices
-
         rows = self.sparsity.rows
         cols = self.sparsity.cols
 
-        if self.mode == "VJP":
-            color_idx = self.colors[rows].astype(np.intp)
-            elem_idx = cols.astype(np.intp)
-        else:  # JVP
-            color_idx = self.colors[cols].astype(np.intp)
-            elem_idx = rows.astype(np.intp)
+        match self.mode:
+            case "symmetric":
+                return self._star_extraction_indices
+            case "row":
+                color_idx = self.colors[rows].astype(np.intp)
+                elem_idx = cols.astype(np.intp)
+            case "column":
+                color_idx = self.colors[cols].astype(np.intp)
+                elem_idx = rows.astype(np.intp)
+            case _ as unreachable:
+                assert_never(unreachable)  # type: ignore[type-assertion-failure]
 
         return color_idx, elem_idx
 
@@ -327,7 +338,13 @@ class ColoredPattern:
         Row ``c`` is the mask ``colors == c``,
         used as the seed/tangent vector for the ``c``-th AD evaluation.
         """
-        dim = self.sparsity.m if self.mode == "VJP" else self.sparsity.n
+        match self.mode:
+            case "row":
+                dim = self.sparsity.m
+            case "column" | "symmetric":
+                dim = self.sparsity.n
+            case _ as unreachable:
+                assert_never(unreachable)  # type: ignore[type-assertion-failure]
         seeds = np.zeros((self.num_colors, dim), dtype=np.bool_)
         for c in range(self.num_colors):
             seeds[c] = self.colors == c
@@ -370,7 +387,7 @@ class ColoredPattern:
             sparsity=sparsity,
             colors=data["colors"].astype(np.int32),
             num_colors=int(data["num_colors"]),
-            mode=cast(Literal["JVP", "VJP", "HVP"], str(data["mode"])),
+            mode=cast(ColoringMode, str(data["mode"])),
         )
 
     # Display

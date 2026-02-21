@@ -125,5 +125,12 @@ convention = "google"
 quote-style = "double"
 indent-style = "space"
 
+[tool.coverage.report]
+exclude_also = [
+    "case _ as unreachable:",
+    "assert_never\\(",
+    "if TYPE_CHECKING:",
+]
+
 [tool.ty.environment]
 python-version = "3.14"

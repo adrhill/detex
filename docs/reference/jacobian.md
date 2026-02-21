@@ -6,3 +6,7 @@
 ::: asdex.color_jacobian_pattern
 ::: asdex.check_jacobian_correctness
 ::: asdex.VerificationError
+
+---
+
+::: asdex.JacobianMode

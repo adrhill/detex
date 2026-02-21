@@ -1,7 +1,7 @@
 """Sparse Jacobian and Hessian computation using coloring and AD."""
 
 from collections.abc import Callable
-from typing import Literal
+from typing import assert_never
 
 import jax
 import jax.numpy as jnp
@@ -12,9 +12,16 @@ from asdex.coloring import color_hessian_pattern, color_jacobian_pattern
 from asdex.detection import _ensure_scalar
 from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_sparsity
+from asdex.modes import (
+    ColoringMode,
+    HessianMode,
+    JacobianMode,
+    _assert_hessian_args,
+    _assert_jacobian_args,
+    _resolve_ad_mode,
+    _resolve_hessian_mode,
+)
 from asdex.pattern import ColoredPattern
-
-HvpMode = Literal["fwd_over_rev", "rev_over_fwd", "rev_over_rev"]
 
 # Public API
 
@@ -22,6 +29,9 @@ HvpMode = Literal["fwd_over_rev", "rev_over_fwd", "rev_over_rev"]
 def jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     colored_pattern: ColoredPattern | None = None,
+    *,
+    coloring_mode: ColoringMode = "auto",
+    ad_mode: JacobianMode = "auto",
 ) -> Callable[[ArrayLike], BCOO]:
     """Build a sparse Jacobian function using coloring and AD.
 
@@ -34,12 +44,25 @@ def jacobian(
         colored_pattern: Optional pre-computed [`ColoredPattern`][asdex.ColoredPattern]
             from [`jacobian_coloring`][asdex.jacobian_coloring].
             If None, sparsity is detected and colored automatically on each call.
+        coloring_mode: Coloring mode (used only when ``colored_pattern`` is None).
+            ``"row"`` for row coloring,
+            ``"column"`` for column coloring,
+            ``"symmetric"`` for symmetric (star) coloring,
+            ``"auto"`` picks automatically.
+            When ``"auto"`` but ``ad_mode`` is specific,
+            resolves to the natural coloring:
+            ``"fwd"`` implies ``"column"``, ``"rev"`` implies ``"row"``.
+        ad_mode: AD mode for Jacobian computation.
+            ``"fwd"`` uses JVPs (forward-mode AD),
+            ``"rev"`` uses VJPs (reverse-mode AD),
+            ``"auto"`` selects based on the coloring mode.
 
     Returns:
         A function that takes an input array and returns
             the sparse Jacobian as BCOO of shape ``(m, n)``
             where ``n = x.size`` and ``m = prod(output_shape)``.
     """
+    _assert_jacobian_args(colored_pattern, coloring_mode, ad_mode)
     if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
         raise TypeError(
             f"Expected ColoredPattern, got {type(colored_pattern).__name__}. "
@@ -47,7 +70,9 @@ def jacobian(
         )
 
     def jac_fn(x: ArrayLike) -> BCOO:
-        return _eval_jacobian(f, jnp.asarray(x), colored_pattern)
+        return _eval_jacobian(
+            f, jnp.asarray(x), colored_pattern, coloring_mode, ad_mode
+        )
 
     return jac_fn
 
@@ -56,11 +81,12 @@ def hessian(
     f: Callable[[ArrayLike], ArrayLike],
     colored_pattern: ColoredPattern | None = None,
     *,
-    hvp_mode: HvpMode = "fwd_over_rev",
+    coloring_mode: ColoringMode = "auto",
+    ad_mode: HessianMode = "auto",
 ) -> Callable[[ArrayLike], BCOO]:
     """Build a sparse Hessian function using coloring and HVPs.
 
-    Uses symmetric (star) coloring and Hessian-vector products.
+    Uses symmetric (star) coloring and Hessian-vector products by default.
 
     If ``f`` returns a squeezable shape like ``(1,)`` or ``(1, 1)``,
     it is automatically squeezed to scalar.
@@ -71,18 +97,23 @@ def hessian(
         colored_pattern: Optional pre-computed [`ColoredPattern`][asdex.ColoredPattern]
             from [`hessian_coloring`][asdex.hessian_coloring].
             If None, sparsity is detected and colored automatically on each call.
-        hvp_mode: AD composition strategy for Hessian-vector products.
-            ``"fwd_over_rev"`` (default) uses forward-over-reverse,
+        coloring_mode: Coloring mode (used only when ``colored_pattern`` is None).
+            ``"row"`` for row coloring,
+            ``"column"`` for column coloring,
+            ``"symmetric"`` for symmetric (star) coloring,
+            ``"auto"`` defaults to ``"symmetric"``.
+        ad_mode: AD composition strategy for Hessian-vector products.
+            ``"fwd_over_rev"`` uses forward-over-reverse,
             ``"rev_over_fwd"`` uses reverse-over-forward,
-            and ``"rev_over_rev"`` uses reverse-over-reverse.
-            All three produce the same result;
-            they differ in memory and performance characteristics.
+            ``"rev_over_rev"`` uses reverse-over-reverse,
+            ``"auto"`` defaults to ``"fwd_over_rev"``.
 
     Returns:
         A function that takes an input array and returns
             the sparse Hessian as BCOO of shape ``(n, n)``
             where ``n = x.size``.
     """
+    _assert_hessian_args(colored_pattern, coloring_mode, ad_mode)
     if colored_pattern is not None and not isinstance(colored_pattern, ColoredPattern):
         raise TypeError(
             f"Expected ColoredPattern, got {type(colored_pattern).__name__}. "
@@ -90,7 +121,7 @@ def hessian(
         )
 
     def hess_fn(x: ArrayLike) -> BCOO:
-        return _eval_hessian(f, jnp.asarray(x), colored_pattern, hvp_mode)
+        return _eval_hessian(f, jnp.asarray(x), colored_pattern, coloring_mode, ad_mode)
 
     return hess_fn
 
@@ -102,13 +133,15 @@ def _eval_jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
     colored_pattern: ColoredPattern | None,
+    coloring_mode: ColoringMode,
+    ad_mode: JacobianMode,
 ) -> BCOO:
     """Evaluate the sparse Jacobian of f at x."""
     n = x.size
 
     if colored_pattern is None:
         sparsity = _detect_sparsity(f, x.shape)
-        colored_pattern = color_jacobian_pattern(sparsity)
+        colored_pattern = color_jacobian_pattern(sparsity, coloring_mode, ad_mode)
     else:
         expected = colored_pattern.sparsity.input_shape
         if x.shape != expected:
@@ -129,16 +162,22 @@ def _eval_jacobian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
-    if colored_pattern.mode == "VJP":
-        return _jacobian_rows(f, x, colored_pattern, out_shape)
-    return _jacobian_cols(f, x, colored_pattern)
+    resolved_ad_mode = _resolve_ad_mode(colored_pattern.mode, ad_mode)
+    match resolved_ad_mode:
+        case "rev":
+            return _jacobian_rows(f, x, colored_pattern, out_shape)
+        case "fwd":
+            return _jacobian_cols(f, x, colored_pattern)
+        case _ as unreachable:
+            assert_never(unreachable)  # type: ignore[type-assertion-failure]
 
 
 def _eval_hessian(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
     colored_pattern: ColoredPattern | None,
-    hvp_mode: HvpMode,
+    coloring_mode: ColoringMode,
+    ad_mode: HessianMode,
 ) -> BCOO:
     """Evaluate the sparse Hessian of f at x.
 
@@ -150,7 +189,7 @@ def _eval_hessian(
 
     if colored_pattern is None:
         sparsity = _detect_hessian_sparsity(f, x.shape)
-        colored_pattern = color_hessian_pattern(sparsity)
+        colored_pattern = color_hessian_pattern(sparsity, coloring_mode)
     else:
         expected = colored_pattern.sparsity.input_shape
         if x.shape != expected:
@@ -165,7 +204,8 @@ def _eval_hessian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n))
 
-    grads = _compute_hvps(f, x, colored_pattern, hvp_mode)
+    resolved_ad_mode = _resolve_hessian_mode(ad_mode)
+    grads = _compute_hvps(f, x, colored_pattern, resolved_ad_mode)
     return _decompress(colored_pattern, grads)
 
 
@@ -211,36 +251,34 @@ def _compute_hvps(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
     colored_pattern: ColoredPattern,
-    hvp_mode: HvpMode,
+    ad_mode: HessianMode,
 ) -> jax.Array:
     """Compute one HVP per color using pre-computed seed matrix."""
     seeds = jnp.asarray(colored_pattern._seed_matrix, dtype=x.dtype)
 
-    if hvp_mode == "fwd_over_rev":
+    match ad_mode:
+        case "fwd_over_rev":
 
-        def single_hvp(v: jax.Array) -> jax.Array:
-            _, hvp = jax.jvp(jax.grad(f), (x,), (v.reshape(x.shape),))
-            return hvp.ravel()
+            def single_hvp(v: jax.Array) -> jax.Array:
+                _, hvp = jax.jvp(jax.grad(f), (x,), (v.reshape(x.shape),))
+                return hvp.ravel()
 
-    elif hvp_mode == "rev_over_fwd":
+        case "rev_over_fwd":
 
-        def single_hvp(v: jax.Array) -> jax.Array:
-            return jax.grad(lambda p: jax.jvp(f, (p,), (v.reshape(x.shape),))[1])(
-                x
-            ).ravel()
+            def single_hvp(v: jax.Array) -> jax.Array:
+                return jax.grad(lambda p: jax.jvp(f, (p,), (v.reshape(x.shape),))[1])(
+                    x
+                ).ravel()
 
-    elif hvp_mode == "rev_over_rev":
+        case "rev_over_rev":
 
-        def single_hvp(v: jax.Array) -> jax.Array:
-            return jax.grad(lambda y: jnp.vdot(jax.grad(f)(y), v.reshape(x.shape)))(
-                x
-            ).ravel()
+            def single_hvp(v: jax.Array) -> jax.Array:
+                return jax.grad(lambda y: jnp.vdot(jax.grad(f)(y), v.reshape(x.shape)))(
+                    x
+                ).ravel()
 
-    else:
-        raise ValueError(
-            f"Unknown hvp_mode {hvp_mode!r}. "
-            'Expected "fwd_over_rev", "rev_over_fwd", or "rev_over_rev".'
-        )
+        case _ as unreachable:
+            assert_never(unreachable)  # type: ignore[type-assertion-failure]
 
     return jax.vmap(single_hvp)(seeds)
 

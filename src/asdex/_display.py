@@ -8,7 +8,7 @@ https://github.com/JuliaSparse/SparseArrays.jl/
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
 if TYPE_CHECKING:
     from asdex.pattern import ColoredPattern, SparsityPattern
@@ -16,6 +16,13 @@ if TYPE_CHECKING:
 # Thresholds for switching from dot display to braille (Julia-style heuristics)
 _SMALL_ROWS = 16
 _SMALL_COLS = 40
+
+# Human-readable AD primitive names for display
+_MODE_PRIMITIVE: dict[str, str] = {
+    "row": "VJP",
+    "column": "JVP",
+    "symmetric": "HVP",
+}
 
 
 # SparsityPattern display
@@ -43,30 +50,35 @@ def colored_repr(colored: ColoredPattern) -> str:
     sp = colored.sparsity
     m, n = sp.shape
     c = colored.num_colors
+    primitive = _MODE_PRIMITIVE[colored.mode]
     return (
         f"ColoredPattern({m}×{n}, nnz={sp.nnz}, sparsity={1 - sp.density:.1%}, "
-        f"{colored.mode}, {c} {'color' if c == 1 else 'colors'})"
+        f"{primitive}, {c} {'color' if c == 1 else 'colors'})"
     )
 
 
 def colored_str(colored: ColoredPattern) -> str:
     """Full string representation with AD savings summary and visualization.
 
-    Column compression (JVP/HVP) shows side-by-side with ``→``.
-    Row compression (VJP) shows stacked with ``↓``.
+    Column compression (fwd/symmetric) shows side-by-side with ``→``.
+    Row compression (rev) shows stacked with ``↓``.
     """
     m, n = colored.sparsity.shape
     c = colored.num_colors
+    primitive = _MODE_PRIMITIVE[colored.mode]
     s = "" if c == 1 else "s"
 
     def _plural(count: int, word: str) -> str:
         return f"{count} {word}" if count == 1 else f"{count} {word}s"
 
-    if colored.mode == "HVP":
-        instead = f"instead of {_plural(n, 'HVP')}"
-    else:
-        instead = f"instead of {_plural(m, 'VJP')} or {_plural(n, 'JVP')}"
-    header = f"{colored_repr(colored)}\n  {c} {colored.mode}{s} ({instead})"
+    match colored.mode:
+        case "symmetric":
+            instead = f"instead of {_plural(n, 'HVP')}"
+        case "row" | "column":
+            instead = f"instead of {_plural(m, 'VJP')} or {_plural(n, 'JVP')}"
+        case _ as unreachable:
+            assert_never(unreachable)  # type: ignore[type-assertion-failure]
+    header = f"{colored_repr(colored)}\n  {c} {primitive}{s} ({instead})"
 
     compressed = _compressed_pattern(colored)
     left_lines = _render(colored.sparsity).split("\n")

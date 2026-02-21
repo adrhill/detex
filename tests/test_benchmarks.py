@@ -9,12 +9,12 @@ import pytest
 from asdex import (
     color_hessian_pattern,
     color_jacobian_pattern,
-    color_rows,
     hessian,
     hessian_sparsity,
     jacobian,
     jacobian_sparsity,
 )
+from asdex.coloring import color_rows
 
 N = 200  # Problem size for benchmarks
 

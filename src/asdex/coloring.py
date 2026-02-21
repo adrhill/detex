@@ -14,13 +14,19 @@ See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
 
 import warnings
 from collections.abc import Callable
-from typing import Literal
+from typing import assert_never
 
 import numpy as np
 from numpy.typing import NDArray
 
 from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
 from asdex.detection import jacobian_sparsity as _detect_jacobian_sparsity
+from asdex.modes import (
+    ColoringMode,
+    JacobianMode,
+    _assert_coloring_mode,
+    _resolve_coloring_mode,
+)
 from asdex.pattern import ColoredPattern, SparsityPattern
 
 
@@ -36,42 +42,49 @@ class DenseColoringWarning(UserWarning):
 
 def jacobian_coloring(
     f: Callable,
-    input_shape: tuple[int, ...],
-    partition: Literal["row", "column", "auto"] = "auto",
+    input_shape: int | tuple[int, ...],
+    coloring_mode: ColoringMode = "auto",
 ) -> ColoredPattern:
     """Detect Jacobian sparsity and color in one step.
 
     Args:
         f: Function taking an array and returning an array.
         input_shape: Shape of the input array.
-        partition: Which partition to color
-            (``"row"``, ``"column"``, or ``"auto"``).
+        coloring_mode: Coloring mode.
+            ``"row"`` for row coloring (uses VJPs),
+            ``"column"`` for column coloring (uses JVPs),
+            ``"symmetric"`` for symmetric (star) coloring,
+            ``"auto"`` picks whichever of row/column needs fewer colors.
 
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian`][asdex.jacobian].
     """
     sparsity = _detect_jacobian_sparsity(f, input_shape)
-    return color_jacobian_pattern(sparsity, partition)
+    return color_jacobian_pattern(sparsity, coloring_mode)
 
 
 def hessian_coloring(
     f: Callable,
-    input_shape: tuple[int, ...],
+    input_shape: int | tuple[int, ...],
+    coloring_mode: ColoringMode = "auto",
 ) -> ColoredPattern:
     """Detect Hessian sparsity and color in one step.
-
-    Uses symmetric coloring,
-    which exploits Hessian symmetry for fewer colors.
 
     Args:
         f: Scalar-valued function taking an array.
         input_shape: Shape of the input array.
+        coloring_mode: Coloring mode.
+            ``"row"`` for row coloring,
+            ``"column"`` for column coloring,
+            ``"symmetric"`` for symmetric (star) coloring
+            (exploits Hessian symmetry for fewer colors),
+            ``"auto"`` defaults to ``"symmetric"``.
 
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian`][asdex.hessian].
     """
     sparsity = _detect_hessian_sparsity(f, input_shape)
-    return color_hessian_pattern(sparsity)
+    return color_hessian_pattern(sparsity, coloring_mode)
 
 
 # Public API: pattern coloring
@@ -79,7 +92,8 @@ def hessian_coloring(
 
 def color_jacobian_pattern(
     sparsity: SparsityPattern,
-    partition: Literal["row", "column", "auto"] = "auto",
+    coloring_mode: ColoringMode = "auto",
+    ad_mode: JacobianMode = "auto",
 ) -> ColoredPattern:
     """Color a sparsity pattern for sparse Jacobian computation.
 
@@ -88,77 +102,135 @@ def color_jacobian_pattern(
 
     Args:
         sparsity: Sparsity pattern of shape (m, n).
-        partition: Which partition to color.
+        coloring_mode: Coloring mode.
             ``"row"`` colors rows (uses VJPs),
             ``"column"`` colors columns (uses JVPs),
-            ``"auto"`` picks whichever needs fewer colors
-            (ties go to column coloring since JVPs are cheaper).
+            ``"symmetric"`` uses symmetric (star) coloring
+            (requires a square pattern),
+            ``"auto"`` picks automatically.
+            When ``"auto"`` but ``ad_mode`` is specific,
+            resolves to the natural coloring:
+            ``"fwd"`` implies ``"column"``, ``"rev"`` implies ``"row"``.
+            When both are ``"auto"``,
+            picks whichever of row/column needs fewer colors
+            (ties go to ``"column"`` since JVPs are cheaper).
+        ad_mode: AD mode hint used to resolve ``"auto"`` coloring.
+            Only used when ``coloring_mode`` is ``"auto"``.
 
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian`][asdex.jacobian].
+
+    Raises:
+        ValueError: If coloring_mode or ad_mode is unknown.
     """
+    coloring_mode = _resolve_coloring_mode(coloring_mode, ad_mode)
+
     # Nothing to compute when there are no nonzeros.
     if sparsity.nnz == 0:
-        mode = "VJP" if partition == "row" else "JVP"
-        n_vertices = sparsity.m if partition == "row" else sparsity.n
-        return ColoredPattern(
-            sparsity,
-            colors=np.full(n_vertices, -1, dtype=np.int32),
-            num_colors=0,
-            mode=mode,
-        )
+        return _empty_colored_pattern(sparsity, coloring_mode)
 
-    if partition == "row":
-        colors_arr, num = color_rows(sparsity)
-        result = ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="VJP")
-        _check_dense(num, sparsity.m, "Jacobian", sparsity.shape)
-        return result
+    match coloring_mode:
+        case "row":
+            colors_arr, num = color_rows(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="row"
+            )
+            _warn_if_dense(num, sparsity.m, "Jacobian", sparsity.shape)
+            return result
 
-    if partition == "column":
-        colors_arr, num = color_cols(sparsity)
-        result = ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="JVP")
-        _check_dense(num, sparsity.n, "Jacobian", sparsity.shape)
-        return result
+        case "column":
+            colors_arr, num = color_cols(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="column"
+            )
+            _warn_if_dense(num, sparsity.n, "Jacobian", sparsity.shape)
+            return result
 
-    # Auto: pick whichever uses fewer colors.
-    # Ties go to column coloring (JVPs are cheaper than VJPs).
-    row_colors, num_row = color_rows(sparsity)
-    col_colors, num_col = color_cols(sparsity)
+        case "symmetric":
+            colors_arr, num = color_symmetric(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="symmetric"
+            )
+            _warn_if_dense(num, sparsity.n, "Jacobian", sparsity.shape)
+            return result
 
-    if num_col <= num_row:
-        result = ColoredPattern(
-            sparsity, colors=col_colors, num_colors=num_col, mode="JVP"
-        )
-        _check_dense(num_col, sparsity.n, "Jacobian", sparsity.shape)
-        return result
-    result = ColoredPattern(sparsity, colors=row_colors, num_colors=num_row, mode="VJP")
-    _check_dense(num_row, sparsity.m, "Jacobian", sparsity.shape)
-    return result
+        case "auto":
+            # Pick whichever uses fewer colors.
+            # Ties go to column coloring (JVPs are cheaper than VJPs).
+            row_colors, num_row = color_rows(sparsity)
+            col_colors, num_col = color_cols(sparsity)
+
+            if num_col <= num_row:
+                result = ColoredPattern(
+                    sparsity, colors=col_colors, num_colors=num_col, mode="column"
+                )
+                _warn_if_dense(num_col, sparsity.n, "Jacobian", sparsity.shape)
+                return result
+            result = ColoredPattern(
+                sparsity, colors=row_colors, num_colors=num_row, mode="row"
+            )
+            _warn_if_dense(num_row, sparsity.m, "Jacobian", sparsity.shape)
+            return result
+
+        case _ as unreachable:
+            assert_never(unreachable)
 
 
-def color_hessian_pattern(sparsity: SparsityPattern) -> ColoredPattern:
+def color_hessian_pattern(
+    sparsity: SparsityPattern,
+    coloring_mode: ColoringMode = "auto",
+) -> ColoredPattern:
     """Color a sparsity pattern for sparse Hessian computation.
 
-    Uses symmetric coloring,
-    which exploits Hessian symmetry for fewer colors than row coloring.
-
     Args:
-        sparsity: Symmetric sparsity pattern of shape (n, n).
+        sparsity: Sparsity pattern of shape (n, n).
+        coloring_mode: Coloring mode.
+            ``"row"`` colors rows,
+            ``"column"`` colors columns,
+            ``"symmetric"`` uses symmetric (star) coloring
+            (exploits Hessian symmetry for fewer colors),
+            ``"auto"`` defaults to ``"symmetric"``.
 
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian`][asdex.hessian].
+
+    Raises:
+        ValueError: If coloring_mode is unknown.
     """
+    _assert_coloring_mode(coloring_mode)
+    if coloring_mode == "auto":
+        coloring_mode = "symmetric"
+
     if sparsity.nnz == 0:
-        return ColoredPattern(
-            sparsity,
-            colors=np.full(sparsity.n, -1, dtype=np.int32),
-            num_colors=0,
-            mode="HVP",
-        )
-    colors_arr, num = color_symmetric(sparsity)
-    result = ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="HVP")
-    _check_dense(num, sparsity.n, "Hessian", sparsity.shape)
-    return result
+        return _empty_colored_pattern(sparsity, coloring_mode)
+
+    match coloring_mode:
+        case "row":
+            colors_arr, num = color_rows(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="row"
+            )
+            _warn_if_dense(num, sparsity.m, "Hessian", sparsity.shape)
+            return result
+
+        case "column":
+            colors_arr, num = color_cols(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="column"
+            )
+            _warn_if_dense(num, sparsity.n, "Hessian", sparsity.shape)
+            return result
+
+        case "symmetric":
+            colors_arr, num = color_symmetric(sparsity)
+            result = ColoredPattern(
+                sparsity, colors=colors_arr, num_colors=num, mode="symmetric"
+            )
+            _warn_if_dense(num, sparsity.n, "Hessian", sparsity.shape)
+            return result
+
+        case _ as unreachable:
+            assert_never(unreachable)
 
 
 # Public API: low-level coloring algorithms
@@ -316,7 +388,52 @@ def color_symmetric(sparsity: SparsityPattern) -> tuple[NDArray[np.int32], int]:
 # Private helpers
 
 
-def _check_dense(
+def _empty_colored_pattern(
+    sparsity: SparsityPattern,
+    coloring_mode: ColoringMode,
+) -> ColoredPattern:
+    """Build a ``ColoredPattern`` for an all-zero sparsity pattern.
+
+    Args:
+        sparsity: Sparsity pattern with ``nnz == 0``.
+        coloring_mode: Coloring mode (``"auto"`` defaults to ``"column"``).
+
+    Returns:
+        A ``ColoredPattern`` with zero colors.
+
+    Raises:
+        ValueError: If ``coloring_mode`` is ``"symmetric"``
+            and the pattern is not square.
+    """
+    if coloring_mode == "auto":
+        coloring_mode = "column"
+
+    match coloring_mode:
+        case "symmetric":
+            if sparsity.m != sparsity.n:
+                msg = f"Symmetric coloring requires a square pattern, got shape {sparsity.shape}"
+                raise ValueError(msg)
+            return ColoredPattern(
+                sparsity,
+                colors=np.full(sparsity.n, -1, dtype=np.int32),
+                num_colors=0,
+                mode="symmetric",
+            )
+        case "row":
+            n_vertices = sparsity.m
+        case "column":
+            n_vertices = sparsity.n
+        case _ as unreachable:
+            assert_never(unreachable)  # type: ignore[type-assertion-failure]
+    return ColoredPattern(
+        sparsity,
+        colors=np.full(n_vertices, -1, dtype=np.int32),
+        num_colors=0,
+        mode=coloring_mode,
+    )
+
+
+def _warn_if_dense(
     num_colors: int,
     dense_baseline: int,
     kind: str,
