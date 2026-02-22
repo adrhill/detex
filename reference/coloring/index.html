@@ -982,10 +982,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#asdex.color_jacobian_pattern" class="md-nav__link">
+  <a href="#asdex.jacobian_coloring" class="md-nav__link">
     <span class="md-ellipsis">
       
-        color_jacobian_pattern
+        jacobian_coloring
       
     </span>
   </a>
@@ -993,10 +993,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#asdex.color_hessian_pattern" class="md-nav__link">
+  <a href="#asdex.hessian_coloring" class="md-nav__link">
     <span class="md-ellipsis">
       
-        color_hessian_pattern
+        hessian_coloring
       
     </span>
   </a>
@@ -1004,10 +1004,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#asdex.ColoringMode" class="md-nav__link">
+  <a href="#asdex.jacobian_coloring_from_sparsity" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ColoringMode
+        jacobian_coloring_from_sparsity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asdex.hessian_coloring_from_sparsity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        hessian_coloring_from_sparsity
       
     </span>
   </a>
@@ -1112,10 +1123,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#asdex.color_jacobian_pattern" class="md-nav__link">
+  <a href="#asdex.jacobian_coloring" class="md-nav__link">
     <span class="md-ellipsis">
       
-        color_jacobian_pattern
+        jacobian_coloring
       
     </span>
   </a>
@@ -1123,10 +1134,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#asdex.color_hessian_pattern" class="md-nav__link">
+  <a href="#asdex.hessian_coloring" class="md-nav__link">
     <span class="md-ellipsis">
       
-        color_hessian_pattern
+        hessian_coloring
       
     </span>
   </a>
@@ -1134,10 +1145,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#asdex.ColoringMode" class="md-nav__link">
+  <a href="#asdex.jacobian_coloring_from_sparsity" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ColoringMode
+        jacobian_coloring_from_sparsity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asdex.hessian_coloring_from_sparsity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        hessian_coloring_from_sparsity
       
     </span>
   </a>
@@ -1170,10 +1192,288 @@
 <div class="doc doc-object doc-function">
 
 
-<h2 id="asdex.color_jacobian_pattern" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">color_jacobian_pattern</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">ad_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span></code>
+<h2 id="asdex.jacobian_coloring" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
-<a href="#asdex.color_jacobian_pattern" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#asdex.jacobian_coloring" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+        <p>Detect Jacobian sparsity and color in one step.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>f</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Function taking an array and returning an array.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>input_shape</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | <span title="tuple">tuple</span>[<span title="int">int</span>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Shape of the input array.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>mode</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.JacobianMode = Literal['fwd', 'rev', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.JacobianMode)" href="../#asdex.JacobianMode">JacobianMode</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>AD mode.
+<code>"fwd"</code> uses JVPs (forward-mode AD),
+<code>"rev"</code> uses VJPs (reverse-mode AD),
+<code>"auto"</code> picks whichever of fwd/rev needs fewer colors
+(unless <code>symmetric</code> is True, in which case defaults to <code>"fwd"</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;auto&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>symmetric</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to use symmetric (star) coloring.
+Requires a square Jacobian.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoredPattern
+
+
+  
+      dataclass
+   (asdex.pattern.ColoredPattern)" href="../#asdex.ColoredPattern">ColoredPattern</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A <a class="autorefs autorefs-internal" title="asdex.ColoredPattern
+
+
+  
+      dataclass
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.jacobian_from_coloring(f, coloring)" href="../#asdex.jacobian_from_coloring"><code>jacobian_from_coloring</code></a>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="asdex.hessian_coloring" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+
+<a href="#asdex.hessian_coloring" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+        <p>Detect Hessian sparsity and color in one step.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>f</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scalar-valued function taking an array.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>input_shape</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | <span title="tuple">tuple</span>[<span title="int">int</span>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Shape of the input array.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>mode</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev', 'auto']
+
+  
+      module-attribute
+   (asdex.modes.HessianMode)" href="../#asdex.HessianMode">HessianMode</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>AD composition strategy for Hessian-vector products.
+<code>"fwd_over_rev"</code> uses forward-over-reverse,
+<code>"rev_over_fwd"</code> uses reverse-over-forward,
+<code>"rev_over_rev"</code> uses reverse-over-reverse,
+<code>"auto"</code> defaults to <code>"fwd_over_rev"</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;auto&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>symmetric</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to use symmetric (star) coloring.
+Defaults to True (exploits H = H^T for fewer colors).</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoredPattern
+
+
+  
+      dataclass
+   (asdex.pattern.ColoredPattern)" href="../#asdex.ColoredPattern">ColoredPattern</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A <a class="autorefs autorefs-internal" title="asdex.ColoredPattern
+
+
+  
+      dataclass
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian_from_coloring(f, coloring)" href="../#asdex.hessian_from_coloring"><code>hessian_from_coloring</code></a>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="asdex.jacobian_coloring_from_sparsity" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian_coloring_from_sparsity</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+<a href="#asdex.jacobian_coloring_from_sparsity" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
@@ -1217,38 +1517,7 @@ computed together in a single VJP (or JVP).</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>coloring_mode</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
-
-  
-      module-attribute
-   (asdex.modes.ColoringMode)" href="#asdex.ColoringMode">ColoringMode</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Coloring mode.
-<code>"row"</code> colors rows (uses VJPs),
-<code>"column"</code> colors columns (uses JVPs),
-<code>"symmetric"</code> uses symmetric (star) coloring
-(requires a square pattern),
-<code>"auto"</code> picks automatically.
-When <code>"auto"</code> but <code>ad_mode</code> is specific,
-resolves to the natural coloring:
-<code>"fwd"</code> implies <code>"column"</code>, <code>"rev"</code> implies <code>"row"</code>.
-When both are <code>"auto"</code>,
-picks whichever of row/column needs fewer colors
-(ties go to <code>"column"</code> since JVPs are cheaper).</p>
-              </div>
-            </td>
-            <td>
-                  <code>&#39;auto&#39;</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>ad_mode</code>
+                <code>mode</code>
             </td>
             <td>
                   <code><a class="autorefs autorefs-internal" title="asdex.JacobianMode = Literal['fwd', 'rev', 'auto']
@@ -1259,12 +1528,32 @@ picks whichever of row/column needs fewer colors
             </td>
             <td>
               <div class="doc-md-description">
-                <p>AD mode hint used to resolve <code>"auto"</code> coloring.
-Only used when <code>coloring_mode</code> is <code>"auto"</code>.</p>
+                <p>AD mode.
+<code>"fwd"</code> uses JVPs (column coloring),
+<code>"rev"</code> uses VJPs (row coloring),
+<code>"auto"</code> picks whichever of fwd/rev needs fewer colors
+(unless <code>symmetric</code> is True, in which case defaults to <code>"fwd"</code>).</p>
               </div>
             </td>
             <td>
                   <code>&#39;auto&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>symmetric</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to use symmetric (star) coloring.
+Requires a square pattern.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
             </td>
           </tr>
       </tbody>
@@ -1296,7 +1585,7 @@ Only used when <code>coloring_mode</code> is <code>"auto"</code>.</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.jacobian(f, colored_pattern=None, *, coloring_mode='auto', ad_mode='auto')" href="../#asdex.jacobian"><code>jacobian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.jacobian_from_coloring(f, coloring)" href="../#asdex.jacobian_from_coloring"><code>jacobian_from_coloring</code></a>.</p>
               </div>
             </td>
           </tr>
@@ -1319,7 +1608,7 @@ Only used when <code>coloring_mode</code> is <code>"auto"</code>.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If coloring_mode or ad_mode is unknown.</p>
+                <p>If mode is unknown.</p>
               </div>
             </td>
           </tr>
@@ -1334,10 +1623,10 @@ Only used when <code>coloring_mode</code> is <code>"auto"</code>.</p>
 <div class="doc doc-object doc-function">
 
 
-<h2 id="asdex.color_hessian_pattern" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">color_hessian_pattern</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="n">coloring_mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span></code>
+<h2 id="asdex.hessian_coloring_from_sparsity" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring_from_sparsity</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
-<a href="#asdex.color_hessian_pattern" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#asdex.hessian_coloring_from_sparsity" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
@@ -1379,27 +1668,43 @@ Only used when <code>coloring_mode</code> is <code>"auto"</code>.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>coloring_mode</code>
+                <code>mode</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
+                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev', 'auto']
 
   
       module-attribute
-   (asdex.modes.ColoringMode)" href="#asdex.ColoringMode">ColoringMode</a></code>
+   (asdex.modes.HessianMode)" href="../#asdex.HessianMode">HessianMode</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Coloring mode.
-<code>"row"</code> colors rows,
-<code>"column"</code> colors columns,
-<code>"symmetric"</code> uses symmetric (star) coloring
-(exploits Hessian symmetry for fewer colors),
-<code>"auto"</code> defaults to <code>"symmetric"</code>.</p>
+                <p>AD composition strategy for Hessian-vector products.
+<code>"fwd_over_rev"</code> uses forward-over-reverse,
+<code>"rev_over_fwd"</code> uses reverse-over-forward,
+<code>"rev_over_rev"</code> uses reverse-over-reverse,
+<code>"auto"</code> defaults to <code>"fwd_over_rev"</code>.</p>
               </div>
             </td>
             <td>
                   <code>&#39;auto&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>symmetric</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to use symmetric (star) coloring.
+Defaults to True (exploits Hessian symmetry for fewer colors).</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
             </td>
           </tr>
       </tbody>
@@ -1431,7 +1736,7 @@ Only used when <code>coloring_mode</code> is <code>"auto"</code>.</p>
 
   
       dataclass
-  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian(f, colored_pattern=None, *, coloring_mode='auto', ad_mode='auto')" href="../#asdex.hessian"><code>hessian</code></a>.</p>
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian_from_coloring(f, coloring)" href="../#asdex.hessian_from_coloring"><code>hessian_from_coloring</code></a>.</p>
               </div>
             </td>
           </tr>
@@ -1454,40 +1759,13 @@ Only used when <code>coloring_mode</code> is <code>"auto"</code>.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If coloring_mode is unknown.</p>
+                <p>If mode is unknown.</p>
               </div>
             </td>
           </tr>
       </tbody>
     </table>
 
-
-    </div>
-
-</div><hr />
-
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h2 id="asdex.ColoringMode" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">ColoringMode</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;row&#39;</span><span class="p">,</span> <span class="s1">&#39;column&#39;</span><span class="p">,</span> <span class="s1">&#39;symmetric&#39;</span><span class="p">,</span> <span class="s1">&#39;auto&#39;</span><span class="p">]</span></code>
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
-  </span>
-
-<a href="#asdex.ColoringMode" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-
-        <p>Coloring mode for sparse differentiation.</p>
-<p><code>"row"</code> for row coloring (compatible with VJPs or HVPs),
-<code>"column"</code> for column coloring (compatible with JVPs or HVPs),
-<code>"symmetric"</code> for symmetric (star) coloring (compatible with JVPs, VJPs, or HVPs),
-<code>"auto"</code> selects automatically.</p>
 
     </div>
 

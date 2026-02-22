@@ -1169,10 +1169,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#asdex.SparsityPattern.from_coordinates" class="md-nav__link">
+  <a href="#asdex.SparsityPattern.from_coo" class="md-nav__link">
     <span class="md-ellipsis">
       
-        from_coordinates
+        from_coo
       
     </span>
   </a>
@@ -1503,10 +1503,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#asdex.SparsityPattern.from_coordinates" class="md-nav__link">
+  <a href="#asdex.SparsityPattern.from_coo" class="md-nav__link">
     <span class="md-ellipsis">
       
-        from_coordinates
+        from_coo
       
     </span>
   </a>
@@ -1685,8 +1685,8 @@
             <td>
               <div class="doc-md-description">
                 <p>Color assignment array.
-Shape <code>(m,)</code> for <code>"row"</code> mode,
-<code>(n,)</code> for <code>"column"</code> and <code>"symmetric"</code> modes.</p>
+Shape <code>(m,)</code> for <code>"rev"</code> mode,
+<code>(n,)</code> for all other modes.</p>
               </div>
             </td>
           </tr>
@@ -1702,20 +1702,30 @@ Shape <code>(m,)</code> for <code>"row"</code> mode,
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="asdex.ColoredPattern.mode">mode</span></code></td>
+            <td><code><span title="asdex.ColoredPattern.symmetric">symmetric</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="asdex.ColoringMode = Literal['row', 'column', 'symmetric', 'auto']
-
-  
-      module-attribute
-   (asdex.modes.ColoringMode)" href="../#asdex.ColoringMode">ColoringMode</a></code>
+                  <code><span title="bool">bool</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The coloring mode.
-<code>"row"</code> for row-colored patterns (uses VJPs),
-<code>"column"</code> for column-colored patterns (uses JVPs),
-<code>"symmetric"</code> for symmetrically colored patterns (uses HVPs).</p>
+                <p>Whether symmetric (star) coloring was used.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="asdex.ColoredPattern.mode">mode</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The AD mode.
+Resolved, never <code>"auto"</code>.
+<code>"fwd"</code> uses JVPs (forward-mode AD),
+<code>"rev"</code> uses VJPs (reverse-mode AD),
+<code>"fwd_over_rev"</code> uses forward-over-reverse HVPs,
+<code>"rev_over_fwd"</code> uses reverse-over-forward HVPs,
+<code>"rev_over_rev"</code> uses reverse-over-reverse HVPs.</p>
               </div>
             </td>
           </tr>
@@ -2167,14 +2177,14 @@ Defaults to <code>(n,)</code> if not specified.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="asdex.SparsityPattern.from_coordinates" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">from_coordinates</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">input_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+<h3 id="asdex.SparsityPattern.from_coo" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">from_coo</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">input_shape</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
   </span>
 
-<a href="#asdex.SparsityPattern.from_coordinates" class="headerlink" title="Permanent link">&para;</a></h3>
+<a href="#asdex.SparsityPattern.from_coo" class="headerlink" title="Permanent link">&para;</a></h3>
 
 
     <div class="doc doc-contents ">
