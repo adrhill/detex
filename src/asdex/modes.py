@@ -17,7 +17,7 @@ HessianMode = Literal["fwd_over_rev", "rev_over_fwd", "rev_over_rev"]
 ``"rev_over_rev"`` uses reverse-over-reverse.
 """
 
-ColoringMode = Literal["fwd", "rev", "fwd_over_rev", "rev_over_fwd", "rev_over_rev"]
+ColoringMode = JacobianMode | HessianMode
 """AD mode that a coloring was computed for."""
 
 
@@ -34,3 +34,9 @@ def _assert_hessian_mode(mode: str) -> None:
             f"Unknown mode {mode!r}. "
             "Expected 'fwd_over_rev', 'rev_over_fwd', or 'rev_over_rev'."
         )
+
+
+def _assert_coloring_mode(mode: str) -> None:
+    """Raise ``ValueError`` if *mode* is not a valid ``ColoringMode``."""
+    if mode not in get_args(ColoringMode):
+        raise ValueError(f"Unknown mode {mode!r}.")

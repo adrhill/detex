@@ -6,7 +6,7 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cached_property
-from typing import assert_never, get_args
+from typing import assert_never
 
 import jax.numpy as jnp
 import numpy as np
@@ -14,14 +14,7 @@ from jax.experimental.sparse import BCOO
 from numpy.typing import NDArray
 
 from asdex._display import colored_repr, colored_str, sparsity_repr, sparsity_str
-from asdex.modes import ColoringMode
-
-
-def _parse_coloring_mode(mode: str) -> ColoringMode:
-    """Parse a string into a ``ColoringMode``, raising on invalid values."""
-    if mode not in get_args(ColoringMode):
-        raise ValueError(f"Unknown mode {mode!r}.")
-    return mode  # type: ignore[return-value]
+from asdex.modes import ColoringMode, _assert_coloring_mode
 
 
 @dataclass(frozen=True)
@@ -395,12 +388,14 @@ class ColoredPattern:
             shape=tuple(data["shape"]),
             input_shape=tuple(data["input_shape"]),
         )
+        mode = str(data["mode"])
+        _assert_coloring_mode(mode)
         return cls(
             sparsity=sparsity,
             colors=data["colors"].astype(np.int32),
             num_colors=int(data["num_colors"]),
             symmetric=bool(data["symmetric"]),
-            mode=_parse_coloring_mode(str(data["mode"])),
+            mode=mode,  # type: ignore[arg-type]
         )
 
     # Display
