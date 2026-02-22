@@ -11,7 +11,12 @@ from numpy.typing import ArrayLike
 from asdex.coloring import hessian_coloring as _hessian_coloring
 from asdex.coloring import jacobian_coloring as _jacobian_coloring
 from asdex.detection import _ensure_scalar
-from asdex.modes import HessianMode, JacobianMode
+from asdex.modes import (
+    HessianMode,
+    JacobianMode,
+    _assert_hessian_mode,
+    _assert_jacobian_mode,
+)
 from asdex.pattern import ColoredPattern
 
 # Public API
@@ -21,7 +26,7 @@ def jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     input_shape: int | tuple[int, ...],
     *,
-    mode: JacobianMode = "auto",
+    mode: JacobianMode | None = None,
     symmetric: bool = False,
 ) -> Callable[[ArrayLike], BCOO]:
     """Detect sparsity, color, and return a function computing sparse Jacobians.
@@ -36,8 +41,8 @@ def jacobian(
         input_shape: Shape of the input array.
         mode: AD mode.
             ``"fwd"`` uses JVPs (forward-mode AD),
-            ``"rev"`` uses VJPs (reverse-mode AD),
-            ``"auto"`` picks whichever of fwd/rev needs fewer colors.
+            ``"rev"`` uses VJPs (reverse-mode AD).
+            ``None`` picks whichever of fwd/rev needs fewer colors.
         symmetric: Whether to use symmetric (star) coloring.
             Requires a square Jacobian.
 
@@ -54,7 +59,7 @@ def hessian(
     f: Callable[[ArrayLike], ArrayLike],
     input_shape: int | tuple[int, ...],
     *,
-    mode: HessianMode = "auto",
+    mode: HessianMode | None = None,
     symmetric: bool = True,
 ) -> Callable[[ArrayLike], BCOO]:
     """Detect sparsity, color, and return a function computing sparse Hessians.
@@ -73,8 +78,8 @@ def hessian(
         mode: AD composition strategy for Hessian-vector products.
             ``"fwd_over_rev"`` uses forward-over-reverse,
             ``"rev_over_fwd"`` uses reverse-over-forward,
-            ``"rev_over_rev"`` uses reverse-over-reverse,
-            ``"auto"`` defaults to ``"fwd_over_rev"``.
+            ``"rev_over_rev"`` uses reverse-over-reverse.
+            Defaults to ``"fwd_over_rev"``.
         symmetric: Whether to use symmetric (star) coloring.
             Defaults to True (exploits H = H^T for fewer colors).
 
@@ -173,6 +178,7 @@ def _eval_jacobian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
+    _assert_jacobian_mode(coloring.mode)
     match coloring.mode:
         case "rev":
             return _jacobian_rows(f, x, coloring, out_shape)
@@ -258,6 +264,7 @@ def _compute_hvps(
     """Compute one HVP per color using pre-computed seed matrix."""
     seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
 
+    _assert_hessian_mode(coloring.mode)
     match coloring.mode:
         case "fwd_over_rev":
 

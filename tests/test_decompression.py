@@ -14,6 +14,7 @@ from asdex import (
     hessian_from_coloring,
     hessian_sparsity,
     jacobian,
+    jacobian_coloring,
     jacobian_coloring_from_sparsity,
     jacobian_from_coloring,
     jacobian_sparsity,
@@ -723,3 +724,32 @@ def test_hessian_non_symmetric_coloring(mode):
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
+
+
+# Wrong-mode coloring guards
+
+
+@pytest.mark.jacobian
+def test_jacobian_from_coloring_rejects_hessian_coloring():
+    """jacobian_from_coloring raises ValueError for Hessian-mode colorings."""
+
+    def f(x):
+        return jnp.sum(x**2)
+
+    x = np.array([1.0, 2.0, 3.0])
+    coloring = hessian_coloring(f, input_shape=x.shape)
+    with pytest.raises(ValueError, match="Expected 'fwd' or 'rev'"):
+        jacobian_from_coloring(jax.grad(f), coloring)(x)
+
+
+@pytest.mark.hessian
+def test_hessian_from_coloring_rejects_jacobian_coloring():
+    """hessian_from_coloring raises ValueError for Jacobian-mode colorings."""
+
+    def f(x):
+        return jnp.sum(x**2)
+
+    x = np.array([1.0, 2.0, 3.0])
+    coloring = jacobian_coloring(jax.grad(f), input_shape=x.shape)
+    with pytest.raises(ValueError, match="Expected 'fwd_over_rev'"):
+        hessian_from_coloring(f, coloring)(x)

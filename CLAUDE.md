@@ -36,6 +36,13 @@ uv run ty check            # type check
 uv run pytest              # run tests
 ```
 
+## Code style
+
+- Favor `match` statements over long if-else chains.
+  Use explicit cases and default to `case _ as unreachable: assert_never(unreachable)`.
+- Use plain `# Section name` comments for section separators, 
+  not banner-style `# -- Section name ---`.
+
 ## Architecture
 
 ### Jacobians

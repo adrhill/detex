@@ -14,8 +14,7 @@ from jax.experimental.sparse import BCOO
 from numpy.typing import NDArray
 
 from asdex._display import colored_repr, colored_str, sparsity_repr, sparsity_str
-
-_KNOWN_MODES = frozenset({"fwd", "rev", "fwd_over_rev", "rev_over_fwd", "rev_over_rev"})
+from asdex.modes import ColoringMode, _assert_coloring_mode
 
 
 @dataclass(frozen=True)
@@ -246,19 +245,7 @@ class ColoredPattern:
     colors: NDArray[np.int32]
     num_colors: int
     symmetric: bool
-    mode: str
-
-    def __post_init__(self) -> None:
-        """Validate that mode has been resolved."""
-        if self.mode == "auto":
-            raise ValueError(
-                "ColoredPattern requires a resolved mode, got 'auto'. "
-                "Resolve the mode before constructing a ColoredPattern."
-            )
-        if self.mode not in _KNOWN_MODES:
-            raise ValueError(
-                f"Unknown mode {self.mode!r}. Expected one of {sorted(_KNOWN_MODES)}."
-            )
+    mode: ColoringMode
 
     @property
     def _compresses_columns(self) -> bool:
@@ -302,7 +289,7 @@ class ColoredPattern:
                 color_idx = self.colors[cols].astype(np.intp)
                 elem_idx = rows.astype(np.intp)
             case _ as unreachable:
-                assert_never(unreachable)  # type: ignore[type-assertion-failure]
+                assert_never(unreachable)
 
         return color_idx, elem_idx
 
@@ -361,7 +348,7 @@ class ColoredPattern:
             case "fwd_over_rev" | "rev_over_fwd" | "rev_over_rev":
                 dim = self.sparsity.n
             case _ as unreachable:
-                assert_never(unreachable)  # type: ignore[type-assertion-failure]
+                assert_never(unreachable)
         seeds = np.zeros((self.num_colors, dim), dtype=np.bool_)
         for c in range(self.num_colors):
             seeds[c] = self.colors == c
@@ -401,12 +388,14 @@ class ColoredPattern:
             shape=tuple(data["shape"]),
             input_shape=tuple(data["input_shape"]),
         )
+        mode = str(data["mode"])
+        _assert_coloring_mode(mode)
         return cls(
             sparsity=sparsity,
             colors=data["colors"].astype(np.int32),
             num_colors=int(data["num_colors"]),
             symmetric=bool(data["symmetric"]),
-            mode=str(data["mode"]),
+            mode=mode,  # type: ignore[arg-type]
         )
 
     # Display
