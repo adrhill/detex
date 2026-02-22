@@ -6,14 +6,19 @@ structure without evaluating derivatives, so results are valid for all inputs.
 
 from asdex.coloring import (
     DenseColoringWarning,
-    color_hessian_pattern,
-    color_jacobian_pattern,
     hessian_coloring,
+    hessian_coloring_from_sparsity,
     jacobian_coloring,
+    jacobian_coloring_from_sparsity,
 )
-from asdex.decompression import hessian, jacobian
+from asdex.decompression import (
+    hessian,
+    hessian_from_coloring,
+    jacobian,
+    jacobian_from_coloring,
+)
 from asdex.detection import hessian_sparsity, jacobian_sparsity
-from asdex.modes import ColoringMode, HessianMode, JacobianMode
+from asdex.modes import HessianMode, JacobianMode
 from asdex.pattern import ColoredPattern, SparsityPattern
 from asdex.verify import (
     VerificationError,
@@ -23,7 +28,6 @@ from asdex.verify import (
 
 __all__ = [
     "ColoredPattern",
-    "ColoringMode",
     "DenseColoringWarning",
     "HessianMode",
     "JacobianMode",
@@ -31,12 +35,14 @@ __all__ = [
     "VerificationError",
     "check_hessian_correctness",
     "check_jacobian_correctness",
-    "color_hessian_pattern",
-    "color_jacobian_pattern",
     "hessian",
     "hessian_coloring",
+    "hessian_coloring_from_sparsity",
+    "hessian_from_coloring",
     "hessian_sparsity",
     "jacobian",
     "jacobian_coloring",
+    "jacobian_coloring_from_sparsity",
+    "jacobian_from_coloring",
     "jacobian_sparsity",
 ]

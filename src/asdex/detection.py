@@ -61,7 +61,7 @@ def jacobian_sparsity(
             cols.append(j)
 
     shape_tuple = (input_shape,) if isinstance(input_shape, int) else tuple(input_shape)
-    return SparsityPattern.from_coordinates(rows, cols, (m, n), input_shape=shape_tuple)
+    return SparsityPattern.from_coo(rows, cols, (m, n), input_shape=shape_tuple)
 
 
 def hessian_sparsity(

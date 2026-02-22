@@ -5,8 +5,18 @@
 
 ---
 
+::: asdex.jacobian_from_coloring
+::: asdex.hessian_from_coloring
+
+---
+
 ::: asdex.jacobian_coloring
 ::: asdex.hessian_coloring
+
+---
+
+::: asdex.jacobian_coloring_from_sparsity
+::: asdex.hessian_coloring_from_sparsity
 
 ---
 
@@ -15,16 +25,10 @@
 
 ---
 
-::: asdex.color_jacobian_pattern
-::: asdex.color_hessian_pattern
-
----
-
 ::: asdex.SparsityPattern
 ::: asdex.ColoredPattern
 
 ---
 
-::: asdex.ColoringMode
 ::: asdex.JacobianMode
 ::: asdex.HessianMode

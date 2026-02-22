@@ -6,7 +6,7 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cached_property
-from typing import assert_never, cast
+from typing import assert_never
 
 import jax.numpy as jnp
 import numpy as np
@@ -14,7 +14,8 @@ from jax.experimental.sparse import BCOO
 from numpy.typing import NDArray
 
 from asdex._display import colored_repr, colored_str, sparsity_repr, sparsity_str
-from asdex.modes import ColoringMode
+
+_KNOWN_MODES = frozenset({"fwd", "rev", "fwd_over_rev", "rev_over_fwd", "rev_over_rev"})
 
 
 @dataclass(frozen=True)
@@ -93,7 +94,7 @@ class SparsityPattern:
     # Constructors
 
     @classmethod
-    def from_coordinates(
+    def from_coo(
         cls,
         rows: NDArray[np.int32] | list[int],
         cols: NDArray[np.int32] | list[int],
@@ -203,7 +204,7 @@ class SparsityPattern:
             path: Source file path.
         """
         data = np.load(path)
-        return cls.from_coordinates(
+        return cls.from_coo(
             rows=data["rows"],
             cols=data["cols"],
             shape=tuple(data["shape"]),
@@ -228,19 +229,24 @@ class ColoredPattern:
     Attributes:
         sparsity: The sparsity pattern that was colored.
         colors: Color assignment array.
-            Shape ``(m,)`` for ``"row"`` mode,
-            ``(n,)`` for ``"column"`` and ``"symmetric"`` modes.
+            Shape ``(m,)`` for ``"rev"`` mode,
+            ``(n,)`` for all other modes.
         num_colors: Total number of colors used.
-        mode: The coloring mode.
-            ``"row"`` for row-colored patterns (uses VJPs),
-            ``"column"`` for column-colored patterns (uses JVPs),
-            ``"symmetric"`` for symmetrically colored patterns (uses HVPs).
+        symmetric: Whether symmetric (star) coloring was used.
+        mode: The AD mode.
+            Resolved, never ``"auto"``.
+            ``"fwd"`` uses JVPs (forward-mode AD),
+            ``"rev"`` uses VJPs (reverse-mode AD),
+            ``"fwd_over_rev"`` uses forward-over-reverse HVPs,
+            ``"rev_over_fwd"`` uses reverse-over-forward HVPs,
+            ``"rev_over_rev"`` uses reverse-over-reverse HVPs.
     """
 
     sparsity: SparsityPattern
     colors: NDArray[np.int32]
     num_colors: int
-    mode: ColoringMode
+    symmetric: bool
+    mode: str
 
     def __post_init__(self) -> None:
         """Validate that mode has been resolved."""
@@ -249,11 +255,19 @@ class ColoredPattern:
                 "ColoredPattern requires a resolved mode, got 'auto'. "
                 "Resolve the mode before constructing a ColoredPattern."
             )
+        if self.mode not in _KNOWN_MODES:
+            raise ValueError(
+                f"Unknown mode {self.mode!r}. Expected one of {sorted(_KNOWN_MODES)}."
+            )
 
     @property
     def _compresses_columns(self) -> bool:
-        """Whether coloring compresses columns (column/symmetric) or rows (row)."""
-        return self.mode in ("column", "symmetric")
+        """Whether coloring compresses columns or rows.
+
+        Only ``"rev"`` compresses rows (VJP seeds are cotangent vectors).
+        All other modes compress columns.
+        """
+        return self.mode != "rev"
 
     # Cached arrays for fast decompression
 
@@ -269,21 +283,22 @@ class ColoredPattern:
             data = C[color_idx, elem_idx]
 
         gives the nnz values in sparsity-pattern order.
-
-        For row: ``color_idx = colors[rows]``, ``elem_idx = cols``.
-        For column: ``color_idx = colors[cols]``, ``elem_idx = rows``.
-        For symmetric: delegates to `_star_extraction_indices`.
         """
         rows = self.sparsity.rows
         cols = self.sparsity.cols
 
+        if self.symmetric:
+            return self._star_extraction_indices
+
         match self.mode:
-            case "symmetric":
-                return self._star_extraction_indices
-            case "row":
+            case "rev":
                 color_idx = self.colors[rows].astype(np.intp)
                 elem_idx = cols.astype(np.intp)
-            case "column":
+            case "fwd":
+                color_idx = self.colors[cols].astype(np.intp)
+                elem_idx = rows.astype(np.intp)
+            case "fwd_over_rev" | "rev_over_fwd" | "rev_over_rev":
+                # HVP modes seed columns
                 color_idx = self.colors[cols].astype(np.intp)
                 elem_idx = rows.astype(np.intp)
             case _ as unreachable:
@@ -339,9 +354,11 @@ class ColoredPattern:
         used as the seed/tangent vector for the ``c``-th AD evaluation.
         """
         match self.mode:
-            case "row":
+            case "rev":
                 dim = self.sparsity.m
-            case "column" | "symmetric":
+            case "fwd":
+                dim = self.sparsity.n
+            case "fwd_over_rev" | "rev_over_fwd" | "rev_over_rev":
                 dim = self.sparsity.n
             case _ as unreachable:
                 assert_never(unreachable)  # type: ignore[type-assertion-failure]
@@ -366,6 +383,7 @@ class ColoredPattern:
             input_shape=np.array(self.sparsity.input_shape),
             colors=self.colors,
             num_colors=np.array(self.num_colors),
+            symmetric=np.array(self.symmetric),
             mode=np.array(self.mode),
         )
 
@@ -377,7 +395,7 @@ class ColoredPattern:
             path: Source file path.
         """
         data = np.load(path, allow_pickle=False)
-        sparsity = SparsityPattern.from_coordinates(
+        sparsity = SparsityPattern.from_coo(
             rows=data["rows"],
             cols=data["cols"],
             shape=tuple(data["shape"]),
@@ -387,7 +405,8 @@ class ColoredPattern:
             sparsity=sparsity,
             colors=data["colors"].astype(np.int32),
             num_colors=int(data["num_colors"]),
-            mode=cast(ColoringMode, str(data["mode"])),
+            symmetric=bool(data["symmetric"]),
+            mode=str(data["mode"]),
         )
 
     # Display

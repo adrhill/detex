@@ -11,49 +11,65 @@ using [row or column coloring](../explanation/coloring.md) with forward- or reve
     Always verify against vanilla JAX at least once on a new function.
     See [Verifying Results](#verifying-results) below.
 
-## One-Call API
+## Basic Usage
 
-The simplest way to compute a sparse Jacobian:
+Pass your function and its `input_shape` to [`jacobian`](../reference/index.md#asdex.jacobian):
 
 ```python
 from asdex import jacobian
 
-J = jacobian(f)(x)
+jac_fn = jacobian(f, input_shape=1000)
+J = jac_fn(x)
 ```
 
-This detects sparsity, colors the pattern, and decompresses — all in one call.
+This runs the computationally expensive sparsity detection and coloring steps when defining `jac_fn`.
+Subsequent calls to `jac_fn` only need to perform the cheap decompression step.
 The result is a JAX [BCOO](https://docs.jax.dev/en/latest/jax.experimental.sparse.html) sparse matrix.
 
-!!! warning "Precompute the colored pattern"
+The same function can be reused across evaluations at different inputs:
 
-    Without a precomputed colored pattern,
-    `jacobian` re-detects sparsity and re-colors on every call.
-    These steps are computationally expensive.
-    If you call `jacobian` more than once for the same function,
-    precompute the colored pattern and reuse it — see below.
+```python
+for x in inputs:
+    J = jac_fn(x)
+```
+
+`asdex` supports multi-dimensional input and output arrays.
+The Jacobian is always returned as a 2D matrix
+of shape \((m, n)\) where \(n\) is the total number of input elements
+and \(m\) is the total number of output elements
 
 ## Precomputing the Colored Pattern
 
-When computing Jacobians at many different inputs,
-precompute the colored pattern once:
+For more control,
+precompute the coloring explicitly:
+
+```python exec="true" session="jac-precompute" source="above"
+from asdex import jacobian_coloring, jacobian_from_coloring
+
+def f(x):
+    return (x[1:] - x[:-1]) ** 2
+
+coloring = jacobian_coloring(f, input_shape=100)
+```
+
+```python exec="true" session="jac-precompute"
+print(f"```\n{coloring}\n```")
+```
+
+This is useful when you want to visually inspect the coloring for correctness,
+or save it to disk to avoid recomputation.
+Pass the coloring to [`jacobian_from_coloring`](../reference/index.md#asdex.jacobian_from_coloring) to compute the Jacobian:
 
 ```python
-from asdex import jacobian_coloring, jacobian
-
-colored_pattern = jacobian_coloring(f, input_shape=1000)
-jac_fn = jacobian(f, colored_pattern)
+jac_fn = jacobian_from_coloring(f, coloring)
 
 for x in inputs:
     J = jac_fn(x)
 ```
 
-The colored pattern depends only on the function structure,
-not the input values,
-so it can be reused across evaluations.
-
 !!! tip
 
-    If your `colored_pattern` looks wrong or overly dense,
+    If your `coloring` looks wrong or overly dense,
     please help out `asdex`'s development by
     [reporting it](https://github.com/adrhill/asdex/issues).
     These reports directly drive improvements
@@ -61,18 +77,20 @@ so it can be reused across evaluations.
 
 ## Saving and Loading Patterns
 
-Save a colored pattern to disk and reload it in a later session:
+Save a coloring to disk and reload it in a later session:
 
 ```python
-colored_pattern = jacobian_coloring(f, input_shape=1000)
-colored_pattern.save("colored.npz")
+from asdex import jacobian_coloring
+
+coloring = jacobian_coloring(f, input_shape=1000)
+coloring.save("colored.npz")
 ```
 
 ```python
-from asdex import ColoredPattern
+from asdex import ColoredPattern, jacobian_from_coloring
 
-colored_pattern = ColoredPattern.load("colored.npz")
-jac_fn = jacobian(f, colored_pattern)
+coloring = ColoredPattern.load("colored.npz")
+jac_fn = jacobian_from_coloring(f, coloring)
 ```
 
 [`SparsityPattern`](../reference/index.md#asdex.SparsityPattern) supports the same `save`/`load` interface.
@@ -89,45 +107,50 @@ def f(x):
     return (x[1:] - x[:-1]) ** 2
 
 # Automatic selection (default):
-colored_pattern = jacobian_coloring(f, input_shape=100)
+coloring = jacobian_coloring(f, input_shape=100)
 ```
 
 ```python exec="true" session="jac"
-print(f"```\n{colored_pattern}\n```")
+print(f"```\n{coloring}\n```")
 ```
 
-You can also force a specific coloring mode.
-``"row"`` colors rows (uses VJPs, reverse-mode AD),
-``"column"`` colors columns (uses JVPs, forward-mode AD):
+You can also force a specific AD mode.
+``"fwd"`` colors columns (uses JVPs, forward-mode AD),
+``"rev"`` colors rows (uses VJPs, reverse-mode AD):
 
 ```python exec="true" session="jac" source="above"
-# Force column coloring (uses JVPs):
-colored_pattern = jacobian_coloring(f, input_shape=100, coloring_mode="column")
+# Force forward mode (column coloring, uses JVPs):
+coloring = jacobian_coloring(f, input_shape=100, mode="fwd")
 
-# Force row coloring (uses VJPs):
-colored_pattern = jacobian_coloring(f, input_shape=100, coloring_mode="row")
+# Force reverse mode (row coloring, uses VJPs):
+coloring = jacobian_coloring(f, input_shape=100, mode="rev")
 ```
 
 ```python exec="true" session="jac"
-print(f"```\n{colored_pattern}\n```")
+print(f"```\n{coloring}\n```")
+```
+
+The one-call [`jacobian`](../reference/index.md#asdex.jacobian) API accepts the same `mode` parameter:
+
+```python
+jac_fn = jacobian(f, input_shape=100, mode="rev")
 ```
 
 When the number of colors is equal,
-`asdex` prefers column coloring since JVPs are generally cheaper in JAX.
+`asdex` prefers column coloring since JVPs are generally cheaper to compute in JAX.
 
 ## Separate Detection and Coloring
 
-For more control, you can split detection and coloring:
+For even more control, you can split detection and coloring:
 
 ```python
-from asdex import jacobian_sparsity, color_jacobian_pattern
+from asdex import jacobian_sparsity, jacobian_coloring_from_sparsity
 
 sparsity = jacobian_sparsity(f, input_shape=1000)
-colored_pattern = color_jacobian_pattern(sparsity, coloring_mode="column")
+coloring = jacobian_coloring_from_sparsity(sparsity, mode="fwd")
 ```
 
-This is useful when you want to inspect the sparsity pattern (`print(sparsity)`)
-before deciding on a coloring strategy.
+This is useful when you want to manually provide a sparsity pattern.
 
 ## Manually Providing a Sparsity Pattern
 
@@ -152,7 +175,7 @@ print(f"```\n{sparsity}\n```")
 From row and column index arrays:
 
 ```python exec="true" session="jac" source="above"
-sparsity = SparsityPattern.from_coordinates(
+sparsity = SparsityPattern.from_coo(
     rows=[0, 0, 1, 1, 2, 2],
     cols=[0, 1, 1, 2, 2, 3],
     shape=(3, 4),
@@ -169,67 +192,46 @@ sparsity = SparsityPattern.from_bcoo(bcoo_matrix)
 
 Finally, color the sparsity pattern and compute the Jacobian:
 ```python
-from asdex import color_jacobian_pattern, jacobian
+from asdex import jacobian_coloring_from_sparsity, jacobian_from_coloring
 
-colored_pattern = color_jacobian_pattern(sparsity)
-jac_fn = jacobian(f, colored_pattern)
+coloring = jacobian_coloring_from_sparsity(sparsity)
+jac_fn = jacobian_from_coloring(f, coloring)
 J = jac_fn(x)
-```
-
-## Multi-Dimensional Inputs
-
-`asdex` supports multi-dimensional input and output arrays.
-The Jacobian is always returned as a 2D matrix
-of shape \((m, n)\) where \(n\) is the total number of input elements
-and \(m\) is the total number of output elements:
-
-```python exec="true" session="jac-multi" source="above"
-from asdex import jacobian_coloring
-
-def f(x):
-    # x has shape (10, 10), output has shape (9, 10)
-    return x[1:, :] - x[:-1, :]
-
-colored_pattern = jacobian_coloring(f, input_shape=(10, 10))
-```
-
-```python exec="true" session="jac-multi"
-print(f"```\n{colored_pattern}\n```")
 ```
 
 ## Verifying Results
 
 Use [`check_jacobian_correctness`][asdex.check_jacobian_correctness]
-to verify the sparse Jacobian against vanilla JAX.
+to verify `asdex`'s sparse Jacobian against vanilla JAX.
 
 ```python
-from asdex import check_jacobian_correctness
+from asdex import check_jacobian_correctness, jacobian_coloring
 
-check_jacobian_correctness(f, x)
+coloring = jacobian_coloring(f, input_shape=x.shape)
+check_jacobian_correctness(f, x, coloring)
 ```
 
 Use verification for debugging and initial setup, not in production loops.
 A good place to call it is in your test suite.
 
 By default, this uses randomized matrix-vector products (`method="matvec"`)
-to check `asdex.jacobian(f)(x)` against JVPs or VJPs,
-automatically picking forward or reverse mode based on the input and output sizes.
+to check the sparse Jacobian against JVPs or VJPs.
+The AD mode is derived from the coloring.
 This is cheap — O(k) in the number of probes — and scales to large problems.
 If the results match, the function returns silently.
 If they disagree, it raises a [`VerificationError`][asdex.VerificationError].
 
-You can also pass a pre-computed colored pattern, control the AD mode used for the reference computation, 
-set custom tolerances, the number of probes, and the PRNG seed:
+You can also set custom tolerances, the number of probes, and the PRNG seed:
 
 ```python
-check_jacobian_correctness(f, x, colored_pattern=colored_pattern, ad_mode="rev", rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
+check_jacobian_correctness(f, x, coloring, rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
 ```
 
 For an exact element-wise comparison against the full dense Jacobian,
 use `method="dense"`:
 
 ```python
-check_jacobian_correctness(f, x, method="dense")
+check_jacobian_correctness(f, x, coloring, method="dense")
 ```
 
 !!! warning "Dense computation"

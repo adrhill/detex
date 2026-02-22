@@ -18,11 +18,11 @@ from asdex import (
     ColoredPattern,
     DenseColoringWarning,
     SparsityPattern,
-    color_hessian_pattern,
-    color_jacobian_pattern,
-    hessian,
     hessian_coloring,
+    hessian_coloring_from_sparsity,
+    hessian_from_coloring,
     jacobian_coloring,
+    jacobian_coloring_from_sparsity,
 )
 from asdex._display import _compressed_pattern
 from asdex.coloring import color_cols, color_rows, color_symmetric
@@ -32,7 +32,7 @@ def _make_pattern(
     rows: list[int], cols: list[int], shape: tuple[int, int]
 ) -> SparsityPattern:
     """Helper to create SparsityPattern from row/col lists."""
-    return SparsityPattern.from_coordinates(rows, cols, shape)
+    return SparsityPattern.from_coo(rows, cols, shape)
 
 
 def _from_dense(matrix: list[list[int]]) -> SparsityPattern:
@@ -739,26 +739,26 @@ def test_star_empty():
     assert len(colors) == 0
 
 
-# Unified color_jacobian_pattern() tests
+# Unified jacobian_coloring_from_sparsity() tests
 
 
 @pytest.mark.coloring
 def test_color_returns_coloring_result():
-    """color_jacobian_pattern() returns a ColoredPattern with correct fields."""
+    """jacobian_coloring_from_sparsity() returns a ColoredPattern with correct fields."""
     sparsity = _make_pattern([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
 
-    result = color_jacobian_pattern(sparsity)
+    result = jacobian_coloring_from_sparsity(sparsity)
 
     assert isinstance(result, ColoredPattern)
     assert isinstance(result.num_colors, int)
-    assert result.mode in ("row", "column")
+    assert result.mode in ("fwd", "rev")
     assert len(result.colors) in (4, 4)  # m or n (both 4 here)
 
 
 @pytest.mark.coloring
 @pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
-def test_color_auto_picks_column_for_tall():
-    """Auto picks column coloring for tall-skinny patterns.
+def test_color_auto_picks_fwd_for_tall():
+    """Auto picks fwd (column coloring) for tall-skinny patterns.
 
     With m=6 and n=2, column coloring needs at most 2 colors
     while row coloring may need up to 6.
@@ -768,17 +768,17 @@ def test_color_auto_picks_column_for_tall():
     cols = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
     sparsity = _make_pattern(rows, cols, (6, 2))
 
-    result = color_jacobian_pattern(sparsity)
+    result = jacobian_coloring_from_sparsity(sparsity)
 
-    assert result.mode == "column"
+    assert result.mode == "fwd"
     assert result.num_colors <= 2
     assert len(result.colors) == 2  # n=2
 
 
 @pytest.mark.coloring
 @pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
-def test_color_auto_picks_row_for_wide():
-    """Auto picks row coloring for wide patterns.
+def test_color_auto_picks_rev_for_wide():
+    """Auto picks rev (row coloring) for wide patterns.
 
     With m=2 and n=6, row coloring needs at most 2 colors
     while column coloring may need up to 6.
@@ -788,33 +788,33 @@ def test_color_auto_picks_row_for_wide():
     cols = [0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5]
     sparsity = _make_pattern(rows, cols, (2, 6))
 
-    result = color_jacobian_pattern(sparsity)
+    result = jacobian_coloring_from_sparsity(sparsity)
 
-    assert result.mode == "row"
+    assert result.mode == "rev"
     assert result.num_colors <= 2
     assert len(result.colors) == 2  # m=2
 
 
 @pytest.mark.coloring
-def test_color_force_row():
-    """color_jacobian_pattern(sparsity, "row") forces row coloring."""
+def test_color_force_rev():
+    """jacobian_coloring_from_sparsity(sparsity, mode="rev") forces row coloring."""
     sparsity = _make_pattern([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
 
-    result = color_jacobian_pattern(sparsity, "row")
+    result = jacobian_coloring_from_sparsity(sparsity, mode="rev")
 
-    assert result.mode == "row"
+    assert result.mode == "rev"
     assert len(result.colors) == 4  # m=4
     assert _is_valid_row_coloring(sparsity, result.colors)
 
 
 @pytest.mark.coloring
-def test_color_force_column():
-    """color_jacobian_pattern(sparsity, "column") forces column coloring."""
+def test_color_force_fwd():
+    """jacobian_coloring_from_sparsity(sparsity, mode="fwd") forces column coloring."""
     sparsity = _make_pattern([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
 
-    result = color_jacobian_pattern(sparsity, "column")
+    result = jacobian_coloring_from_sparsity(sparsity, mode="fwd")
 
-    assert result.mode == "column"
+    assert result.mode == "fwd"
     assert len(result.colors) == 4  # n=4
     assert _is_valid_col_coloring(sparsity, result.colors)
 
@@ -843,11 +843,11 @@ def test_jacobian_coloring_mode():
     def f(x):
         return x**2
 
-    result_row = jacobian_coloring(f, (3,), coloring_mode="row")
-    result_col = jacobian_coloring(f, (3,), coloring_mode="column")
+    result_rev = jacobian_coloring(f, (3,), mode="rev")
+    result_fwd = jacobian_coloring(f, (3,), mode="fwd")
 
-    assert result_row.mode == "row"
-    assert result_col.mode == "column"
+    assert result_rev.mode == "rev"
+    assert result_fwd.mode == "fwd"
 
 
 @pytest.mark.coloring
@@ -860,7 +860,8 @@ def test_hessian_coloring_basic():
     result = hessian_coloring(f, (4,))
 
     assert isinstance(result, ColoredPattern)
-    assert result.mode == "symmetric"
+    assert result.symmetric is True
+    assert result.mode == "fwd_over_rev"
     assert result.sparsity.shape == (4, 4)
     # Diagonal Hessian → 1 color
     assert result.num_colors == 1
@@ -876,7 +877,7 @@ def test_hessian_coloring_coupled():
     result = hessian_coloring(f, (3,))
 
     assert isinstance(result, ColoredPattern)
-    assert result.mode == "symmetric"
+    assert result.symmetric is True
     # Star coloring should use fewer colors than n for sparse Hessians
     assert result.num_colors <= 3
 
@@ -894,7 +895,7 @@ def test_compressed_pattern_column():
             [1, 0, 0],
         ]
     )
-    result = color_jacobian_pattern(sparsity, "column")
+    result = jacobian_coloring_from_sparsity(sparsity, mode="fwd")
     compressed = _compressed_pattern(result)
 
     assert compressed.shape == (3, result.num_colors)
@@ -917,7 +918,7 @@ def test_compressed_pattern_row():
             [1, 0, 0],
         ]
     )
-    result = color_jacobian_pattern(sparsity, "row")
+    result = jacobian_coloring_from_sparsity(sparsity, mode="rev")
     compressed = _compressed_pattern(result)
 
     assert compressed.shape == (result.num_colors, 3)
@@ -943,7 +944,7 @@ def test_str_column_contains_arrow():
             [1, 0, 0],
         ]
     )
-    result = color_jacobian_pattern(sparsity, "column")
+    result = jacobian_coloring_from_sparsity(sparsity, mode="fwd")
     s = str(result)
 
     assert "→" in s
@@ -960,41 +961,41 @@ def test_str_row_contains_downarrow():
             [1, 0, 0],
         ]
     )
-    result = color_jacobian_pattern(sparsity, "row")
+    result = jacobian_coloring_from_sparsity(sparsity, mode="rev")
     s = str(result)
 
     assert "↓" in s
     assert "●" in s
 
 
-# hessian with colored_pattern tests
+# hessian with coloring tests
 
 
 @pytest.mark.hessian
-def test_hessian_with_colored_pattern():
+def test_hessian_with_coloring():
     """Hessian works with a pre-computed ColoredPattern."""
 
     def f(x):
         return jnp.sum(x**2) + x[0] * x[1]
 
     x = np.array([1.0, 2.0, 3.0])
-    cp = hessian_coloring(f, x.shape)
-    result = hessian(f, cp)(x).todense()
+    coloring = hessian_coloring(f, x.shape)
+    result = hessian_from_coloring(f, coloring)(x).todense()
     expected = jax.hessian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
 
 
 @pytest.mark.hessian
-def test_hessian_colored_pattern_zero_hessian():
-    """Hessian with colored_pattern handles all-zero Hessian (nnz=0)."""
+def test_hessian_coloring_zero_hessian():
+    """Hessian with coloring handles all-zero Hessian (nnz=0)."""
 
     def f(x):
         return jnp.sum(x)
 
     x = np.array([1.0, 2.0, 3.0])
-    cp = hessian_coloring(f, x.shape)
-    result = hessian(f, cp)(x)
+    coloring = hessian_coloring(f, x.shape)
+    result = hessian_from_coloring(f, coloring)(x)
 
     assert result.shape == (3, 3)
     assert_allclose(result.todense(), np.zeros((3, 3)))
@@ -1007,8 +1008,8 @@ def test_str_hvp_display():
     def f(x):
         return jnp.sum(x**2)
 
-    cp = hessian_coloring(f, (3,))
-    s = str(cp)
+    coloring = hessian_coloring(f, (3,))
+    s = str(coloring)
 
     assert "HVP" in s
     assert "instead of" in s
@@ -1016,14 +1017,14 @@ def test_str_hvp_display():
 
 
 @pytest.mark.coloring
-def test_repr_colored_pattern():
+def test_repr_coloring():
     """ColoredPattern __repr__ returns a compact single-line string."""
 
     def f(x):
         return x**2
 
-    cp = jacobian_coloring(f, (3,))
-    r = repr(cp)
+    coloring = jacobian_coloring(f, (3,))
+    r = repr(coloring)
 
     assert "ColoredPattern" in r
 
@@ -1032,7 +1033,7 @@ def test_repr_colored_pattern():
 def test_color_empty_pattern():
     """Coloring an empty sparsity pattern returns 0 colors."""
     sparsity = _make_pattern([], [], (0, 3))
-    result = color_jacobian_pattern(sparsity, "row")
+    result = jacobian_coloring_from_sparsity(sparsity, mode="rev")
 
     assert result.num_colors == 0
     assert len(result.colors) == 0
@@ -1062,14 +1063,20 @@ def test_hessian_star_decompression_non_unique_branch():
         if i + 1 < n:
             rows.extend([i, i + 1])
             cols.extend([i + 1, i])
-    sparsity = SparsityPattern.from_coordinates(rows, cols, (n, n))
+    sparsity = SparsityPattern.from_coo(rows, cols, (n, n))
     colors_arr, num = color_symmetric(sparsity)
 
     # Verify star coloring reuses colors (needs only 3 for tridiagonal)
     assert num == 3
 
-    cp = ColoredPattern(sparsity, colors=colors_arr, num_colors=num, mode="symmetric")
-    result = hessian(f, cp)(x).todense()
+    coloring = ColoredPattern(
+        sparsity,
+        colors=colors_arr,
+        num_colors=num,
+        symmetric=True,
+        mode="fwd_over_rev",
+    )
+    result = hessian_from_coloring(f, coloring)(x).todense()
 
     assert_allclose(result, expected, rtol=1e-5)
 
@@ -1079,7 +1086,7 @@ def test_hessian_star_decompression_non_unique_branch():
 
 @pytest.mark.coloring
 def test_dense_jacobian_warns():
-    """color_jacobian_pattern warns when coloring is as expensive as dense."""
+    """jacobian_coloring_from_sparsity warns when coloring is as expensive as dense."""
     rows, cols = [], []
     for i in range(4):
         for j in range(4):
@@ -1088,12 +1095,12 @@ def test_dense_jacobian_warns():
     sparsity = _make_pattern(rows, cols, (4, 4))
 
     with pytest.warns(DenseColoringWarning, match="same as the dense case"):
-        color_jacobian_pattern(sparsity)
+        jacobian_coloring_from_sparsity(sparsity)
 
 
 @pytest.mark.coloring
 def test_dense_hessian_warns():
-    """color_hessian_pattern warns when coloring is as expensive as dense."""
+    """hessian_coloring_from_sparsity warns when coloring is as expensive as dense."""
     rows, cols = [], []
     for i in range(4):
         for j in range(4):
@@ -1102,7 +1109,7 @@ def test_dense_hessian_warns():
     sparsity = _make_pattern(rows, cols, (4, 4))
 
     with pytest.warns(DenseColoringWarning, match="same as the dense case"):
-        color_hessian_pattern(sparsity)
+        hessian_coloring_from_sparsity(sparsity)
 
 
 @pytest.mark.coloring
@@ -1118,7 +1125,7 @@ def test_dense_warning_suppressible():
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=DenseColoringWarning)
         # Should not raise any warning
-        color_jacobian_pattern(sparsity)
+        jacobian_coloring_from_sparsity(sparsity)
 
 
 # Symmetric Jacobian coloring tests
@@ -1126,28 +1133,28 @@ def test_dense_warning_suppressible():
 
 @pytest.mark.coloring
 def test_color_jacobian_symmetric():
-    """color_jacobian_pattern with "symmetric" returns mode="symmetric"."""
+    """jacobian_coloring_from_sparsity with symmetric=True returns symmetric coloring."""
     sparsity = _make_pattern([0, 1, 2, 3], [0, 1, 2, 3], (4, 4))
 
-    result = color_jacobian_pattern(sparsity, "symmetric")
+    result = jacobian_coloring_from_sparsity(sparsity, symmetric=True)
 
-    assert result.mode == "symmetric"
+    assert result.symmetric is True
     assert _is_valid_star_coloring(sparsity, result.colors)
 
 
 @pytest.mark.coloring
 def test_color_jacobian_symmetric_non_square_raises():
-    """color_jacobian_pattern with "symmetric" on non-square raises ValueError."""
+    """jacobian_coloring_from_sparsity with symmetric=True on non-square raises ValueError."""
     sparsity = _make_pattern([0, 1], [0, 1], (3, 4))
 
     with pytest.raises(ValueError, match="square"):
-        color_jacobian_pattern(sparsity, "symmetric")
+        jacobian_coloring_from_sparsity(sparsity, symmetric=True)
 
 
 @pytest.mark.coloring
 def test_color_jacobian_symmetric_empty_non_square_raises():
-    """Empty non-square pattern with "symmetric" coloring raises ValueError."""
+    """Empty non-square pattern with symmetric coloring raises ValueError."""
     sparsity = _make_pattern([], [], (3, 4))
 
     with pytest.raises(ValueError, match="square"):
-        color_jacobian_pattern(sparsity, "symmetric")
+        jacobian_coloring_from_sparsity(sparsity, symmetric=True)

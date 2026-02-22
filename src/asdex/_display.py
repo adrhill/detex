@@ -8,7 +8,7 @@ https://github.com/JuliaSparse/SparseArrays.jl/
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from asdex.pattern import ColoredPattern, SparsityPattern
@@ -19,9 +19,11 @@ _SMALL_COLS = 40
 
 # Human-readable AD primitive names for display
 _MODE_PRIMITIVE: dict[str, str] = {
-    "row": "VJP",
-    "column": "JVP",
-    "symmetric": "HVP",
+    "fwd": "JVP",
+    "rev": "VJP",
+    "fwd_over_rev": "HVP",
+    "rev_over_fwd": "HVP",
+    "rev_over_rev": "HVP",
 }
 
 
@@ -71,13 +73,10 @@ def colored_str(colored: ColoredPattern) -> str:
     def _plural(count: int, word: str) -> str:
         return f"{count} {word}" if count == 1 else f"{count} {word}s"
 
-    match colored.mode:
-        case "symmetric":
-            instead = f"instead of {_plural(n, 'HVP')}"
-        case "row" | "column":
-            instead = f"instead of {_plural(m, 'VJP')} or {_plural(n, 'JVP')}"
-        case _ as unreachable:
-            assert_never(unreachable)  # type: ignore[type-assertion-failure]
+    if colored.symmetric:
+        instead = f"instead of {_plural(n, 'HVP')}"
+    else:
+        instead = f"instead of {_plural(m, 'VJP')} or {_plural(n, 'JVP')}"
     header = f"{colored_repr(colored)}\n  {c} {primitive}{s} ({instead})"
 
     compressed = _compressed_pattern(colored)
@@ -130,7 +129,7 @@ def _compressed_pattern(colored: ColoredPattern) -> SparsityPattern:
                 comp_cols.append(entry[1])
         shape = (colored.num_colors, colored.sparsity.n)
 
-    return cls.from_coordinates(comp_rows, comp_cols, shape)
+    return cls.from_coo(comp_rows, comp_cols, shape)
 
 
 # Rendering helpers

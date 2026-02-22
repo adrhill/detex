@@ -27,16 +27,19 @@ which has a banded Jacobian.
 Detect the sparsity pattern and color it in one step:
 
 ```python exec="true" session="gs" source="above"
+import jax.numpy as jnp
 from asdex import jacobian_coloring
 
 def f(x):
     return (x[1:] - x[:-1]) ** 2
 
-colored_pattern = jacobian_coloring(f, input_shape=50)
+x = jnp.ones(50)
+
+coloring = jacobian_coloring(f, input_shape=x.shape)
 ```
 
 ```python exec="true" session="gs"
-print(f"```\n{colored_pattern}\n```")
+print(f"```\n{coloring}\n```")
 ```
 
 The print-out shows the original sparsity pattern (left) compressed into just two colors (right).
@@ -59,14 +62,12 @@ as the decompression overhead dominates.
     and are one of the most impactful ways to contribute.
 
 
-Now we can compute the sparse Jacobian using the colored pattern:
+Now we can compute the sparse Jacobian using the coloring:
 
 ```python exec="true" session="gs" source="above"
-import jax.numpy as jnp
-from asdex import jacobian
+from asdex import jacobian_from_coloring
 
-x = jnp.ones(50)
-jac_fn = jacobian(f, colored_pattern)
+jac_fn = jacobian_from_coloring(f, coloring)
 J = jac_fn(x)
 ```
 
@@ -78,8 +79,10 @@ We can verify that `asdex` produces the same result as `jax.jacobian`:
 import jax
 import numpy as np
 
-J_dense = jax.jacobian(f)(x)
-np.testing.assert_allclose(J.todense(), J_dense, atol=1e-6)
+J_asdex = J.todense()
+J_jax = jax.jacobian(f)(x)
+
+np.testing.assert_allclose(J_asdex, J_jax, atol=1e-6)
 ```
 
 `asdex` also provides [`check_jacobian_correctness`][asdex.check_jacobian_correctness]
@@ -88,16 +91,18 @@ see [Verifying Results](../how-to/jacobians.md#verifying-results).
 
 On larger problems, the speedup from coloring becomes significant.
 Let's benchmark on a 5000-dimensional input
-(note that timings may vary as part of the doc-building process):
+(note that timings may vary as part of the doc-building process).
+This time, we use [`asdex.jacobian`](../reference/index.md#asdex.jacobian), which calls [`jacobian_coloring`](../reference/index.md#asdex.jacobian_coloring) and [`jacobian_from_coloring`](../reference/index.md#asdex.jacobian_from_coloring):
 
 ```python exec="true" session="gs" source="above"
+import asdex
+import jax
 import timeit
 
 n = 5000
-colored_pattern = jacobian_coloring(f, input_shape=n)
 x = jnp.ones(n)
 
-jac_fn_asdex = jacobian(f, colored_pattern)
+jac_fn_asdex = asdex.jacobian(f, input_shape=n)
 jac_fn_jax = jax.jacobian(f)
 
 # Warm up JIT caches
@@ -119,13 +124,13 @@ print("```\n" + "\n".join(lines) + "\n```")
 
 !!! tip "Precompute for Repeated Evaluations"
 
-    The colored pattern depends only on the function structure,
+    The coloring depends only on the function structure,
     not the input values.
     When computing Jacobians at many different inputs,
-    precompute the colored pattern once and reuse it:
+    precompute the coloring once and reuse it:
 
     ```python
-    jac_fn = jacobian(f, jacobian_coloring(f, input_shape=5000))
+    jac_fn = jacobian(f, input_shape=5000)
 
     for x in inputs:
         J = jac_fn(x)
@@ -137,12 +142,12 @@ For scalar-valued functions \(f: \mathbb{R}^n \to \mathbb{R}\),
 `asdex` can detect Hessian sparsity and compute sparse Hessians:
 
 ```python
-from asdex import hessian_coloring, hessian
+from asdex import hessian
 
 def g(x):
     return jnp.sum(x ** 2)
 
-hess_fn = hessian(g, hessian_coloring(g, input_shape=20))
+hess_fn = hessian(g, input_shape=20)
 
 for x in inputs:
     H = hess_fn(x)

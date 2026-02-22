@@ -41,7 +41,8 @@ uv run pytest              # run tests
 ### Jacobians
 
 ```
-jacobian(f, colored_pattern)(x)
+jacobian(f, input_shape)(x)          # one-call API
+jacobian_from_coloring(f, coloring)(x)  # from pre-computed coloring
   │
   ├─ 1. DETECTION
   │     jacobian_sparsity(f, input_shape)
@@ -50,32 +51,31 @@ jacobian(f, colored_pattern)(x)
   │     └─ SparsityPattern
   │
   ├─ 2. COLORING
-  │     color_jacobian_pattern(sparsity)
+  │     jacobian_coloring_from_sparsity(sparsity)
   │
   └─ 3. DECOMPRESSION
         One VJP or JVP per color
 
-Convenience: jacobian(f)(x) = auto-detect + color + decompress
-Precompute:  jacobian_coloring(f, shape) = detect + color
+Precompute: jacobian_coloring(f, shape) = detect + color
 ```
 
 ### Hessians
 
 ```
-hessian(f, colored_pattern)(x)
+hessian(f, input_shape)(x)          # one-call API
+hessian_from_coloring(f, coloring)(x)  # from pre-computed coloring
   │
   ├─ 1. DETECTION
   │     hessian_sparsity(f, input_shape)
   │     └─ jacobian_sparsity(grad(f), input_shape)
   │
   ├─ 2. COLORING
-  │     color_hessian_pattern(sparsity)
+  │     hessian_coloring_from_sparsity(sparsity)
   │
   └─ 3. DECOMPRESSION
         One HVP per color (fwd-over-rev)
 
-Convenience: hessian(f)(x) = auto-detect + color + decompress
-Precompute:  hessian_coloring(f, shape) = detect + color_symmetric
+Precompute: hessian_coloring(f, shape) = detect + color_symmetric
 ```
 
 ## Commits
