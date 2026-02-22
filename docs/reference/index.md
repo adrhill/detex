@@ -15,13 +15,13 @@
 
 ---
 
-::: asdex.jacobian_sparsity
-::: asdex.hessian_sparsity
+::: asdex.jacobian_coloring_from_sparsity
+::: asdex.hessian_coloring_from_sparsity
 
 ---
 
-::: asdex.color_jacobian_pattern
-::: asdex.color_hessian_pattern
+::: asdex.jacobian_sparsity
+::: asdex.hessian_sparsity
 
 ---
 

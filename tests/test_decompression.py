@@ -8,13 +8,13 @@ from jax.experimental.sparse import BCOO
 from numpy.testing import assert_allclose
 
 from asdex import (
-    color_hessian_pattern,
-    color_jacobian_pattern,
     hessian,
     hessian_coloring,
+    hessian_coloring_from_sparsity,
     hessian_from_coloring,
     hessian_sparsity,
     jacobian,
+    jacobian_coloring_from_sparsity,
     jacobian_from_coloring,
     jacobian_sparsity,
 )
@@ -117,7 +117,9 @@ def test_precomputed_sparsity():
     x = np.array([1.0, 2.0, 3.0])
     sparsity = jacobian_sparsity(f, input_shape=3)
 
-    result1 = jacobian_from_coloring(f, color_jacobian_pattern(sparsity))(x).todense()
+    result1 = jacobian_from_coloring(f, jacobian_coloring_from_sparsity(sparsity))(
+        x
+    ).todense()
     result2 = jacobian(f, input_shape=x.shape)(x).todense()
 
     assert_allclose(result1, result2, rtol=1e-10)
@@ -132,7 +134,7 @@ def test_precomputed_colors():
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
     sparsity = jacobian_sparsity(f, input_shape=5)
-    coloring = color_jacobian_pattern(sparsity, mode="rev")
+    coloring = jacobian_coloring_from_sparsity(sparsity, mode="rev")
 
     result1 = jacobian_from_coloring(f, coloring)(x).todense()
     result2 = jacobian(f, input_shape=x.shape)(x).todense()
@@ -150,7 +152,7 @@ def test_different_input_points():
         return jnp.array([x[0] * x[1], x[1] ** 2, jnp.exp(x[2])])
 
     sparsity = jacobian_sparsity(f, input_shape=3)
-    jac_fn = jacobian_from_coloring(f, color_jacobian_pattern(sparsity))
+    jac_fn = jacobian_from_coloring(f, jacobian_coloring_from_sparsity(sparsity))
 
     for x in [
         np.array([1.0, 2.0, 0.5]),
@@ -318,9 +320,9 @@ def test_column_partition_diagonal():
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = jacobian_from_coloring(f, color_jacobian_pattern(sparsity, mode="fwd"))(
-        x
-    ).todense()
+    result = jacobian_from_coloring(
+        f, jacobian_coloring_from_sparsity(sparsity, mode="fwd")
+    )(x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -335,9 +337,9 @@ def test_column_partition_mixed():
 
     x = np.array([1.0, 2.0, 0.5])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = jacobian_from_coloring(f, color_jacobian_pattern(sparsity, mode="fwd"))(
-        x
-    ).todense()
+    result = jacobian_from_coloring(
+        f, jacobian_coloring_from_sparsity(sparsity, mode="fwd")
+    )(x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -361,9 +363,9 @@ def test_column_partition_tridiagonal():
 
     x = np.array([1.0, 2.0, 3.0, 4.0])
     sparsity = jacobian_sparsity(f, input_shape=x.shape)
-    result = jacobian_from_coloring(f, color_jacobian_pattern(sparsity, mode="fwd"))(
-        x
-    ).todense()
+    result = jacobian_from_coloring(
+        f, jacobian_coloring_from_sparsity(sparsity, mode="fwd")
+    )(x).todense()
     expected = jax.jacobian(f)(x)
 
     assert_allclose(result, expected, rtol=1e-5)
@@ -377,7 +379,9 @@ def test_precomputed_col_colors():
         return (x[1:] - x[:-1]) ** 2
 
     x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
-    coloring = color_jacobian_pattern(jacobian_sparsity(f, input_shape=5), mode="fwd")
+    coloring = jacobian_coloring_from_sparsity(
+        jacobian_sparsity(f, input_shape=5), mode="fwd"
+    )
 
     result = jacobian_from_coloring(f, coloring)(x).todense()
     expected = jax.jacobian(f)(x)
@@ -403,7 +407,7 @@ def test_auto_picks_column_for_tall():
     # Auto should give same result as explicit column
     result_auto = jacobian(f, input_shape=x.shape)(x).todense()
     result_col = jacobian_from_coloring(
-        f, color_jacobian_pattern(sparsity, mode="fwd")
+        f, jacobian_coloring_from_sparsity(sparsity, mode="fwd")
     )(x).todense()
     expected = jax.jacobian(f)(x)
 
@@ -429,7 +433,7 @@ def test_auto_picks_row_for_wide():
     # Auto and row should give same result
     result_auto = jacobian(f, input_shape=x.shape)(x).todense()
     result_row = jacobian_from_coloring(
-        f, color_jacobian_pattern(sparsity, mode="rev")
+        f, jacobian_coloring_from_sparsity(sparsity, mode="rev")
     )(x).todense()
     expected = jax.jacobian(f)(x)
 
@@ -439,13 +443,13 @@ def test_auto_picks_row_for_wide():
 
 @pytest.mark.jacobian
 def test_precomputed_auto_coloring():
-    """Passing color_jacobian_pattern(sparsity) with auto partition."""
+    """Passing jacobian_coloring_from_sparsity(sparsity) with auto partition."""
 
     def f(x):
         return x**2
 
     x = np.array([1.0, 2.0, 3.0])
-    coloring = color_jacobian_pattern(jacobian_sparsity(f, input_shape=3))
+    coloring = jacobian_coloring_from_sparsity(jacobian_sparsity(f, input_shape=3))
 
     result = jacobian_from_coloring(f, coloring)(x).todense()
     expected = jax.jacobian(f)(x)
@@ -464,7 +468,7 @@ def test_jacobian_shape_mismatch_raises():
         return x**2
 
     coloring = jacobian_sparsity(f, (2, 3))
-    colored = color_jacobian_pattern(coloring)
+    colored = jacobian_coloring_from_sparsity(coloring)
 
     with pytest.raises(ValueError, match=r"Input shape .* does not match"):
         jacobian_from_coloring(f, colored)(np.ones(6))
@@ -478,7 +482,7 @@ def test_hessian_shape_mismatch_raises():
         return jnp.sum(x**2)
 
     coloring = hessian_sparsity(f, (2, 3))
-    colored = color_hessian_pattern(coloring)
+    colored = hessian_coloring_from_sparsity(coloring)
 
     with pytest.raises(ValueError, match=r"Input shape .* does not match"):
         hessian_from_coloring(f, colored)(np.ones(6))
@@ -526,7 +530,9 @@ def test_hessian_precomputed_sparsity():
     x = np.array([1.0, 2.0, 3.0])
     sparsity = hessian_sparsity(f, input_shape=3)
 
-    result1 = hessian_from_coloring(f, color_hessian_pattern(sparsity))(x).todense()
+    result1 = hessian_from_coloring(f, hessian_coloring_from_sparsity(sparsity))(
+        x
+    ).todense()
     result2 = hessian(f, input_shape=x.shape)(x).todense()
 
     assert_allclose(result1, result2, rtol=1e-10)

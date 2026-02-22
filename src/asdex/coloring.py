@@ -65,7 +65,7 @@ def jacobian_coloring(
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian_from_coloring`][asdex.jacobian_from_coloring].
     """
     sparsity = _detect_jacobian_sparsity(f, input_shape)
-    return color_jacobian_pattern(sparsity, symmetric=symmetric, mode=mode)
+    return jacobian_coloring_from_sparsity(sparsity, symmetric=symmetric, mode=mode)
 
 
 def hessian_coloring(
@@ -92,13 +92,13 @@ def hessian_coloring(
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian_from_coloring`][asdex.hessian_from_coloring].
     """
     sparsity = _detect_hessian_sparsity(f, input_shape)
-    return color_hessian_pattern(sparsity, symmetric=symmetric, mode=mode)
+    return hessian_coloring_from_sparsity(sparsity, symmetric=symmetric, mode=mode)
 
 
 # Public API: pattern coloring
 
 
-def color_jacobian_pattern(
+def jacobian_coloring_from_sparsity(
     sparsity: SparsityPattern,
     *,
     mode: JacobianMode = "auto",
@@ -190,7 +190,7 @@ def color_jacobian_pattern(
             assert_never(unreachable)
 
 
-def color_hessian_pattern(
+def hessian_coloring_from_sparsity(
     sparsity: SparsityPattern,
     *,
     mode: HessianMode = "auto",

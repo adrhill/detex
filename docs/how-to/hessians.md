@@ -128,10 +128,10 @@ print(f"```\n{coloring}\n```")
 For even more control, you can split detection and coloring:
 
 ```python
-from asdex import hessian_sparsity, color_hessian_pattern
+from asdex import hessian_sparsity, hessian_coloring_from_sparsity
 
 sparsity = hessian_sparsity(g, input_shape=100)
-coloring = color_hessian_pattern(sparsity)
+coloring = hessian_coloring_from_sparsity(sparsity)
 ```
 
 Since the Hessian is the Jacobian of the gradient,
@@ -181,9 +181,9 @@ sparsity = SparsityPattern.from_bcoo(bcoo_matrix)
 
 Finally, color the sparsity pattern and compute the Hessian:
 ```python
-from asdex import color_hessian_pattern, hessian_from_coloring
+from asdex import hessian_coloring_from_sparsity, hessian_from_coloring
 
-coloring = color_hessian_pattern(sparsity)
+coloring = hessian_coloring_from_sparsity(sparsity)
 hess_fn = hessian_from_coloring(f, coloring)
 H = hess_fn(x)
 ```

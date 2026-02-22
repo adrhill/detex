@@ -51,7 +51,7 @@ jacobian_from_coloring(f, coloring)(x)  # from pre-computed coloring
   │     └─ SparsityPattern
   │
   ├─ 2. COLORING
-  │     color_jacobian_pattern(sparsity)
+  │     jacobian_coloring_from_sparsity(sparsity)
   │
   └─ 3. DECOMPRESSION
         One VJP or JVP per color
@@ -70,7 +70,7 @@ hessian_from_coloring(f, coloring)(x)  # from pre-computed coloring
   │     └─ jacobian_sparsity(grad(f), input_shape)
   │
   ├─ 2. COLORING
-  │     color_hessian_pattern(sparsity)
+  │     hessian_coloring_from_sparsity(sparsity)
   │
   └─ 3. DECOMPRESSION
         One HVP per color (fwd-over-rev)

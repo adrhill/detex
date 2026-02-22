@@ -144,10 +144,10 @@ When the number of colors is equal,
 For even more control, you can split detection and coloring:
 
 ```python
-from asdex import jacobian_sparsity, color_jacobian_pattern
+from asdex import jacobian_sparsity, jacobian_coloring_from_sparsity
 
 sparsity = jacobian_sparsity(f, input_shape=1000)
-coloring = color_jacobian_pattern(sparsity, mode="fwd")
+coloring = jacobian_coloring_from_sparsity(sparsity, mode="fwd")
 ```
 
 This is useful when you want to manually provide a sparsity pattern.
@@ -192,9 +192,9 @@ sparsity = SparsityPattern.from_bcoo(bcoo_matrix)
 
 Finally, color the sparsity pattern and compute the Jacobian:
 ```python
-from asdex import color_jacobian_pattern, jacobian_from_coloring
+from asdex import jacobian_coloring_from_sparsity, jacobian_from_coloring
 
-coloring = color_jacobian_pattern(sparsity)
+coloring = jacobian_coloring_from_sparsity(sparsity)
 jac_fn = jacobian_from_coloring(f, coloring)
 J = jac_fn(x)
 ```
