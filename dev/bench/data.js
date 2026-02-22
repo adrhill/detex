@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771720651688,
+  "lastUpdate": 1771726562592,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -7062,6 +7062,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0007676094668254782",
             "extra": "mean: 39.68910391666736 msec\nrounds: 24"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "68e9ca88b8f80e35bda3c8c4004a29ecedcddf11",
+          "message": "fix!: validate and simplify mode handling (#66)\n\n* refactor!(API): replace `\"auto\"` mode with `None`\n\nRemove `\"auto\"` from `JacobianMode` and `HessianMode` Literal types.\nFunctions now use `mode: XMode | None = None` where `None` means\nauto-select.\n\n- Add `ColoringMode` type for the resolved mode in `ColoredPattern.mode`\n- Replace `_resolve_*` functions with `_assert_*` validation;\n  `None` handling lives at the call sites\n- Replace `case _:` fallbacks with `assert_never`\n- Tighten `str` annotations to `Literal` types\n- Add tests for invalid mode and method strings\n- Document code style conventions in `CLAUDE.md`\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix: add `assert_never` to all exhaustive match statements\n\nEnsures exhaustiveness is enforced at both type-check time and\nruntime for match statements in `coloring.py` and `verify.py`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: cover remaining branches in verify, coloring, and pattern modules\n\nAdd tests for uncovered edge cases:\n- `check_jacobian_correctness` with a Hessian-mode coloring (shape-based fallback)\n- `check_hessian_correctness` with a Jacobian-mode coloring (ValueError)\n- `_check_allclose` shape-mismatch branch (VerificationError)\n- `_color_jacobian_symmetric` with empty square pattern\n- `_empty_hessian_pattern` with non-square symmetric (ValueError)\n- `_greedy_color` with 0 vertices\n- `_parse_coloring_mode` with invalid mode string via corrupted save file\n\nBrings `verify.py`, `coloring.py`, and `pattern.py` to 100% coverage.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix: validate coloring mode before decompression and reject mismatches\n\nAdd runtime guards (`_assert_jacobian_mode`, `_assert_hessian_mode`)\nbefore match statements in `_eval_jacobian`, `_compute_hvps`, and\n`check_jacobian_correctness`.\nWiden assert signatures to `str` so they work on untyped inputs.\nRemove the silent hessian-mode fallback in `check_jacobian_correctness`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor: move mode validation from `pattern` to `modes` module\n\nRename `_parse_coloring_mode` to `_assert_coloring_mode` to match\nthe `_assert_jacobian_mode`/`_assert_hessian_mode` helpers.\nDefine `ColoringMode` as `JacobianMode | HessianMode`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix: flatten `get_args` for union-based `ColoringMode`\n\n`get_args` on `JacobianMode | HessianMode` returns the two `Literal`\ntypes, not the string values.\nExpand both in `_assert_coloring_mode`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-22T03:15:29+01:00",
+          "tree_id": "61a66d056e2cf15265ef0dcc58a30817dc5d9db7",
+          "url": "https://github.com/adrhill/asdex/commit/68e9ca88b8f80e35bda3c8c4004a29ecedcddf11"
+        },
+        "date": 1771726561924,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 788.3529228832231,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004015844633508554",
+            "extra": "mean: 1.268467422360439 msec\nrounds: 161"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3315.1734074318,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000011317824942420281",
+            "extra": "mean: 301.6433462449496 usec\nrounds: 2117"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 59.064876139369005,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000612504458209593",
+            "extra": "mean: 16.930535799997415 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 101.05386447865553,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00041680588085491106",
+            "extra": "mean: 9.895712599998774 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 20.43030130719188,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01888874323300431",
+            "extra": "mean: 48.946904157893144 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 248.06436255484095,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000034063570037424784",
+            "extra": "mean: 4.031211858490655 msec\nrounds: 212"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 28.44750878480636,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009704826261946985",
+            "extra": "mean: 35.15246299999717 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 26.805358592757834,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005590263457850977",
+            "extra": "mean: 37.30597360000161 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 91.32074657048187,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013567500916693176",
+            "extra": "mean: 10.950414199999933 msec\nrounds: 55"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3267.2706083934104,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000009285865134925943",
+            "extra": "mean: 306.06586348589053 usec\nrounds: 2117"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 25.537789976307188,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0015244892745488018",
+            "extra": "mean: 39.157656199998314 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 25.60218623171767,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002322823161517912",
+            "extra": "mean: 39.05916436000041 msec\nrounds: 25"
           }
         ]
       }
