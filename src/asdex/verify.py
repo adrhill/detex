@@ -10,6 +10,7 @@ from jax.experimental.sparse import BCOO
 from numpy.typing import ArrayLike
 
 from asdex.decompression import hessian_from_coloring, jacobian_from_coloring
+from asdex.modes import _assert_jacobian_mode
 from asdex.pattern import ColoredPattern
 
 
@@ -64,16 +65,12 @@ def check_jacobian_correctness(
     x = jnp.asarray(x)
 
     # Derive reference AD mode from the colored pattern
+    _assert_jacobian_mode(coloring.mode)
     match coloring.mode:
         case "fwd" | "rev":
             ref_mode = coloring.mode
-        case "fwd_over_rev" | "rev_over_fwd" | "rev_over_rev":
-            # Hessian modes shouldn't appear here, but default based on shape
-            m = coloring.sparsity.m
-            n = coloring.sparsity.n
-            ref_mode: Literal["fwd", "rev"] = "fwd" if m >= n else "rev"
         case _ as unreachable:
-            assert_never(unreachable)
+            assert_never(unreachable)  # type: ignore[type-assertion-failure]
 
     J_sparse = jacobian_from_coloring(f, coloring)(x)
 

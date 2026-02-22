@@ -11,7 +11,12 @@ from numpy.typing import ArrayLike
 from asdex.coloring import hessian_coloring as _hessian_coloring
 from asdex.coloring import jacobian_coloring as _jacobian_coloring
 from asdex.detection import _ensure_scalar
-from asdex.modes import HessianMode, JacobianMode
+from asdex.modes import (
+    HessianMode,
+    JacobianMode,
+    _assert_hessian_mode,
+    _assert_jacobian_mode,
+)
 from asdex.pattern import ColoredPattern
 
 # Public API
@@ -173,6 +178,7 @@ def _eval_jacobian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(m, n))
 
+    _assert_jacobian_mode(coloring.mode)
     match coloring.mode:
         case "rev":
             return _jacobian_rows(f, x, coloring, out_shape)
@@ -258,6 +264,7 @@ def _compute_hvps(
     """Compute one HVP per color using pre-computed seed matrix."""
     seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
 
+    _assert_hessian_mode(coloring.mode)
     match coloring.mode:
         case "fwd_over_rev":
 

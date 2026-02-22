@@ -338,24 +338,16 @@ def test_verification_error_is_assertion_error():
 
 
 @pytest.mark.jacobian
-def test_check_jacobian_with_hessian_coloring():
-    """check_jacobian_correctness falls back to shape-based mode for Hessian colorings.
-
-    The Hessian coloring has mode="fwd_over_rev",
-    which triggers the shape-based fallback in lines 70-74.
-    We use a linear function whose Hessian (and coloring) has nnz=0,
-    so jacobian_from_coloring returns early before the mode check.
-    """
+def test_check_jacobian_with_hessian_coloring_raises():
+    """check_jacobian_correctness raises ValueError for Hessian-mode colorings."""
 
     def f(x):
-        return jnp.sum(x)
+        return jnp.sum(x**2)
 
     x = np.array([1.0, 2.0, 3.0])
     coloring = hessian_coloring(f, input_shape=x.shape)
-    assert coloring.mode == "fwd_over_rev"
-    assert coloring.sparsity.nnz == 0
-    # grad(f) = constant vector → Jacobian is all zeros, matching the empty pattern
-    check_jacobian_correctness(jax.grad(f), x, coloring, method="dense")
+    with pytest.raises(ValueError, match="Expected 'fwd' or 'rev'"):
+        check_jacobian_correctness(jax.grad(f), x, coloring)
 
 
 @pytest.mark.hessian

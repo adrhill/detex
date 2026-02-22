@@ -13,13 +13,13 @@ from asdex.pattern import SparsityPattern
 def test_assert_jacobian_mode_invalid():
     """Invalid Jacobian mode raises ValueError."""
     with pytest.raises(ValueError, match="Unknown mode"):
-        _assert_jacobian_mode("invalid")  # type: ignore[arg-type]
+        _assert_jacobian_mode("invalid")
 
 
 def test_assert_hessian_mode_invalid():
     """Invalid Hessian mode raises ValueError."""
     with pytest.raises(ValueError, match="Unknown mode"):
-        _assert_hessian_mode("invalid")  # type: ignore[arg-type]
+        _assert_hessian_mode("invalid")
 
 
 def test_jacobian_coloring_invalid_mode():

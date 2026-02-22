@@ -21,13 +21,13 @@ ColoringMode = Literal["fwd", "rev", "fwd_over_rev", "rev_over_fwd", "rev_over_r
 """AD mode that a coloring was computed for."""
 
 
-def _assert_jacobian_mode(mode: JacobianMode) -> None:
+def _assert_jacobian_mode(mode: str) -> None:
     """Raise ``ValueError`` if *mode* is not a valid ``JacobianMode``."""
     if mode not in get_args(JacobianMode):
         raise ValueError(f"Unknown mode {mode!r}. Expected 'fwd' or 'rev'.")
 
 
-def _assert_hessian_mode(mode: HessianMode) -> None:
+def _assert_hessian_mode(mode: str) -> None:
     """Raise ``ValueError`` if *mode* is not a valid ``HessianMode``."""
     if mode not in get_args(HessianMode):
         raise ValueError(
