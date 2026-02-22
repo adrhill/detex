@@ -40,11 +40,9 @@ from asdex import jacobian
 def f(x):
     return (x[1:] - x[:-1]) ** 2
 
-# Detect sparsity, color, and build a sparse Jacobian function:
-jac_fn = jacobian(f, input_shape=1000)
-
-# Compute sparse Jacobians efficiently:
 x = np.random.randn(1000)
+
+jac_fn = jacobian(f, input_shape=x.shape)
 J = jac_fn(x)
 ```
 
