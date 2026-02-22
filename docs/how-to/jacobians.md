@@ -205,33 +205,33 @@ Use [`check_jacobian_correctness`][asdex.check_jacobian_correctness]
 to verify `asdex`'s sparse Jacobian against vanilla JAX.
 
 ```python
-from asdex import check_jacobian_correctness
+from asdex import check_jacobian_correctness, jacobian_coloring
 
-check_jacobian_correctness(f, x)
+coloring = jacobian_coloring(f, input_shape=x.shape)
+check_jacobian_correctness(f, x, coloring)
 ```
 
 Use verification for debugging and initial setup, not in production loops.
 A good place to call it is in your test suite.
 
 By default, this uses randomized matrix-vector products (`method="matvec"`)
-to check `asdex.jacobian(f, input_shape=...)(x)` against JVPs or VJPs,
-automatically picking forward or reverse mode based on the input and output sizes.
+to check the sparse Jacobian against JVPs or VJPs.
+The AD mode is derived from the coloring.
 This is cheap — O(k) in the number of probes — and scales to large problems.
 If the results match, the function returns silently.
 If they disagree, it raises a [`VerificationError`][asdex.VerificationError].
 
-You can also pass a pre-computed coloring, control the AD mode used for the reference computation, 
-set custom tolerances, the number of probes, and the PRNG seed:
+You can also set custom tolerances, the number of probes, and the PRNG seed:
 
 ```python
-check_jacobian_correctness(f, x, coloring=coloring, ad_mode="rev", rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
+check_jacobian_correctness(f, x, coloring, rtol=1e-5, atol=1e-5, num_probes=50, seed=42)
 ```
 
 For an exact element-wise comparison against the full dense Jacobian,
 use `method="dense"`:
 
 ```python
-check_jacobian_correctness(f, x, method="dense")
+check_jacobian_correctness(f, x, coloring, method="dense")
 ```
 
 !!! warning "Dense computation"
