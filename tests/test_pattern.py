@@ -374,3 +374,25 @@ def test_save_load_sparsity_non_default_input_shape(tmp_path):
 
     assert loaded.input_shape == (2, 3)
     assert loaded.shape == (2, 6)
+
+
+def test_load_colored_pattern_invalid_mode(tmp_path):
+    """ColoredPattern.load raises ValueError when the saved mode is invalid."""
+    sparsity = SparsityPattern.from_coo([0, 1, 2], [0, 1, 2], (3, 3))
+    coloring = ColoredPattern(
+        sparsity=sparsity,
+        colors=np.array([0, 0, 0], dtype=np.int32),
+        num_colors=1,
+        symmetric=False,
+        mode="fwd",
+    )
+    path = tmp_path / "bad_mode.npz"
+    coloring.save(path)
+
+    # Corrupt the mode field by re-saving with an invalid mode string
+    data = dict(np.load(path))
+    data["mode"] = np.array("bogus")
+    np.savez(path, **data)
+
+    with pytest.raises(ValueError, match="Unknown mode"):
+        ColoredPattern.load(path)

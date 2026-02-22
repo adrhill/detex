@@ -1,10 +1,13 @@
 """Tests for the verification utilities."""
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
 
 from asdex import (
+    ColoredPattern,
+    SparsityPattern,
     VerificationError,
     check_hessian_correctness,
     check_jacobian_correctness,
@@ -329,3 +332,72 @@ def test_invalid_method_hessian():
 def test_verification_error_is_assertion_error():
     """VerificationError subclasses AssertionError."""
     assert issubclass(VerificationError, AssertionError)
+
+
+# Cross-mode coloring
+
+
+@pytest.mark.jacobian
+def test_check_jacobian_with_hessian_coloring():
+    """check_jacobian_correctness falls back to shape-based mode for Hessian colorings.
+
+    The Hessian coloring has mode="fwd_over_rev",
+    which triggers the shape-based fallback in lines 70-74.
+    We use a linear function whose Hessian (and coloring) has nnz=0,
+    so jacobian_from_coloring returns early before the mode check.
+    """
+
+    def f(x):
+        return jnp.sum(x)
+
+    x = np.array([1.0, 2.0, 3.0])
+    coloring = hessian_coloring(f, input_shape=x.shape)
+    assert coloring.mode == "fwd_over_rev"
+    assert coloring.sparsity.nnz == 0
+    # grad(f) = constant vector → Jacobian is all zeros, matching the empty pattern
+    check_jacobian_correctness(jax.grad(f), x, coloring, method="dense")
+
+
+@pytest.mark.hessian
+def test_check_hessian_with_jacobian_coloring_raises():
+    """check_hessian_correctness raises ValueError for Jacobian-mode colorings."""
+
+    def f(x):
+        return jnp.sum(x**2)
+
+    x = np.array([1.0, 2.0, 3.0])
+    coloring = jacobian_coloring(f, input_shape=x.shape)
+    with pytest.raises(ValueError, match="Expected a Hessian mode"):
+        check_hessian_correctness(f, x, coloring)
+
+
+# Shape mismatch in _check_allclose
+
+
+@pytest.mark.jacobian
+def test_check_allclose_shape_mismatch():
+    """_check_allclose raises VerificationError when shapes differ.
+
+    Constructs a coloring whose pattern is too small for the function,
+    so the decompressed sparse Jacobian has a different shape
+    than the dense reference.
+    """
+
+    # Function returns 3 outputs from 3 inputs → dense Jacobian is (3, 3)
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0])
+
+    # Build a coloring for a (2, 3) pattern — wrong number of rows
+    sparsity = SparsityPattern.from_coo([0, 1], [0, 1], (2, 3))
+    coloring = ColoredPattern(
+        sparsity=sparsity,
+        colors=np.array([0, 0, 0], dtype=np.int32),
+        num_colors=1,
+        symmetric=False,
+        mode="fwd",
+    )
+
+    with pytest.raises(VerificationError, match="shape"):
+        check_jacobian_correctness(f, x, coloring, method="dense")

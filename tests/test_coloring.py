@@ -25,7 +25,7 @@ from asdex import (
     jacobian_coloring_from_sparsity,
 )
 from asdex._display import _compressed_pattern
-from asdex.coloring import color_cols, color_rows, color_symmetric
+from asdex.coloring import _greedy_color, color_cols, color_rows, color_symmetric
 
 
 def _make_pattern(
@@ -1158,3 +1158,49 @@ def test_color_jacobian_symmetric_empty_non_square_raises():
 
     with pytest.raises(ValueError, match="square"):
         jacobian_coloring_from_sparsity(sparsity, symmetric=True)
+
+
+@pytest.mark.coloring
+def test_color_jacobian_symmetric_empty_square():
+    """Empty square pattern with symmetric=True returns 0 colors."""
+    sparsity = _make_pattern([], [], (3, 3))
+
+    result = jacobian_coloring_from_sparsity(sparsity, symmetric=True)
+
+    assert result.num_colors == 0
+    assert result.symmetric is True
+    assert len(result.colors) == 3
+
+
+@pytest.mark.coloring
+def test_empty_hessian_symmetric_non_square_raises():
+    """Empty non-square pattern with symmetric Hessian coloring raises ValueError."""
+    sparsity = _make_pattern([], [], (3, 4))
+
+    with pytest.raises(ValueError, match="square"):
+        hessian_coloring_from_sparsity(sparsity, symmetric=True)
+
+
+@pytest.mark.coloring
+def test_color_zero_row_pattern():
+    """Coloring a (0, n) pattern exercises _greedy_color with 0 vertices."""
+    sparsity = _make_pattern([0], [0], (1, 3))
+
+    # Force row coloring on a pattern where m=1 → single vertex
+    result = jacobian_coloring_from_sparsity(sparsity, mode="rev")
+    assert result.num_colors == 1
+
+    # Now test with m=0
+    sparsity_zero = _make_pattern([], [], (0, 3))
+    result_zero = jacobian_coloring_from_sparsity(sparsity_zero, mode="rev")
+    assert result_zero.num_colors == 0
+    assert len(result_zero.colors) == 0
+
+
+@pytest.mark.coloring
+def test_greedy_color_zero_vertices():
+    """_greedy_color with 0 vertices returns empty colors and 0 colors."""
+    colors, num_colors = _greedy_color(0, [])
+
+    assert num_colors == 0
+    assert len(colors) == 0
