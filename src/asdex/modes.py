@@ -38,5 +38,5 @@ def _assert_hessian_mode(mode: str) -> None:
 
 def _assert_coloring_mode(mode: str) -> None:
     """Raise ``ValueError`` if *mode* is not a valid ``ColoringMode``."""
-    if mode not in get_args(ColoringMode):
+    if mode not in (*get_args(JacobianMode), *get_args(HessianMode)):
         raise ValueError(f"Unknown mode {mode!r}.")
