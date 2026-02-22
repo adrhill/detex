@@ -24,7 +24,7 @@ def jacobian(
     mode: JacobianMode = "auto",
     symmetric: bool = False,
 ) -> Callable[[ArrayLike], BCOO]:
-    """Detect sparsity, color, and build a sparse Jacobian function.
+    """Detect sparsity, color, and return a function computing sparse Jacobians.
 
     Combines [`jacobian_coloring`][asdex.jacobian_coloring]
     and [`jacobian_from_coloring`][asdex.jacobian_from_coloring]
@@ -57,7 +57,7 @@ def hessian(
     mode: HessianMode = "auto",
     symmetric: bool = True,
 ) -> Callable[[ArrayLike], BCOO]:
-    """Detect sparsity, color, and build a sparse Hessian function.
+    """Detect sparsity, color, and return a function computing sparse Hessians.
 
     Combines [`hessian_coloring`][asdex.hessian_coloring]
     and [`hessian_from_coloring`][asdex.hessian_from_coloring]
