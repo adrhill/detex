@@ -1193,7 +1193,7 @@
 
 
 <h2 id="asdex.jacobian_coloring" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
 <a href="#asdex.jacobian_coloring" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1251,23 +1251,23 @@
                 <code>mode</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="asdex.JacobianMode = Literal['fwd', 'rev', 'auto']
+                  <code><a class="autorefs autorefs-internal" title="asdex.JacobianMode = Literal['fwd', 'rev']
 
   
       module-attribute
-   (asdex.modes.JacobianMode)" href="../#asdex.JacobianMode">JacobianMode</a></code>
+   (asdex.modes.JacobianMode)" href="../#asdex.JacobianMode">JacobianMode</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>AD mode.
 <code>"fwd"</code> uses JVPs (forward-mode AD),
 <code>"rev"</code> uses VJPs (reverse-mode AD),
-<code>"auto"</code> picks whichever of fwd/rev needs fewer colors
+<code>None</code> picks whichever of fwd/rev needs fewer colors
 (unless <code>symmetric</code> is True, in which case defaults to <code>"fwd"</code>).</p>
               </div>
             </td>
             <td>
-                  <code>&#39;auto&#39;</code>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1332,7 +1332,7 @@ Requires a square Jacobian.</p>
 
 
 <h2 id="asdex.hessian_coloring" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
 <a href="#asdex.hessian_coloring" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1390,23 +1390,23 @@ Requires a square Jacobian.</p>
                 <code>mode</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev', 'auto']
+                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev']
 
   
       module-attribute
-   (asdex.modes.HessianMode)" href="../#asdex.HessianMode">HessianMode</a></code>
+   (asdex.modes.HessianMode)" href="../#asdex.HessianMode">HessianMode</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>AD composition strategy for Hessian-vector products.
 <code>"fwd_over_rev"</code> uses forward-over-reverse,
 <code>"rev_over_fwd"</code> uses reverse-over-forward,
-<code>"rev_over_rev"</code> uses reverse-over-reverse,
-<code>"auto"</code> defaults to <code>"fwd_over_rev"</code>.</p>
+<code>"rev_over_rev"</code> uses reverse-over-reverse.
+Defaults to <code>"fwd_over_rev"</code>.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;auto&#39;</code>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1471,7 +1471,7 @@ Defaults to True (exploits H = H^T for fewer colors).</p>
 
 
 <h2 id="asdex.jacobian_coloring_from_sparsity" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian_coloring_from_sparsity</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian_coloring_from_sparsity</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
 <a href="#asdex.jacobian_coloring_from_sparsity" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1520,23 +1520,23 @@ computed together in a single VJP (or JVP).</p>
                 <code>mode</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="asdex.JacobianMode = Literal['fwd', 'rev', 'auto']
+                  <code><a class="autorefs autorefs-internal" title="asdex.JacobianMode = Literal['fwd', 'rev']
 
   
       module-attribute
-   (asdex.modes.JacobianMode)" href="../#asdex.JacobianMode">JacobianMode</a></code>
+   (asdex.modes.JacobianMode)" href="../#asdex.JacobianMode">JacobianMode</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>AD mode.
 <code>"fwd"</code> uses JVPs (column coloring),
-<code>"rev"</code> uses VJPs (row coloring),
-<code>"auto"</code> picks whichever of fwd/rev needs fewer colors
+<code>"rev"</code> uses VJPs (row coloring).
+<code>None</code> picks whichever of fwd/rev needs fewer colors
 (unless <code>symmetric</code> is True, in which case defaults to <code>"fwd"</code>).</p>
               </div>
             </td>
             <td>
-                  <code>&#39;auto&#39;</code>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1593,29 +1593,6 @@ Requires a square pattern.</p>
     </table>
 
 
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="ValueError">ValueError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If mode is unknown.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
     </div>
 
 </div>
@@ -1624,7 +1601,7 @@ Requires a square pattern.</p>
 
 
 <h2 id="asdex.hessian_coloring_from_sparsity" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring_from_sparsity</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring_from_sparsity</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
 <a href="#asdex.hessian_coloring_from_sparsity" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1671,23 +1648,23 @@ Requires a square pattern.</p>
                 <code>mode</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev', 'auto']
+                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev']
 
   
       module-attribute
-   (asdex.modes.HessianMode)" href="../#asdex.HessianMode">HessianMode</a></code>
+   (asdex.modes.HessianMode)" href="../#asdex.HessianMode">HessianMode</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>AD composition strategy for Hessian-vector products.
 <code>"fwd_over_rev"</code> uses forward-over-reverse,
 <code>"rev_over_fwd"</code> uses reverse-over-forward,
-<code>"rev_over_rev"</code> uses reverse-over-reverse,
-<code>"auto"</code> defaults to <code>"fwd_over_rev"</code>.</p>
+<code>"rev_over_rev"</code> uses reverse-over-reverse.
+Defaults to <code>"fwd_over_rev"</code>.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;auto&#39;</code>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1737,29 +1714,6 @@ Defaults to True (exploits Hessian symmetry for fewer colors).</p>
   
       dataclass
   " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian_from_coloring(f, coloring)" href="../#asdex.hessian_from_coloring"><code>hessian_from_coloring</code></a>.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="ValueError">ValueError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If mode is unknown.</p>
               </div>
             </td>
           </tr>

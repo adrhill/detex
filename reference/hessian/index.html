@@ -1259,7 +1259,7 @@
 
 
 <h2 id="asdex.hessian" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
 <a href="#asdex.hessian" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1267,7 +1267,7 @@
     <div class="doc doc-contents first">
 
         <p>Detect sparsity, color, and return a function computing sparse Hessians.</p>
-<p>Combines <a class="autorefs autorefs-internal" title="asdex.hessian_coloring(f, input_shape, *, mode='auto', symmetric=True)" href="#asdex.hessian_coloring"><code>hessian_coloring</code></a>
+<p>Combines <a class="autorefs autorefs-internal" title="asdex.hessian_coloring(f, input_shape, *, mode=None, symmetric=True)" href="#asdex.hessian_coloring"><code>hessian_coloring</code></a>
 and <a class="autorefs autorefs-internal" title="asdex.hessian_from_coloring(f, coloring)" href="#asdex.hessian_from_coloring"><code>hessian_from_coloring</code></a>
 in one call.</p>
 <p>If <code>f</code> returns a squeezable shape like <code>(1,)</code> or <code>(1, 1)</code>,
@@ -1323,23 +1323,23 @@ Input may be multi-dimensional.</p>
                 <code>mode</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev', 'auto']
+                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev']
 
   
       module-attribute
-   (asdex.modes.HessianMode)" href="#asdex.HessianMode">HessianMode</a></code>
+   (asdex.modes.HessianMode)" href="#asdex.HessianMode">HessianMode</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>AD composition strategy for Hessian-vector products.
 <code>"fwd_over_rev"</code> uses forward-over-reverse,
 <code>"rev_over_fwd"</code> uses reverse-over-forward,
-<code>"rev_over_rev"</code> uses reverse-over-reverse,
-<code>"auto"</code> defaults to <code>"fwd_over_rev"</code>.</p>
+<code>"rev_over_rev"</code> uses reverse-over-reverse.
+Defaults to <code>"fwd_over_rev"</code>.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;auto&#39;</code>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1457,7 +1457,7 @@ Input may be multi-dimensional.</p>
   
       dataclass
   " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a>
-from <a class="autorefs autorefs-internal" title="asdex.hessian_coloring(f, input_shape, *, mode='auto', symmetric=True)" href="#asdex.hessian_coloring"><code>hessian_coloring</code></a>.</p>
+from <a class="autorefs autorefs-internal" title="asdex.hessian_coloring(f, input_shape, *, mode=None, symmetric=True)" href="#asdex.hessian_coloring"><code>hessian_coloring</code></a>.</p>
               </div>
             </td>
             <td>
@@ -1501,7 +1501,7 @@ where <code>n = x.size</code>.</p>
 
 
 <h2 id="asdex.hessian_coloring" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
 <a href="#asdex.hessian_coloring" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1559,23 +1559,23 @@ where <code>n = x.size</code>.</p>
                 <code>mode</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev', 'auto']
+                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev']
 
   
       module-attribute
-   (asdex.modes.HessianMode)" href="#asdex.HessianMode">HessianMode</a></code>
+   (asdex.modes.HessianMode)" href="#asdex.HessianMode">HessianMode</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>AD composition strategy for Hessian-vector products.
 <code>"fwd_over_rev"</code> uses forward-over-reverse,
 <code>"rev_over_fwd"</code> uses reverse-over-forward,
-<code>"rev_over_rev"</code> uses reverse-over-reverse,
-<code>"auto"</code> defaults to <code>"fwd_over_rev"</code>.</p>
+<code>"rev_over_rev"</code> uses reverse-over-reverse.
+Defaults to <code>"fwd_over_rev"</code>.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;auto&#39;</code>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1640,7 +1640,7 @@ Defaults to True (exploits H = H^T for fewer colors).</p>
 
 
 <h2 id="asdex.hessian_coloring_from_sparsity" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring_from_sparsity</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">hessian_coloring_from_sparsity</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
 <a href="#asdex.hessian_coloring_from_sparsity" class="headerlink" title="Permanent link">&para;</a></h2>
 
@@ -1687,23 +1687,23 @@ Defaults to True (exploits H = H^T for fewer colors).</p>
                 <code>mode</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev', 'auto']
+                  <code><a class="autorefs autorefs-internal" title="asdex.HessianMode = Literal['fwd_over_rev', 'rev_over_fwd', 'rev_over_rev']
 
   
       module-attribute
-   (asdex.modes.HessianMode)" href="#asdex.HessianMode">HessianMode</a></code>
+   (asdex.modes.HessianMode)" href="#asdex.HessianMode">HessianMode</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>AD composition strategy for Hessian-vector products.
 <code>"fwd_over_rev"</code> uses forward-over-reverse,
 <code>"rev_over_fwd"</code> uses reverse-over-forward,
-<code>"rev_over_rev"</code> uses reverse-over-reverse,
-<code>"auto"</code> defaults to <code>"fwd_over_rev"</code>.</p>
+<code>"rev_over_rev"</code> uses reverse-over-reverse.
+Defaults to <code>"fwd_over_rev"</code>.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;auto&#39;</code>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -1753,29 +1753,6 @@ Defaults to True (exploits Hessian symmetry for fewer colors).</p>
   
       dataclass
   " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a> ready for <a class="autorefs autorefs-internal" title="asdex.hessian_from_coloring(f, coloring)" href="#asdex.hessian_from_coloring"><code>hessian_from_coloring</code></a>.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="ValueError">ValueError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If mode is unknown.</p>
               </div>
             </td>
           </tr>
@@ -2090,7 +2067,7 @@ Defaults to 1e-5 for <code>"matvec"</code> and 1e-7 for <code>"dense"</code>.</p
 
 
 <h2 id="asdex.HessianMode" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">HessianMode</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;fwd_over_rev&#39;</span><span class="p">,</span> <span class="s1">&#39;rev_over_fwd&#39;</span><span class="p">,</span> <span class="s1">&#39;rev_over_rev&#39;</span><span class="p">,</span> <span class="s1">&#39;auto&#39;</span><span class="p">]</span></code>
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">HessianMode</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;fwd_over_rev&#39;</span><span class="p">,</span> <span class="s1">&#39;rev_over_fwd&#39;</span><span class="p">,</span> <span class="s1">&#39;rev_over_rev&#39;</span><span class="p">]</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
@@ -2104,8 +2081,7 @@ Defaults to 1e-5 for <code>"matvec"</code> and 1e-7 for <code>"dense"</code>.</p
         <p>AD composition strategy for Hessian-vector products.</p>
 <p><code>"fwd_over_rev"</code> uses forward-over-reverse,
 <code>"rev_over_fwd"</code> uses reverse-over-forward,
-<code>"rev_over_rev"</code> uses reverse-over-reverse,
-<code>"auto"</code> defaults to <code>"fwd_over_rev"</code>.</p>
+<code>"rev_over_rev"</code> uses reverse-over-reverse.</p>
 
     </div>
 
