@@ -64,12 +64,14 @@ def check_jacobian_correctness(
     x = jnp.asarray(x)
 
     # Derive reference AD mode from the colored pattern
-    ref_mode = coloring.mode
-    if ref_mode not in ("fwd", "rev"):
-        # Hessian modes shouldn't appear here, but default to fwd
-        m = coloring.sparsity.m
-        n = coloring.sparsity.n
-        ref_mode = "fwd" if m >= n else "rev"
+    match coloring.mode:
+        case "fwd" | "rev":
+            ref_mode = coloring.mode
+        case "fwd_over_rev" | "rev_over_fwd" | "rev_over_rev":
+            # Hessian modes shouldn't appear here, but default based on shape
+            m = coloring.sparsity.m
+            n = coloring.sparsity.n
+            ref_mode: Literal["fwd", "rev"] = "fwd" if m >= n else "rev"
 
     J_sparse = jacobian_from_coloring(f, coloring)(x)
 
@@ -134,7 +136,11 @@ def check_hessian_correctness(
     x = jnp.asarray(x)
 
     # Derive reference AD mode from the colored pattern
-    hessian_mode = coloring.mode
+    match coloring.mode:
+        case "fwd_over_rev" | "rev_over_fwd" | "rev_over_rev":
+            hessian_mode = coloring.mode
+        case "fwd" | "rev":
+            raise ValueError(f"Expected a Hessian mode, got {coloring.mode!r}.")
 
     H_sparse = hessian_from_coloring(f, coloring)(x)
 
@@ -159,13 +165,13 @@ def check_hessian_correctness(
             assert_never(unreachable)
 
 
-# -- Private helpers ----------------------------------------------------------
+# Private helpers
 
 
 def _dense_hessian(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
-    mode: str,
+    mode: Literal["fwd_over_rev", "rev_over_fwd", "rev_over_rev"],
 ) -> jax.Array:
     """Compute a dense Hessian using the specified AD composition."""
     match mode:
@@ -175,9 +181,8 @@ def _dense_hessian(
             return jax.jacrev(jax.jacfwd(f))(x)
         case "rev_over_rev":
             return jax.jacrev(jax.grad(f))(x)
-        case _:
-            # Default to fwd_over_rev for unknown modes
-            return jax.jacfwd(jax.grad(f))(x)
+        case _ as unreachable:
+            assert_never(unreachable)
 
 
 def _check_jacobian_matvec(
@@ -185,7 +190,7 @@ def _check_jacobian_matvec(
     x: jax.Array,
     J_sparse: BCOO,
     *,
-    ref_mode: str,
+    ref_mode: Literal["fwd", "rev"],
     num_probes: int,
     seed: int,
     rtol: float | None = None,
@@ -214,12 +219,8 @@ def _check_jacobian_matvec(
                 _, vjp_fn = jax.vjp(f, x)
                 (ref_result,) = vjp_fn(v.reshape(out_shape))
                 ref_result = jnp.asarray(ref_result).ravel()
-            case _:
-                # Default to fwd for unknown modes
-                v = jax.random.normal(keys[i], shape=(n,))
-                sparse_result = (J_sparse @ v).ravel()
-                _, ref_result = jax.jvp(f, (x,), (v.reshape(x.shape),))
-                ref_result = jnp.asarray(ref_result).ravel()
+            case _ as unreachable:
+                assert_never(unreachable)
 
         _check_matvec_allclose(
             sparse_result,
@@ -237,7 +238,7 @@ def _check_hessian_matvec(
     x: jax.Array,
     H_sparse: BCOO,
     *,
-    hessian_mode: str,
+    hessian_mode: Literal["fwd_over_rev", "rev_over_fwd", "rev_over_rev"],
     num_probes: int,
     seed: int,
     rtol: float | None = None,
@@ -273,11 +274,8 @@ def _check_hessian_matvec(
                 )(x)
                 return jnp.asarray(result).ravel()
 
-        case _:
-            # Default to fwd_over_rev for unknown modes
-            def hvp(v: jax.Array) -> jax.Array:
-                _, result = jax.jvp(jax.grad(f), (x,), (v.reshape(x.shape),))
-                return jnp.asarray(result).ravel()
+        case _ as unreachable:
+            assert_never(unreachable)
 
     for i in range(num_probes):
         v = jax.random.normal(keys[i], shape=(n,))

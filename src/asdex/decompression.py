@@ -21,7 +21,7 @@ def jacobian(
     f: Callable[[ArrayLike], ArrayLike],
     input_shape: int | tuple[int, ...],
     *,
-    mode: JacobianMode = "auto",
+    mode: JacobianMode | None = None,
     symmetric: bool = False,
 ) -> Callable[[ArrayLike], BCOO]:
     """Detect sparsity, color, and return a function computing sparse Jacobians.
@@ -36,8 +36,8 @@ def jacobian(
         input_shape: Shape of the input array.
         mode: AD mode.
             ``"fwd"`` uses JVPs (forward-mode AD),
-            ``"rev"`` uses VJPs (reverse-mode AD),
-            ``"auto"`` picks whichever of fwd/rev needs fewer colors.
+            ``"rev"`` uses VJPs (reverse-mode AD).
+            ``None`` picks whichever of fwd/rev needs fewer colors.
         symmetric: Whether to use symmetric (star) coloring.
             Requires a square Jacobian.
 
@@ -54,7 +54,7 @@ def hessian(
     f: Callable[[ArrayLike], ArrayLike],
     input_shape: int | tuple[int, ...],
     *,
-    mode: HessianMode = "auto",
+    mode: HessianMode | None = None,
     symmetric: bool = True,
 ) -> Callable[[ArrayLike], BCOO]:
     """Detect sparsity, color, and return a function computing sparse Hessians.
@@ -73,8 +73,8 @@ def hessian(
         mode: AD composition strategy for Hessian-vector products.
             ``"fwd_over_rev"`` uses forward-over-reverse,
             ``"rev_over_fwd"`` uses reverse-over-forward,
-            ``"rev_over_rev"`` uses reverse-over-reverse,
-            ``"auto"`` defaults to ``"fwd_over_rev"``.
+            ``"rev_over_rev"`` uses reverse-over-reverse.
+            Defaults to ``"fwd_over_rev"``.
         symmetric: Whether to use symmetric (star) coloring.
             Defaults to True (exploits H = H^T for fewer colors).
 
