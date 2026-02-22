@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771706937822,
+  "lastUpdate": 1771719722150,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -7158,6 +7158,142 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.029446146115757826",
             "extra": "mean: 131.17757612499935 msec\nrounds: 8"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "89a23cb80924fe0f850ffd27f93f7a6e49fc73e3",
+          "message": "refactor!(API): require pre-computed coloring (#64)\n\n* feat!: require `colored_pattern` or `input_shape` in `jacobian()`/`hessian()`\n\n`jacobian(f)(x)` and `hessian(f)(x)` previously re-detected sparsity\nand re-colored on every call. Now either a pre-computed `colored_pattern`\nor an `input_shape` must be provided, and detection + coloring happen\nonce at definition time.\n\n- Add `input_shape` kwarg to `jacobian()` and `hessian()`\n- Add mutual exclusivity check in `_assert_jacobian_args`/`_assert_hessian_args`\n- Remove `colored_pattern is None` branch from `_eval_jacobian`/`_eval_hessian`\n- Update all tests and docs\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* feat!: freeze AD mode in `ColoredPattern`, remove `ColoringMode`\n\nReplace `mode: ColoringMode` on `ColoredPattern` with `symmetric: bool`\n+ `mode: str` (the resolved AD mode, never \"auto\").\nThis eliminates `ColoringMode` from the public API entirely.\n\n`jacobian()` and `hessian()` now require a pre-computed `ColoredPattern`;\nthe `input_shape` convenience path is removed.\n\nKey changes:\n- `ColoredPattern` stores `symmetric` + `mode` (\"fwd\"/\"rev\"/HVP modes)\n- `ColoringMode` type alias removed from `modes.py` and `__init__.py`\n- `jacobian(f, colored_pattern)` / `hessian(f, colored_pattern)` simplified\n- `from_coordinates` renamed to `from_coo` (scipy convention)\n- All coloring functions use `symmetric=` + `mode=` keyword args\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor: rename `colored_pattern` to `coloring`, `sparsity_pattern` to `sparsity`\n\nShorter, more consistent variable names throughout\nthe codebase, tests, and documentation.\n\n* refactor(coloring): put `mode` before `symmetric` in keyword args\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Update docs\n\n* feat!: add one-call `jacobian`/`hessian` API, rename old to `_from_coloring`\n\n`jacobian(f, input_shape)` and `hessian(f, input_shape)` now handle\ndetection, coloring, and decompression in one call.\nThe old `jacobian(f, coloring)` and `hessian(f, coloring)` are renamed\nto `jacobian_from_coloring` and `hessian_from_coloring`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: use one-call `jacobian`/`hessian` API in tests\n\nSwitch ~35 end-to-end tests from verbose\n`jacobian_from_coloring(f, jacobian_coloring(f, shape))` to the new\n`jacobian(f, input_shape=shape)` (and likewise for `hessian`).\nTests that exercise explicit coloring paths stay with `from_coloring`.\n\nAlso parametrize `test_hessian_non_symmetric_coloring` over all three\nHessian AD modes.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: minor changes to \"Getting started\" guide\n\n* docs: improve how-to guides for jacobians and hessians\n\n- Rewrite Basic Usage sections with cross-references to API docs\n- Add executable code blocks to Precomputing sections showing coloring output\n- Add imports to Saving/Loading code blocks for self-contained examples\n- Inline multi-dimensional input notes, remove standalone sections\n- Replace \"colored pattern\" with \"coloring\" throughout\n- Add one-call API `mode` parameter mention to Choosing Row vs Column Coloring\n- Fix `jnp` import order in Getting Started tutorial\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor!: rename `color_*_pattern` to `*_coloring_from_sparsity`\n\nRename `color_jacobian_pattern` to `jacobian_coloring_from_sparsity`\nand `color_hessian_pattern` to `hessian_coloring_from_sparsity`\nfor consistency with the `*_coloring` naming convention.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor!: make `coloring` mandatory in `check_*_correctness`\n\n`check_jacobian_correctness` and `check_hessian_correctness` now require\na pre-computed `coloring` as a positional argument instead of accepting\nan optional keyword. Remove auto-detection branches, unused imports, and\nthe non-existent `ad_mode` parameter from docs.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Minor tweaks to docstrings\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-22T01:21:19+01:00",
+          "tree_id": "04c653e55f9fa29ab7878972af995167e180f88e",
+          "url": "https://github.com/adrhill/asdex/commit/89a23cb80924fe0f850ffd27f93f7a6e49fc73e3"
+        },
+        "date": 1771719721006,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 794.767798100254,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0037189376688620246",
+            "extra": "mean: 1.2582291360952413 msec\nrounds: 169"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3337.9463102185696,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000010757101011014845",
+            "extra": "mean: 299.58540583431966 usec\nrounds: 1954"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 59.713199889458544,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005753496294292766",
+            "extra": "mean: 16.746716000000106 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 103.69472389428726,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002659972911703389",
+            "extra": "mean: 9.643692199995257 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 22.46058089440822,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012884775017442611",
+            "extra": "mean: 44.52244600000349 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 250.1920289813675,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000044750004852854335",
+            "extra": "mean: 3.9969298944950515 msec\nrounds: 218"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 30.359460628471936,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005372516271521271",
+            "extra": "mean: 32.93866160000789 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 27.22939960453755,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007653826011410219",
+            "extra": "mean: 36.72501099999863 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 108.72873537756934,
+            "unit": "iter/sec",
+            "range": "stddev: 0.007540434363582972",
+            "extra": "mean: 9.197200689655949 msec\nrounds: 58"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3363.0657876179353,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000008840694381832143",
+            "extra": "mean: 297.34773660443363 usec\nrounds: 2221"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 25.377193277854804,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005925186228893789",
+            "extra": "mean: 39.405461000001196 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 25.5704144985585,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010615404415476647",
+            "extra": "mean: 39.10769612500312 msec\nrounds: 24"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_detection",
+            "value": 29.45705030000267,
+            "unit": "iter/sec",
+            "range": "stddev: 0.023628162116551495",
+            "extra": "mean: 33.947730333335834 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_coloring",
+            "value": 611.8854830578134,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008600050417452631",
+            "extra": "mean: 1.6342927356318993 msec\nrounds: 522"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_materialization",
+            "value": 11.933931786916315,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012353836168298926",
+            "extra": "mean: 83.79468039999551 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
+            "value": 12.093622669958414,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004884243274156321",
+            "extra": "mean: 82.6882090909025 msec\nrounds: 11"
           }
         ]
       }
