@@ -125,7 +125,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "ced92bb4520950b819640b6457dbbee4b71cae07",
-          "message": "Add `SparsityPattern` data structure (#16)\n\n* Add SparsityPattern data structure to replace BCOO in pipeline\n\nReplace BCOO with a custom SparsityPattern class optimized for the\ndetection->coloring->decompression pipeline:\n\n- Store row/col indices separately for direct access (no slicing)\n- Cache col_to_rows mapping for coloring algorithm\n- No unnecessary data values (pattern-only, no all-1s array)\n- Julia-style visualization: dots for small matrices, braille for large\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Update README to showcase SparsityPattern visualization\n\n- Jacobian example: n=100 with braille display\n- Hessian example: n=5 diagonal pattern with dot display\n- Show SparsityPattern pretty-printing output\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Use Julia-style bracket characters for braille frame\n\nBox-drawing characters (┌─┐│└┘) have inconsistent width with braille\nin some fonts. Switch to mathematical bracket characters (⎡⎢⎣⎤⎥⎦)\nwhich align correctly, matching Julia's SparseArrays visualization.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
+          "message": "Add `SparsityPattern` data structure (#16)\n\n* Add SparsityPattern data structure to replace BCOO in pipeline\n\nReplace BCOO with a custom SparsityPattern class optimized for the\ndetection->coloring->decompression pipeline:\n\n- Store row/col indices separately for direct access (no slicing)\n- Cache col_to_rows mapping for coloring algorithm\n- No unnecessary data values (pattern-only, no all-1s array)\n- Julia-style visualization: dots for small matrices, braille for large\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Update README to showcase SparsityPattern visualization\n\n- Jacobian example: n=100 with braille display\n- Hessian example: n=5 diagonal pattern with dot display\n- Show SparsityPattern pretty-printing output\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n* Use Julia-style bracket characters for braille frame\n\nBox-drawing characters (\u250c\u2500\u2510\u2502\u2514\u2518) have inconsistent width with braille\nin some fonts. Switch to mathematical bracket characters (\u23a1\u23a2\u23a3\u23a4\u23a5\u23a6)\nwhich align correctly, matching Julia's SparseArrays visualization.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.5 <noreply@anthropic.com>",
           "timestamp": "2026-02-06T17:07:14+01:00",
           "tree_id": "73e1e1c2de7a7d140f94137e699577d78d38177e",
           "url": "https://github.com/adrhill/asdex/commit/ced92bb4520950b819640b6457dbbee4b71cae07"
@@ -665,7 +665,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "b9c2deaedc549dbf6297e04dac3dc07ea9c224e0",
-          "message": "Improve coloring and API (#21)\n\n* Add LargestFirst ordering, column coloring, and star coloring\n\nRefactor greedy coloring into _greedy_color helper with LargestFirst\nvertex ordering (sort by decreasing degree) for fewer colors. Add\ncolor_cols for column coloring + JVP-based Jacobian computation, with\nauto direction selection in sparse_jacobian. Add star_color for\nsymmetric Hessian coloring (Gebremedhin et al. 2005) with symmetric\ndecompression, used by default in sparse_hessian.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add SparseMatrixColorings.jl attribution\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add SMC-sourced test cases for coloring algorithms\n\nPort test matrices from SparseMatrixColorings.jl: Gebremedhin et al.\nFigures 4.1 and 6.1, banded matrices with known star chromatic numbers,\nanti-diagonal, triangle, bidiagonal, and small hand-crafted patterns.\nTighten arrow matrix assertions to exact counts verified against SMC.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add unified color() function and ColoringResult dataclass\n\nReplace the separate colors/partition parameters on sparse_jacobian\nwith a single coloring: ColoringResult that carries the color array,\ncount, and partition together. The new color(sparsity) function\nauto-picks the best of row/column coloring (ties favor column/JVPs).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Rename ColoringResult to ColoredPattern and simplify sparse_jacobian API\n\nBundle the sparsity pattern into ColoredPattern so callers pass a single\nobject instead of separate sparsity and coloring arguments.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add coloring convenience functions, compressed visualization, and rename API\n\n- Add jacobian_coloring() and hessian_coloring() one-step convenience functions\n- Add ColoredPattern._compressed_pattern() and side-by-side/stacked __str__\n- Extract SparsityPattern._render() helper for reuse by ColoredPattern\n- Move ColoredPattern from coloring.py to pattern.py\n- Rename sparse_jacobian → jacobian, sparse_hessian → hessian\n- Add colored_pattern parameter to hessian() matching jacobian() API\n- Update README, CLAUDE.md, exports, tests, and pytest markers\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Update README to describe automatic coloring and AD mode selection\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Rename color() to color_jacobian_pattern() and add color_hessian_pattern()\n\nThe generic name `color()` was misleading since it only handled Jacobians.\nThe new names clarify intent and `color_hessian_pattern` wraps star_color\nwith the same nnz==0 early-return guard, simplifying callers.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Fix SIM108 lint warning and add test for size-0 binary elementwise\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Fix printing\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "Improve coloring and API (#21)\n\n* Add LargestFirst ordering, column coloring, and star coloring\n\nRefactor greedy coloring into _greedy_color helper with LargestFirst\nvertex ordering (sort by decreasing degree) for fewer colors. Add\ncolor_cols for column coloring + JVP-based Jacobian computation, with\nauto direction selection in sparse_jacobian. Add star_color for\nsymmetric Hessian coloring (Gebremedhin et al. 2005) with symmetric\ndecompression, used by default in sparse_hessian.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add SparseMatrixColorings.jl attribution\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add SMC-sourced test cases for coloring algorithms\n\nPort test matrices from SparseMatrixColorings.jl: Gebremedhin et al.\nFigures 4.1 and 6.1, banded matrices with known star chromatic numbers,\nanti-diagonal, triangle, bidiagonal, and small hand-crafted patterns.\nTighten arrow matrix assertions to exact counts verified against SMC.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add unified color() function and ColoringResult dataclass\n\nReplace the separate colors/partition parameters on sparse_jacobian\nwith a single coloring: ColoringResult that carries the color array,\ncount, and partition together. The new color(sparsity) function\nauto-picks the best of row/column coloring (ties favor column/JVPs).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Rename ColoringResult to ColoredPattern and simplify sparse_jacobian API\n\nBundle the sparsity pattern into ColoredPattern so callers pass a single\nobject instead of separate sparsity and coloring arguments.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add coloring convenience functions, compressed visualization, and rename API\n\n- Add jacobian_coloring() and hessian_coloring() one-step convenience functions\n- Add ColoredPattern._compressed_pattern() and side-by-side/stacked __str__\n- Extract SparsityPattern._render() helper for reuse by ColoredPattern\n- Move ColoredPattern from coloring.py to pattern.py\n- Rename sparse_jacobian \u2192 jacobian, sparse_hessian \u2192 hessian\n- Add colored_pattern parameter to hessian() matching jacobian() API\n- Update README, CLAUDE.md, exports, tests, and pytest markers\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Update README to describe automatic coloring and AD mode selection\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Rename color() to color_jacobian_pattern() and add color_hessian_pattern()\n\nThe generic name `color()` was misleading since it only handled Jacobians.\nThe new names clarify intent and `color_hessian_pattern` wraps star_color\nwith the same nnz==0 early-return guard, simplifying callers.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Fix SIM108 lint warning and add test for size-0 binary elementwise\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Fix printing\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-07T16:52:31+01:00",
           "tree_id": "8f40488aafe282568526eaffc4c53420aa98cb6c",
           "url": "https://github.com/adrhill/asdex/commit/b9c2deaedc549dbf6297e04dac3dc07ea9c224e0"
@@ -1139,7 +1139,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "9f13bfd1303ff58eeb096d81748ddea232b82ecd",
-          "message": "Support `while_loop`, `cond`, and `dynamic_slice` primitives (#24)\n\n* Add brusselator sparsity demo with diffrax\n\nDemonstrates asdex on a realistic reaction-diffusion ODE: detects the\nJacobian sparsity of the brusselator RHS (768 nnz, 11 colors) and\nshows the expected failure on diffrax's `while` primitive.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Support while_loop, cond, dynamic_slice, and diffrax primitives\n\nAdd handlers for 10 new JAX primitives needed by diffrax's diffeqsolve:\n- while: fixed-point iteration over body jaxpr\n- cond: union output deps across all branch jaxprs\n- dynamic_slice / dynamic_update_slice: precise when starts are static\n- not: zero derivative\n- select_if_vmap, nonbatchable, unvmap_any, unvmap_max, pure_callback:\n  conservative fallback\n\nAlso fix select_n to be element-wise instead of globally conservative,\nwhich is necessary for correct sparsity through diffrax control flow.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Simplify dynamic_slice handlers, move select_if_vmap to conservative\n\nReplace manual stride loops with np.indices + np.ravel_multi_index,\nextract _resolve_starts helper. Move select_if_vmap back to the\nconservative fallback since it's a different primitive from select_n.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Fix const_vals propagation into nested jaxprs, clean up handlers\n\nForward const_vals from outer-scope atoms to inner jaxpr variables so\nthat gather/scatter inside cond, while_loop, jit, and custom_jvp can\nresolve static indices precisely instead of falling back to conservative.\n\n- Add seed_const_vals and forward_const_vals helpers to _commons.py\n- Apply both helpers in prop_cond, prop_while, prop_nested_jaxpr,\n  and prop_custom_call\n- Extract prop_broadcast_in_dim into _broadcast.py\n- Clean up select_n: remove dead scalar broadcast, rename branches→cases\n- Add JAX doc URLs to handler docstrings\n- Add scan/associative_scan as explicit TODO errors\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Remove examples/ directory\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "Support `while_loop`, `cond`, and `dynamic_slice` primitives (#24)\n\n* Add brusselator sparsity demo with diffrax\n\nDemonstrates asdex on a realistic reaction-diffusion ODE: detects the\nJacobian sparsity of the brusselator RHS (768 nnz, 11 colors) and\nshows the expected failure on diffrax's `while` primitive.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Support while_loop, cond, dynamic_slice, and diffrax primitives\n\nAdd handlers for 10 new JAX primitives needed by diffrax's diffeqsolve:\n- while: fixed-point iteration over body jaxpr\n- cond: union output deps across all branch jaxprs\n- dynamic_slice / dynamic_update_slice: precise when starts are static\n- not: zero derivative\n- select_if_vmap, nonbatchable, unvmap_any, unvmap_max, pure_callback:\n  conservative fallback\n\nAlso fix select_n to be element-wise instead of globally conservative,\nwhich is necessary for correct sparsity through diffrax control flow.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Simplify dynamic_slice handlers, move select_if_vmap to conservative\n\nReplace manual stride loops with np.indices + np.ravel_multi_index,\nextract _resolve_starts helper. Move select_if_vmap back to the\nconservative fallback since it's a different primitive from select_n.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Fix const_vals propagation into nested jaxprs, clean up handlers\n\nForward const_vals from outer-scope atoms to inner jaxpr variables so\nthat gather/scatter inside cond, while_loop, jit, and custom_jvp can\nresolve static indices precisely instead of falling back to conservative.\n\n- Add seed_const_vals and forward_const_vals helpers to _commons.py\n- Apply both helpers in prop_cond, prop_while, prop_nested_jaxpr,\n  and prop_custom_call\n- Extract prop_broadcast_in_dim into _broadcast.py\n- Clean up select_n: remove dead scalar broadcast, rename branches\u2192cases\n- Add JAX doc URLs to handler docstrings\n- Add scan/associative_scan as explicit TODO errors\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Remove examples/ directory\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-08T00:17:07+01:00",
           "tree_id": "bb07835873f0a87d8bd6df37bd2c719aaf555793",
           "url": "https://github.com/adrhill/asdex/commit/9f13bfd1303ff58eeb096d81748ddea232b82ecd"
@@ -1247,7 +1247,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "4826cb6a0a83177816d1f47b643cd8478fecff5f",
-          "message": "Clean up interpreter module and tests (#25)\n\n* Add JAX doc URLs and improve handler docstrings\n\n- Add JAX doc URLs to all handler docstrings missing them\n- Add JAX doc URLs to test module docstrings\n- Fix parameter names to match JAX API (start_indices, scatter_indices)\n- Document precise-path conditions in gather and scatter\n- Document conv assumption (feature_group_count=1, batch_group_count=1)\n- Clarify reduce_sum vs jax.lax.reduce naming difference\n- Document reshape bug with dimensions parameter\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Fix reshape handler ignoring `dimensions` parameter\n\nWhen `dimensions` is not None, `jax.lax.reshape` transposes the input\naxes before reshaping (e.g. `ravel(order='F')` emits `dimensions=(1,0)`).\nThe handler previously passed deps through in the original flat order,\nproducing incorrect (not merely conservative) sparsity patterns.\n\nFix by building a flat index mapping via `np.arange().reshape().transpose()`,\nmirroring the actual element reordering JAX performs.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add 3D test for reshape dimensions fix\n\nTest ravel(order='F') on a (2, 3, 4) tensor,\nwhich emits dimensions=(2, 1, 0) — a higher-rank permutation\nthan the 2D case already tested.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Extract shared utilities from `_interpret` handlers\n\nAdd `atom_shape`, `flat_to_coords`, and `conservative_deps` helpers to\n`_commons.py` to reduce duplication across handler modules.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Split `_indexing.py` into `_slice.py`, `_squeeze.py`, and `_reshape.py`\n\nEach handler now lives in its own module, consistent with the rest of\nthe `_interpret` package.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Split test files to match `_interpret` handler modules\n\nOne test file per handler: `_foo.py` → `test_foo.py`.\nMove `test_control_flow.py` → `_interpret/test_select.py`,\nrename `test_dynamic_indexing.py` → `test_dynamic_slice.py`,\nand move fallback/custom_call tests into `test_internals.py`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "Clean up interpreter module and tests (#25)\n\n* Add JAX doc URLs and improve handler docstrings\n\n- Add JAX doc URLs to all handler docstrings missing them\n- Add JAX doc URLs to test module docstrings\n- Fix parameter names to match JAX API (start_indices, scatter_indices)\n- Document precise-path conditions in gather and scatter\n- Document conv assumption (feature_group_count=1, batch_group_count=1)\n- Clarify reduce_sum vs jax.lax.reduce naming difference\n- Document reshape bug with dimensions parameter\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Fix reshape handler ignoring `dimensions` parameter\n\nWhen `dimensions` is not None, `jax.lax.reshape` transposes the input\naxes before reshaping (e.g. `ravel(order='F')` emits `dimensions=(1,0)`).\nThe handler previously passed deps through in the original flat order,\nproducing incorrect (not merely conservative) sparsity patterns.\n\nFix by building a flat index mapping via `np.arange().reshape().transpose()`,\nmirroring the actual element reordering JAX performs.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add 3D test for reshape dimensions fix\n\nTest ravel(order='F') on a (2, 3, 4) tensor,\nwhich emits dimensions=(2, 1, 0) \u2014 a higher-rank permutation\nthan the 2D case already tested.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Extract shared utilities from `_interpret` handlers\n\nAdd `atom_shape`, `flat_to_coords`, and `conservative_deps` helpers to\n`_commons.py` to reduce duplication across handler modules.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Split `_indexing.py` into `_slice.py`, `_squeeze.py`, and `_reshape.py`\n\nEach handler now lives in its own module, consistent with the rest of\nthe `_interpret` package.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Split test files to match `_interpret` handler modules\n\nOne test file per handler: `_foo.py` \u2192 `test_foo.py`.\nMove `test_control_flow.py` \u2192 `_interpret/test_select.py`,\nrename `test_dynamic_indexing.py` \u2192 `test_dynamic_slice.py`,\nand move fallback/custom_call tests into `test_internals.py`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-08T01:17:51+01:00",
           "tree_id": "bcca8d345906904d2f614bb3464bd4cc2c7d63e0",
           "url": "https://github.com/adrhill/asdex/commit/4826cb6a0a83177816d1f47b643cd8478fecff5f"
@@ -2435,7 +2435,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "faef7a288b68572f0fd1c95936b834140967e993",
-          "message": "Add precise handlers for all reduction primitives (#33)\n\n* Add precise `reduce_max` primitive handler\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add precise `reduce_prod` primitive handler\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add precise `reduce_min` primitive handler\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add zero-derivative handlers for `reduce_and`, `reduce_or`, `reduce_xor`\n\nBitwise reductions have zero Jacobian, so they use the existing\n`prop_zero_derivative` — no separate handler files needed.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Consolidate reduction handlers into single `_reduce.py` module\n\nThe four reduction primitives (reduce_sum, reduce_max, reduce_min,\nreduce_prod) share identical sparsity structure, so they now share\na single `prop_reduce` handler. Tests are parametrized over the\nreduce function and shape/axes combinations.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Parametrize bitwise reduction tests over reduce_and/or/xor\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Update SKILL and TODOs\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "Add precise handlers for all reduction primitives (#33)\n\n* Add precise `reduce_max` primitive handler\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add precise `reduce_prod` primitive handler\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add precise `reduce_min` primitive handler\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Add zero-derivative handlers for `reduce_and`, `reduce_or`, `reduce_xor`\n\nBitwise reductions have zero Jacobian, so they use the existing\n`prop_zero_derivative` \u2014 no separate handler files needed.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Consolidate reduction handlers into single `_reduce.py` module\n\nThe four reduction primitives (reduce_sum, reduce_max, reduce_min,\nreduce_prod) share identical sparsity structure, so they now share\na single `prop_reduce` handler. Tests are parametrized over the\nreduce function and shape/axes combinations.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Parametrize bitwise reduction tests over reduce_and/or/xor\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Update SKILL and TODOs\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-08T23:23:59+01:00",
           "tree_id": "984e3a6736257a3c4644e001b388e6e3c720fbd6",
           "url": "https://github.com/adrhill/asdex/commit/faef7a288b68572f0fd1c95936b834140967e993"
@@ -3515,7 +3515,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "be0797e8b6a3296ae249f790351b4fe6ac6d2c32",
-          "message": "feat(interpret): dispatch `scatter-mul`, `scatter-min`, `scatter-max` primitives (#39)\n\n* feat(interpret): dispatch `scatter-mul`, `scatter-min`, `scatter-max` primitives\n\nRoute the three remaining scatter combine variants through prop_scatter.\nThe existing logic already handles them correctly via the update_jaxpr\ncheck — only the dispatch case and variable naming needed updating.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(test): parametrize scatter combine tests\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "feat(interpret): dispatch `scatter-mul`, `scatter-min`, `scatter-max` primitives (#39)\n\n* feat(interpret): dispatch `scatter-mul`, `scatter-min`, `scatter-max` primitives\n\nRoute the three remaining scatter combine variants through prop_scatter.\nThe existing logic already handles them correctly via the update_jaxpr\ncheck \u2014 only the dispatch case and variable naming needed updating.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(test): parametrize scatter combine tests\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-12T15:45:45+01:00",
           "tree_id": "203092706018877ec1f3b0abc99bd1e1a3a26f04",
           "url": "https://github.com/adrhill/asdex/commit/be0797e8b6a3296ae249f790351b4fe6ac6d2c32"
@@ -3731,7 +3731,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "75f0b6e7343a883b7250de7fb14cb8a04c55cf65",
-          "message": "feat(interpret): add precise handler for `scan` primitive (#41)\n\n* feat(interpret): add precise handler for `scan` primitive\n\nPropagate index sets through scan bodies using fixed-point iteration\non the carry, same strategy as while_loop. Also extract shared\n_MAX_FIXED_POINT_ITERS constant and raise RuntimeError on\nnon-convergence in both scan and while_loop.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(interpret): add edge-case and pytree test coverage for scan\n\nAdd 10 new tests for scan propagation: pytree xs/ys, length=1,\nscalar carry, unroll, ys-independent-of-carry, carry mixing,\ncarry tuple interaction, scan+cond composition, and pytree\nJacobian values.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(interpret): add tests for `associative_scan` decomposition\n\n`associative_scan` is not a JAX primitive — it decomposes into\nslice/add/pad/concatenate/rev, all of which have precise handlers.\nRemove the unreachable `prop_throw_error` dispatch entry and add\n8 tests verifying correct sparsity patterns through decomposition.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "feat(interpret): add precise handler for `scan` primitive (#41)\n\n* feat(interpret): add precise handler for `scan` primitive\n\nPropagate index sets through scan bodies using fixed-point iteration\non the carry, same strategy as while_loop. Also extract shared\n_MAX_FIXED_POINT_ITERS constant and raise RuntimeError on\nnon-convergence in both scan and while_loop.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(interpret): add edge-case and pytree test coverage for scan\n\nAdd 10 new tests for scan propagation: pytree xs/ys, length=1,\nscalar carry, unroll, ys-independent-of-carry, carry mixing,\ncarry tuple interaction, scan+cond composition, and pytree\nJacobian values.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(interpret): add tests for `associative_scan` decomposition\n\n`associative_scan` is not a JAX primitive \u2014 it decomposes into\nslice/add/pad/concatenate/rev, all of which have precise handlers.\nRemove the unreachable `prop_throw_error` dispatch entry and add\n8 tests verifying correct sparsity patterns through decomposition.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-13T00:35:17+01:00",
           "tree_id": "1ca5aeeb97d7b0389a38833c4af7bd42194232e0",
           "url": "https://github.com/adrhill/asdex/commit/75f0b6e7343a883b7250de7fb14cb8a04c55cf65"
@@ -4163,7 +4163,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "306e7e9c88dc4c2f230f56cbf95c11717b10b281",
-          "message": "refactor(interpret): extract common patterns into _commons.py (#45)\n\n* refactor(interpret): extract common patterns into _commons.py\n\nAdd `permute_indices`, `position_map`, `fixed_point_loop`, and\n`conservative_indices` utilities to reduce duplication across handlers.\n\n- permute_indices: replaces repeated [in_indices[j].copy() for j in map]\n  pattern across 8+ handler files\n- position_map: replaces repeated np.arange(n).reshape(shape) pattern\n- fixed_point_loop: extracts ~22-line fixed-point iteration from\n  _while.py and _scan.py\n- Rename conservative_deps → conservative_indices for consistency\n- Simplify _transpose.py and _slice.py using numpy iota approach\n- Update CLAUDE.md with new naming conventions\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): standardize variable names across handlers\n\nUse `permutation_map` consistently for the flat map passed to\n`permute_indices` (was `perm`, `chunk_indices` in some files).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(interpret): reorganize and improve CLAUDE.md\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Remove skills\n\n* refactor(interpret): rename *_deps variables to *_indices\n\nRename list[IndexSets] variables from *_deps to *_indices across\nhandlers, and standardize dim/const_inputs naming for consistency.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* style(interpret): reorganize _commons.py by concept\n\nReorder functions into logical groups and replace banner comments\nwith lightweight section headers.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "refactor(interpret): extract common patterns into _commons.py (#45)\n\n* refactor(interpret): extract common patterns into _commons.py\n\nAdd `permute_indices`, `position_map`, `fixed_point_loop`, and\n`conservative_indices` utilities to reduce duplication across handlers.\n\n- permute_indices: replaces repeated [in_indices[j].copy() for j in map]\n  pattern across 8+ handler files\n- position_map: replaces repeated np.arange(n).reshape(shape) pattern\n- fixed_point_loop: extracts ~22-line fixed-point iteration from\n  _while.py and _scan.py\n- Rename conservative_deps \u2192 conservative_indices for consistency\n- Simplify _transpose.py and _slice.py using numpy iota approach\n- Update CLAUDE.md with new naming conventions\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): standardize variable names across handlers\n\nUse `permutation_map` consistently for the flat map passed to\n`permute_indices` (was `perm`, `chunk_indices` in some files).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(interpret): reorganize and improve CLAUDE.md\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Remove skills\n\n* refactor(interpret): rename *_deps variables to *_indices\n\nRename list[IndexSets] variables from *_deps to *_indices across\nhandlers, and standardize dim/const_inputs naming for consistency.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* style(interpret): reorganize _commons.py by concept\n\nReorder functions into logical groups and replace banner comments\nwith lightweight section headers.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-17T17:10:38+01:00",
           "tree_id": "2d1e15584dc444162aa78f05a5a3112aeac9c8b3",
           "url": "https://github.com/adrhill/asdex/commit/306e7e9c88dc4c2f230f56cbf95c11717b10b281"
@@ -5135,7 +5135,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "7abb59c29b919f8c5b5999431de9b8e1627db4c6",
-          "message": "fix(interpret): shape-aware broadcasting, multi-dim scatter, const propagation (#51)\n\n* fix(interpret): propagate const_vals through convert_element_type\n\nJAX inserts convert_element_type (e.g. int64 → int32) before every\ngather/scatter operation. Without const value propagation through\nthis primitive, the chain from closure-captured index arrays to\ngather/scatter handlers breaks, causing all gathers to fall back\nto conservative (fully dense) index sets.\n\nAlso handles stop_gradient and bitcast_convert_type, which share\nthe same handler but lack the new_dtype parameter.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix(interpret): handle multi-dimensional scatter patterns\n\nExtend the scatter handler beyond the 1D-only case to support two\nadditional patterns:\n\n1. Batched scatter along dim 0 with trailing window dims preserved.\n   This is the pattern produced by the backward of features[indices]\n   on multi-dimensional arrays (scatter-add with update_window_dims=(1,),\n   inserted_window_dims=(0,)).\n\n2. Full-window scatter along an arbitrary single dimension.\n   This is the pattern from x.at[:, idx, :].set(value) where all update\n   dims are window dims and the scatter targets one position along an\n   arbitrary dimension.\n\nWithout these patterns, any scatter on multi-dimensional arrays fell\nback to conservative (fully dense) index sets.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix(interpret): use shape-aware broadcasting in binary elementwise ops\n\nThe previous implementation used flat modular indexing (i % len) to\nhandle broadcasting, which only works correctly for scalar (len=1)\nbroadcast. For multi-dimensional broadcasting like (16,16) * (16,1),\nit incorrectly maps output element [p,d] to in2[d] instead of in2[p]\nvia (p*16 + d) % 16 = d.\n\nUse numpy coordinate mapping (np.indices + ravel_multi_index) when\ninput shapes differ, respecting numpy broadcasting rules where size-1\ndimensions always read index 0. The fast path with modular indexing\nis preserved for the common cases of same-shape or scalar inputs.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* style: fix lint and formatting\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(benchmarks): add SchNet-style GNN Hessian benchmark\n\nAdds a minimal message-passing GNN as a fourth benchmark group\nexercising gather (neighbor lookup), broadcast (cutoff weighting),\nand scatter-add (gradient of gather) — the patterns pathological\nfor sparsity detection in graph neural networks.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(interpret): strengthen broadcast and scatter test assertions\n\nAdd test_binary_broadcast_dependent_operands that catches the flat\nmodular indexing bug by using input-dependent operands on both sides.\nUpdate test_scatter_2d to assert the exact conservative pattern with\na TODO documenting the true sparse result.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>\nCo-authored-by: adrhill <adrian.hill@mailbox.org>",
+          "message": "fix(interpret): shape-aware broadcasting, multi-dim scatter, const propagation (#51)\n\n* fix(interpret): propagate const_vals through convert_element_type\n\nJAX inserts convert_element_type (e.g. int64 \u2192 int32) before every\ngather/scatter operation. Without const value propagation through\nthis primitive, the chain from closure-captured index arrays to\ngather/scatter handlers breaks, causing all gathers to fall back\nto conservative (fully dense) index sets.\n\nAlso handles stop_gradient and bitcast_convert_type, which share\nthe same handler but lack the new_dtype parameter.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix(interpret): handle multi-dimensional scatter patterns\n\nExtend the scatter handler beyond the 1D-only case to support two\nadditional patterns:\n\n1. Batched scatter along dim 0 with trailing window dims preserved.\n   This is the pattern produced by the backward of features[indices]\n   on multi-dimensional arrays (scatter-add with update_window_dims=(1,),\n   inserted_window_dims=(0,)).\n\n2. Full-window scatter along an arbitrary single dimension.\n   This is the pattern from x.at[:, idx, :].set(value) where all update\n   dims are window dims and the scatter targets one position along an\n   arbitrary dimension.\n\nWithout these patterns, any scatter on multi-dimensional arrays fell\nback to conservative (fully dense) index sets.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix(interpret): use shape-aware broadcasting in binary elementwise ops\n\nThe previous implementation used flat modular indexing (i % len) to\nhandle broadcasting, which only works correctly for scalar (len=1)\nbroadcast. For multi-dimensional broadcasting like (16,16) * (16,1),\nit incorrectly maps output element [p,d] to in2[d] instead of in2[p]\nvia (p*16 + d) % 16 = d.\n\nUse numpy coordinate mapping (np.indices + ravel_multi_index) when\ninput shapes differ, respecting numpy broadcasting rules where size-1\ndimensions always read index 0. The fast path with modular indexing\nis preserved for the common cases of same-shape or scalar inputs.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* style: fix lint and formatting\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(benchmarks): add SchNet-style GNN Hessian benchmark\n\nAdds a minimal message-passing GNN as a fourth benchmark group\nexercising gather (neighbor lookup), broadcast (cutoff weighting),\nand scatter-add (gradient of gather) \u2014 the patterns pathological\nfor sparsity detection in graph neural networks.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(interpret): strengthen broadcast and scatter test assertions\n\nAdd test_binary_broadcast_dependent_operands that catches the flat\nmodular indexing bug by using input-dependent operands on both sides.\nUpdate test_scatter_2d to assert the exact conservative pattern with\na TODO documenting the true sparse result.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>\nCo-authored-by: adrhill <adrian.hill@mailbox.org>",
           "timestamp": "2026-02-18T21:29:10+01:00",
           "tree_id": "e18f7f37836df89f9b2a856397ce8ef6a8b1bef2",
           "url": "https://github.com/adrhill/asdex/commit/7abb59c29b919f8c5b5999431de9b8e1627db4c6"
@@ -5226,34 +5226,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.017346199813022725",
             "extra": "mean: 52.418723049999016 msec\nrounds: 20"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 25.354648248013756,
-            "unit": "iter/sec",
-            "range": "stddev: 0.034370453829108194",
-            "extra": "mean: 39.440499833332865 msec\nrounds: 6"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 665.2314066429499,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000012944767825113378",
-            "extra": "mean: 1.503236302456674 msec\nrounds: 529"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 13.634560887117905,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000823160097955242",
-            "extra": "mean: 73.34302940000157 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 8.024289481464228,
-            "unit": "iter/sec",
-            "range": "stddev: 0.033669421102112594",
-            "extra": "mean: 124.62162566666596 msec\nrounds: 9"
           }
         ]
       },
@@ -5362,34 +5334,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.017645249504226454",
             "extra": "mean: 57.61084135294053 msec\nrounds: 17"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 40.6594962154226,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00040575909101199184",
-            "extra": "mean: 24.594500500001004 msec\nrounds: 6"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 613.5257575784345,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000017507226203663257",
-            "extra": "mean: 1.6299234182880376 msec\nrounds: 514"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 11.145558093079346,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0016143915442307915",
-            "extra": "mean: 89.72184180000227 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 6.633123381822602,
-            "unit": "iter/sec",
-            "range": "stddev: 0.04540160334234818",
-            "extra": "mean: 150.75854050000004 msec\nrounds: 8"
           }
         ]
       },
@@ -5498,34 +5442,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00034191939237370405",
             "extra": "mean: 53.96980138888966 msec\nrounds: 18"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 29.77565819965344,
-            "unit": "iter/sec",
-            "range": "stddev: 0.02653889644957512",
-            "extra": "mean: 33.584480090909935 msec\nrounds: 11"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 608.7402802767685,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003188284604662489",
-            "extra": "mean: 1.6427367013487955 msec\nrounds: 519"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 11.313323315083794,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0004535187604767432",
-            "extra": "mean: 88.39135700000043 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 6.647987986560549,
-            "unit": "iter/sec",
-            "range": "stddev: 0.04621227336892932",
-            "extra": "mean: 150.42145112499927 msec\nrounds: 8"
           }
         ]
       },
@@ -5634,34 +5550,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.012468107953978656",
             "extra": "mean: 52.40574426315934 msec\nrounds: 19"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 32.98239825996214,
-            "unit": "iter/sec",
-            "range": "stddev: 0.019653108606372933",
-            "extra": "mean: 30.31920214285679 msec\nrounds: 7"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 603.9639304280827,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00011444141287707304",
-            "extra": "mean: 1.6557280155641272 msec\nrounds: 514"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 12.303169314377662,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0009685446589474871",
-            "extra": "mean: 81.2798698000023 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 7.803688416451637,
-            "unit": "iter/sec",
-            "range": "stddev: 0.025012463058482603",
-            "extra": "mean: 128.14453199999795 msec\nrounds: 6"
           }
         ]
       },
@@ -5770,34 +5658,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.013608529684565072",
             "extra": "mean: 53.444437842101344 msec\nrounds: 19"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 27.98647962907263,
-            "unit": "iter/sec",
-            "range": "stddev: 0.026807995217235984",
-            "extra": "mean: 35.73153941666855 msec\nrounds: 12"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 609.6997889281187,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004174249053871742",
-            "extra": "mean: 1.640151461685837 msec\nrounds: 522"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 12.053838498581598,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005015319787105112",
-            "extra": "mean: 82.96112480001057 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 7.835464668035223,
-            "unit": "iter/sec",
-            "range": "stddev: 0.02669602381178236",
-            "extra": "mean: 127.62484962500054 msec\nrounds: 8"
           }
         ]
       },
@@ -5906,34 +5766,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.019756210719187612",
             "extra": "mean: 57.82160861111171 msec\nrounds: 18"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 28.2012447594309,
-            "unit": "iter/sec",
-            "range": "stddev: 0.02879956911574239",
-            "extra": "mean: 35.459427714288594 msec\nrounds: 7"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 608.7868585590378,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000021405188880432788",
-            "extra": "mean: 1.6426110155645284 msec\nrounds: 514"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 11.931356671519021,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0020571361844035343",
-            "extra": "mean: 83.81276559999833 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 8.421310327222193,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0008628335372278161",
-            "extra": "mean: 118.74636619998 msec\nrounds: 5"
           }
         ]
       },
@@ -6042,34 +5874,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.011281365271957652",
             "extra": "mean: 49.2022402380964 msec\nrounds: 21"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 29.828228563677502,
-            "unit": "iter/sec",
-            "range": "stddev: 0.026906777662981544",
-            "extra": "mean: 33.52528957142705 msec\nrounds: 7"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 613.1158986527033,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002179569030196107",
-            "extra": "mean: 1.631012998027711 msec\nrounds: 507"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 12.226308102240491,
-            "unit": "iter/sec",
-            "range": "stddev: 0.002891347870230165",
-            "extra": "mean: 81.79083919999925 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 8.436994736332975,
-            "unit": "iter/sec",
-            "range": "stddev: 0.002884522031791949",
-            "extra": "mean: 118.52561619999733 msec\nrounds: 5"
           }
         ]
       },
@@ -6178,34 +5982,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.01666117689111819",
             "extra": "mean: 56.148342388889695 msec\nrounds: 18"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 39.983410083490924,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0008860763166146916",
-            "extra": "mean: 25.01037299999827 msec\nrounds: 6"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 602.7615082336038,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003160523034361531",
-            "extra": "mean: 1.6590309539348425 msec\nrounds: 521"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 11.550050316985496,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0006194466120221334",
-            "extra": "mean: 86.57970940000155 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 7.09456069919245,
-            "unit": "iter/sec",
-            "range": "stddev: 0.03547203238246689",
-            "extra": "mean: 140.95305437499837 msec\nrounds: 8"
           }
         ]
       },
@@ -6314,34 +6090,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.014206668939813377",
             "extra": "mean: 54.85452589473582 msec\nrounds: 19"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 27.468368416937114,
-            "unit": "iter/sec",
-            "range": "stddev: 0.02938761303839897",
-            "extra": "mean: 36.40551141666629 msec\nrounds: 12"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 618.8229795324559,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003259011647583912",
-            "extra": "mean: 1.6159710176818867 msec\nrounds: 509"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 11.727043090020913,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0010485021157652398",
-            "extra": "mean: 85.27298759999837 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 6.959892233376687,
-            "unit": "iter/sec",
-            "range": "stddev: 0.04459345064329735",
-            "extra": "mean: 143.6803856249993 msec\nrounds: 8"
           }
         ]
       },
@@ -6359,7 +6107,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "18f12d46d7e0b4f42958d5d784c84b2f55d6557c",
-          "message": "feat(interpret): improve sparsity via const-value tracking (#59)\n\n* feat(interpret): improve sparsity for const_vals, mul-by-zero, and dot_general\n\nPropagate const_vals through reshape, slice, transpose, and tile so that\nconstant index arrays survive shape-transforming ops before gather/scatter.\n\nAdd prop_mul handler in _mul.py that clears dependencies at positions\nwhere a known-zero constant makes the product zero (d(0*y)/dy = 0).\n\nMake dot_general skip contraction terms where either factor is a known\nconstant zero, producing sparser patterns for matmul with sparse constants.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): extract `propagate_const_unary` and `propagate_const_binary` into `_commons`\n\nMove const-value propagation utilities to `_commons.py` alongside\n`atom_const_val`. Replace inline const propagation in reshape, slice,\ntranspose, and tile with `propagate_const_unary` calls using `partial`,\n`itemgetter`, or named closures. Remove unnecessary `np.asarray` and\n`.ravel()` round-trips — const values are stored in natural shape.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: remove resolved items from TODO.md\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): make `propagate_const_binary` take a callable transform\n\nSymmetric with `propagate_const_unary`. The ufunc dict lookup\nmoves from `_commons.py` into `propagate_const_elementwise` in\n`_elementwise.py`, keeping the shared utility interface clean.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): extract `copy_index_sets` utility into `_commons`\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(interpret): explain downstream impact in `propagate_const_*` docstrings\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(interpret): document conservative fallback invariant for const_vals\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "feat(interpret): improve sparsity via const-value tracking (#59)\n\n* feat(interpret): improve sparsity for const_vals, mul-by-zero, and dot_general\n\nPropagate const_vals through reshape, slice, transpose, and tile so that\nconstant index arrays survive shape-transforming ops before gather/scatter.\n\nAdd prop_mul handler in _mul.py that clears dependencies at positions\nwhere a known-zero constant makes the product zero (d(0*y)/dy = 0).\n\nMake dot_general skip contraction terms where either factor is a known\nconstant zero, producing sparser patterns for matmul with sparse constants.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): extract `propagate_const_unary` and `propagate_const_binary` into `_commons`\n\nMove const-value propagation utilities to `_commons.py` alongside\n`atom_const_val`. Replace inline const propagation in reshape, slice,\ntranspose, and tile with `propagate_const_unary` calls using `partial`,\n`itemgetter`, or named closures. Remove unnecessary `np.asarray` and\n`.ravel()` round-trips \u2014 const values are stored in natural shape.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: remove resolved items from TODO.md\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): make `propagate_const_binary` take a callable transform\n\nSymmetric with `propagate_const_unary`. The ufunc dict lookup\nmoves from `_commons.py` into `propagate_const_elementwise` in\n`_elementwise.py`, keeping the shared utility interface clean.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): extract `copy_index_sets` utility into `_commons`\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(interpret): explain downstream impact in `propagate_const_*` docstrings\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(interpret): document conservative fallback invariant for const_vals\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-20T15:52:27+01:00",
           "tree_id": "1fb12c5b3c013bef6a21f2d9113078ec71bdc9c8",
           "url": "https://github.com/adrhill/asdex/commit/18f12d46d7e0b4f42958d5d784c84b2f55d6557c"
@@ -6450,34 +6198,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.013885459815837517",
             "extra": "mean: 51.742212000000976 msec\nrounds: 20"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 28.160603639757436,
-            "unit": "iter/sec",
-            "range": "stddev: 0.02621635086626919",
-            "extra": "mean: 35.51060242857115 msec\nrounds: 7"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 604.2858039451331,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000025767543725484564",
-            "extra": "mean: 1.6548460901636473 msec\nrounds: 488"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 12.376114873533774,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000954336803181647",
-            "extra": "mean: 80.80080140000092 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 7.787035946323214,
-            "unit": "iter/sec",
-            "range": "stddev: 0.02848627562369354",
-            "extra": "mean: 128.418567333334 msec\nrounds: 6"
           }
         ]
       },
@@ -6586,34 +6306,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0008047236874152402",
             "extra": "mean: 49.425847050000016 msec\nrounds: 20"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 32.22433745906068,
-            "unit": "iter/sec",
-            "range": "stddev: 0.019469469902420846",
-            "extra": "mean: 31.032445625001515 msec\nrounds: 8"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 606.397345853542,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000014674237949148384",
-            "extra": "mean: 1.6490837350094891 msec\nrounds: 517"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 11.593747025696134,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0009106650550872088",
-            "extra": "mean: 86.25339140000392 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 7.510483804543765,
-            "unit": "iter/sec",
-            "range": "stddev: 0.027711224402017138",
-            "extra": "mean: 133.14721475000192 msec\nrounds: 8"
           }
         ]
       },
@@ -6631,7 +6323,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "2032c886c215412736549a4a88861f6400d8b2a9",
-          "message": "perf(interpret): remove unnecessary index set copies (#61)\n\n* perf(interpret): remove unnecessary index set copies\n\nIndex sets stored in `deps` are never mutated by subsequent handlers,\nso defensive `.copy()` calls in `permute_indices`, `conservative_indices`,\nbroadcast, pad, sort, top_k, dynamic_update_slice, and scan tiling\nare unnecessary. Removing them avoids millions of small-set copies.\n\nThe only place that mutates stored sets is `fixed_point_loop` (`|=`\non carry), which now copies carry sets on entry to avoid aliasing bugs.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* perf(interpret): use pyroaring for index sets\n\nSwap the `IndexSet` backend from Python's built-in `set` to Roaring\nbitmaps (`pyroaring.BitMap`). Only `_commons.py` changes — all ~28\nhandler modules already use the factory helpers and compatible ops\n(`|=`, `.copy()`, `|`, `len()`, `bool()`, iteration).\n\nFix bare `set()` in `_top_k.py` to use `empty_index_sets()` factory.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Revert \"perf(interpret): use pyroaring for index sets\"\n\nThis reverts commit 9a3f497052b6f760f6dafaf448501c84dc89c8fd.\n\n* docs(interpret): update IndexSet docstring after pyroaring benchmark\n\npyroaring.BitMap and int bitmasks were benchmarked against set[int].\nset[int] wins for the typical workload (small sparse sets, large universe).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(interpret): document index set aliasing invariant\n\nHandlers must not mutate sets from `deps` since copies were removed\nfor performance. The only exception is `fixed_point_loop`, which\nexplicitly copies carry sets before in-place mutation.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "perf(interpret): remove unnecessary index set copies (#61)\n\n* perf(interpret): remove unnecessary index set copies\n\nIndex sets stored in `deps` are never mutated by subsequent handlers,\nso defensive `.copy()` calls in `permute_indices`, `conservative_indices`,\nbroadcast, pad, sort, top_k, dynamic_update_slice, and scan tiling\nare unnecessary. Removing them avoids millions of small-set copies.\n\nThe only place that mutates stored sets is `fixed_point_loop` (`|=`\non carry), which now copies carry sets on entry to avoid aliasing bugs.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* perf(interpret): use pyroaring for index sets\n\nSwap the `IndexSet` backend from Python's built-in `set` to Roaring\nbitmaps (`pyroaring.BitMap`). Only `_commons.py` changes \u2014 all ~28\nhandler modules already use the factory helpers and compatible ops\n(`|=`, `.copy()`, `|`, `len()`, `bool()`, iteration).\n\nFix bare `set()` in `_top_k.py` to use `empty_index_sets()` factory.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Revert \"perf(interpret): use pyroaring for index sets\"\n\nThis reverts commit 9a3f497052b6f760f6dafaf448501c84dc89c8fd.\n\n* docs(interpret): update IndexSet docstring after pyroaring benchmark\n\npyroaring.BitMap and int bitmasks were benchmarked against set[int].\nset[int] wins for the typical workload (small sparse sets, large universe).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(interpret): document index set aliasing invariant\n\nHandlers must not mutate sets from `deps` since copies were removed\nfor performance. The only exception is `fixed_point_loop`, which\nexplicitly copies carry sets before in-place mutation.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-20T22:52:24+01:00",
           "tree_id": "553bbfd621d92cca5e919de63d918a5850616fa3",
           "url": "https://github.com/adrhill/asdex/commit/2032c886c215412736549a4a88861f6400d8b2a9"
@@ -6722,34 +6414,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.013582004569320702",
             "extra": "mean: 51.58414189999405 msec\nrounds: 20"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 30.6193910889002,
-            "unit": "iter/sec",
-            "range": "stddev: 0.021646893683388766",
-            "extra": "mean: 32.659042666675 msec\nrounds: 12"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 606.9485404578855,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009031310894073675",
-            "extra": "mean: 1.6475861351369165 msec\nrounds: 518"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 12.330176205688288,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000889315582264126",
-            "extra": "mean: 81.1018418000117 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 7.839793928663708,
-            "unit": "iter/sec",
-            "range": "stddev: 0.030152073702989845",
-            "extra": "mean: 127.55437312501527 msec\nrounds: 8"
           }
         ]
       },
@@ -6767,7 +6431,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "c47a9456cac794f2e64c28c3dd8ddeba3edf0f26",
-          "message": "docs: remove complexity claims\n\nThe O(mn) and O(n²) claims for verification assumed T(f) = O(max(m,n)),\nwhich isn't guaranteed. The O(|V| + |E|) claim for greedy coloring\ndidn't account for star coloring's more expensive neighbor-of-neighbor\nchecks.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "docs: remove complexity claims\n\nThe O(mn) and O(n\u00b2) claims for verification assumed T(f) = O(max(m,n)),\nwhich isn't guaranteed. The O(|V| + |E|) claim for greedy coloring\ndidn't account for star coloring's more expensive neighbor-of-neighbor\nchecks.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-21T15:33:43+01:00",
           "tree_id": "8c4dffd2cfc0c221af2f8a3760f65183720ae595",
           "url": "https://github.com/adrhill/asdex/commit/c47a9456cac794f2e64c28c3dd8ddeba3edf0f26"
@@ -6858,34 +6522,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.01535837268428393",
             "extra": "mean: 53.665541578947725 msec\nrounds: 19"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 29.49253521814297,
-            "unit": "iter/sec",
-            "range": "stddev: 0.025461542949165663",
-            "extra": "mean: 33.9068849999992 msec\nrounds: 12"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 615.4448634308518,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00001721614295257012",
-            "extra": "mean: 1.6248409230770269 msec\nrounds: 520"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 12.070675669758705,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007027282007761673",
-            "extra": "mean: 82.84540380000038 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 7.869071384322513,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0285564851875041",
-            "extra": "mean: 127.07979774999778 msec\nrounds: 8"
           }
         ]
       },
@@ -6903,7 +6539,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "047a2b185b2f53e55b204f7a1937b48a228371ec",
-          "message": "feat(verify): add randomized matrix-vector product verification (#62)\n\n* feat(verify): add randomized matvec verification and AD mode selection\n\nReplace the O(n²) dense-only verification with a cheap O(k) randomized\nmatvec default path. Both `check_jacobian_correctness` and\n`check_hessian_correctness` gain `method`, `ad_mode`, `num_probes`, and\n`seed` parameters.\n\n- `method=\"matvec\"` (default) checks via randomized matrix-vector\n  products against `jax.jvp` / HVP references\n- `method=\"dense\"` preserves the original full-matrix comparison\n- `ad_mode` controls the reference AD mode for both paths:\n  Jacobian accepts \"forward\" / \"reverse\",\n  Hessian accepts \"fwd_over_rev\" / \"rev_over_fwd\" / \"rev_over_rev\"\n- Tolerances default to 1e-5 (matvec) or 1e-7 (dense)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* feat(verify): auto-select forward/reverse based on Jacobian shape\n\nWhen `ad_mode` is not specified, pick the mode that maximizes\ndetection power per probe: forward (JVP) when m >= n,\nreverse (VJP) when m < n.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: update verification how-to guides for new API\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "feat(verify): add randomized matrix-vector product verification (#62)\n\n* feat(verify): add randomized matvec verification and AD mode selection\n\nReplace the O(n\u00b2) dense-only verification with a cheap O(k) randomized\nmatvec default path. Both `check_jacobian_correctness` and\n`check_hessian_correctness` gain `method`, `ad_mode`, `num_probes`, and\n`seed` parameters.\n\n- `method=\"matvec\"` (default) checks via randomized matrix-vector\n  products against `jax.jvp` / HVP references\n- `method=\"dense\"` preserves the original full-matrix comparison\n- `ad_mode` controls the reference AD mode for both paths:\n  Jacobian accepts \"forward\" / \"reverse\",\n  Hessian accepts \"fwd_over_rev\" / \"rev_over_fwd\" / \"rev_over_rev\"\n- Tolerances default to 1e-5 (matvec) or 1e-7 (dense)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* feat(verify): auto-select forward/reverse based on Jacobian shape\n\nWhen `ad_mode` is not specified, pick the mode that maximizes\ndetection power per probe: forward (JVP) when m >= n,\nreverse (VJP) when m < n.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: update verification how-to guides for new API\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-21T17:54:05+01:00",
           "tree_id": "644803c127208018560db850614293401d23b5dc",
           "url": "https://github.com/adrhill/asdex/commit/047a2b185b2f53e55b204f7a1937b48a228371ec"
@@ -6994,34 +6630,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.014398258752199822",
             "extra": "mean: 52.36287229999874 msec\nrounds: 20"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 28.451730312964294,
-            "unit": "iter/sec",
-            "range": "stddev: 0.026505638035503324",
-            "extra": "mean: 35.14724724999733 msec\nrounds: 12"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 616.7694732988044,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000026757114173097193",
-            "extra": "mean: 1.6213513205371193 msec\nrounds: 521"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 11.824401190921979,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00100947603123344",
-            "extra": "mean: 84.57087879999676 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 7.74928340439006,
-            "unit": "iter/sec",
-            "range": "stddev: 0.027870070656709094",
-            "extra": "mean: 129.04419000000544 msec\nrounds: 8"
           }
         ]
       },
@@ -7039,7 +6647,7 @@ window.BENCHMARK_DATA = {
           },
           "distinct": true,
           "id": "d11498e51cc45cde5c5d4b8998485e824808f573",
-          "message": "feat!: unify AD mode API (#63)\n\n* feat!: unify AD mode API\n\nConsistent `mode` parameter everywhere, replacing the mix of\n`partition`, `hvp_mode`, and `ad_mode`. Rename `HvpMode` to\n`HessianMode` and introduce `JacobianMode` with `\"fwd\"`/`\"rev\"`\nvalues (matching JAX's `jacfwd`/`jacrev` naming). Add validation\nfor unknown mode values in `color_jacobian_pattern`.\n\nBREAKING CHANGE: `partition=\"row\"/\"column\"` is now `mode=\"rev\"/\"fwd\"`,\n`hvp_mode` is now `mode`, `ad_mode` is now `mode`,\n`HvpMode` is renamed to `HessianMode`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* feat!: separate coloring mode from AD mode\n\nRename `ColoringMode` to domain-appropriate values\n(`\"row\"`, `\"column\"`, `\"symmetric\"`) and add `\"auto\"` to all mode types.\n\nReplace the single `mode` kwarg on `jacobian()` and `hessian()` with\nseparate `coloring_mode` and `ad_mode` kwargs, decoupling the coloring\nstrategy from the AD primitive selection.\n\nKey changes:\n- `modes.py`: add `resolve_ad_mode()` and `resolve_hessian_mode()`\n- `coloring.py`: `color_jacobian_pattern` accepts `\"symmetric\"`\n- `decompression.py`: `hessian()` accepts `coloring_mode` for\n  row/column coloring with HVPs\n- `verify.py`: rename `mode` → `ad_mode`\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(coloring): centralize mode validation and resolution\n\nAdd `assert_coloring_mode`, `assert_jacobian_mode`, `assert_hessian_mode`\nvalidators and `resolve_coloring_mode` to `modes.py` as single source of truth.\n\n- Derive valid mode sets from `Literal` types via `get_args`\n- Push coloring-from-AD resolution into `resolve_coloring_mode`\n- Push coloring dispatch into `color_hessian_pattern` (accepts `coloring_mode`)\n- Extract `_empty_colored_pattern` helper for zero-nnz patterns\n- Rename bare `mode` parameters to `coloring_mode` everywhere\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor: exhaustive match/case with `assert_never`\n\nReplace `if`/`elif` chains on mode arguments with exhaustive\n`match`/`case` using `assert_never` for unreachable branches.\nValidate `coloring_mode` and `ad_mode` eagerly in `jacobian()`\nand `hessian()` so typos raise at construction time.\n\nSuppresses `ty` false positives where match/case narrowing on\nattribute access is not yet supported (`@Todo`).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: update for new `coloring_mode`/`ad_mode` API\n\nFix parameter names in how-to guides (`mode` → `coloring_mode`/`ad_mode`)\nand update reference pages to reflect the new public API:\nremove `color_rows`, `color_cols`, `color_symmetric` and add\n`ColoringMode`, `JacobianMode`, `HessianMode`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(modes): centralize input validation and mark helpers private\n\nAdd `_assert_jacobian_args` and `_assert_hessian_args` to centralize\nthe shared validation (mode assertions + coloring_mode-ignored warning)\nused by `jacobian`, `hessian`, `check_jacobian_correctness`, and\n`check_hessian_correctness`.\n\nPrefix all helper functions in `modes.py` with underscore since only\nthe type aliases are part of the public API.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: fix stale mode terminology and add missing mode tests\n\nRename test names and docstrings that still referenced `hvp_mode` or\nbare `mode` to use the new `ad_mode`/`coloring_mode` API.  Add tests\nfor column+rev incompatibility, invalid mode validation, and the\ncoloring_mode-ignored warning.  Also include the minor modes.py\ndocstring fix.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: cover remaining reachable mode validation paths\n\nAdd tests for:\n- Hessian coloring_mode-ignored warning (_assert_hessian_args)\n- _resolve_ad_mode raising on unresolved coloring_mode=\"auto\"\n- Empty non-square pattern with symmetric coloring (_empty_colored_pattern)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: exclude unreachable branches from coverage\n\nExclude `assert_never()`, `case _ as unreachable:`, and\n`if TYPE_CHECKING:` lines from coverage reports via\n`[tool.coverage.report]` in pyproject.toml.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "message": "feat!: unify AD mode API (#63)\n\n* feat!: unify AD mode API\n\nConsistent `mode` parameter everywhere, replacing the mix of\n`partition`, `hvp_mode`, and `ad_mode`. Rename `HvpMode` to\n`HessianMode` and introduce `JacobianMode` with `\"fwd\"`/`\"rev\"`\nvalues (matching JAX's `jacfwd`/`jacrev` naming). Add validation\nfor unknown mode values in `color_jacobian_pattern`.\n\nBREAKING CHANGE: `partition=\"row\"/\"column\"` is now `mode=\"rev\"/\"fwd\"`,\n`hvp_mode` is now `mode`, `ad_mode` is now `mode`,\n`HvpMode` is renamed to `HessianMode`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* feat!: separate coloring mode from AD mode\n\nRename `ColoringMode` to domain-appropriate values\n(`\"row\"`, `\"column\"`, `\"symmetric\"`) and add `\"auto\"` to all mode types.\n\nReplace the single `mode` kwarg on `jacobian()` and `hessian()` with\nseparate `coloring_mode` and `ad_mode` kwargs, decoupling the coloring\nstrategy from the AD primitive selection.\n\nKey changes:\n- `modes.py`: add `resolve_ad_mode()` and `resolve_hessian_mode()`\n- `coloring.py`: `color_jacobian_pattern` accepts `\"symmetric\"`\n- `decompression.py`: `hessian()` accepts `coloring_mode` for\n  row/column coloring with HVPs\n- `verify.py`: rename `mode` \u2192 `ad_mode`\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(coloring): centralize mode validation and resolution\n\nAdd `assert_coloring_mode`, `assert_jacobian_mode`, `assert_hessian_mode`\nvalidators and `resolve_coloring_mode` to `modes.py` as single source of truth.\n\n- Derive valid mode sets from `Literal` types via `get_args`\n- Push coloring-from-AD resolution into `resolve_coloring_mode`\n- Push coloring dispatch into `color_hessian_pattern` (accepts `coloring_mode`)\n- Extract `_empty_colored_pattern` helper for zero-nnz patterns\n- Rename bare `mode` parameters to `coloring_mode` everywhere\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor: exhaustive match/case with `assert_never`\n\nReplace `if`/`elif` chains on mode arguments with exhaustive\n`match`/`case` using `assert_never` for unreachable branches.\nValidate `coloring_mode` and `ad_mode` eagerly in `jacobian()`\nand `hessian()` so typos raise at construction time.\n\nSuppresses `ty` false positives where match/case narrowing on\nattribute access is not yet supported (`@Todo`).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: update for new `coloring_mode`/`ad_mode` API\n\nFix parameter names in how-to guides (`mode` \u2192 `coloring_mode`/`ad_mode`)\nand update reference pages to reflect the new public API:\nremove `color_rows`, `color_cols`, `color_symmetric` and add\n`ColoringMode`, `JacobianMode`, `HessianMode`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(modes): centralize input validation and mark helpers private\n\nAdd `_assert_jacobian_args` and `_assert_hessian_args` to centralize\nthe shared validation (mode assertions + coloring_mode-ignored warning)\nused by `jacobian`, `hessian`, `check_jacobian_correctness`, and\n`check_hessian_correctness`.\n\nPrefix all helper functions in `modes.py` with underscore since only\nthe type aliases are part of the public API.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: fix stale mode terminology and add missing mode tests\n\nRename test names and docstrings that still referenced `hvp_mode` or\nbare `mode` to use the new `ad_mode`/`coloring_mode` API.  Add tests\nfor column+rev incompatibility, invalid mode validation, and the\ncoloring_mode-ignored warning.  Also include the minor modes.py\ndocstring fix.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: cover remaining reachable mode validation paths\n\nAdd tests for:\n- Hessian coloring_mode-ignored warning (_assert_hessian_args)\n- _resolve_ad_mode raising on unresolved coloring_mode=\"auto\"\n- Empty non-square pattern with symmetric coloring (_empty_colored_pattern)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: exclude unreachable branches from coverage\n\nExclude `assert_never()`, `case _ as unreachable:`, and\n`if TYPE_CHECKING:` lines from coverage reports via\n`[tool.coverage.report]` in pyproject.toml.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
           "timestamp": "2026-02-21T21:48:17+01:00",
           "tree_id": "5e28607067564842f4e4033909344a1dbf9acb23",
           "url": "https://github.com/adrhill/asdex/commit/d11498e51cc45cde5c5d4b8998485e824808f573"
@@ -7130,34 +6738,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.01646206413038489",
             "extra": "mean: 53.643623950000574 msec\nrounds: 20"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 29.087698091103135,
-            "unit": "iter/sec",
-            "range": "stddev: 0.025251434226442687",
-            "extra": "mean: 34.37879466666575 msec\nrounds: 12"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 602.7417219896561,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005062357630874591",
-            "extra": "mean: 1.6590854150580294 msec\nrounds: 518"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 11.784882266291937,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007492966099061322",
-            "extra": "mean: 84.85447520000093 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 7.623254137941214,
-            "unit": "iter/sec",
-            "range": "stddev: 0.029446146115757826",
-            "extra": "mean: 131.17757612499935 msec\nrounds: 8"
           }
         ]
       },
@@ -7266,34 +6846,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0010615404415476647",
             "extra": "mean: 39.10769612500312 msec\nrounds: 24"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 29.45705030000267,
-            "unit": "iter/sec",
-            "range": "stddev: 0.023628162116551495",
-            "extra": "mean: 33.947730333335834 msec\nrounds: 12"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 611.8854830578134,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008600050417452631",
-            "extra": "mean: 1.6342927356318993 msec\nrounds: 522"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 11.933931786916315,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0012353836168298926",
-            "extra": "mean: 83.79468039999551 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 12.093622669958414,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0004884243274156321",
-            "extra": "mean: 82.6882090909025 msec\nrounds: 11"
           }
         ]
       },
@@ -7402,34 +6954,6 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0007321251787339029",
             "extra": "mean: 39.024957347825946 msec\nrounds: 23"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_detection",
-            "value": 27.571057320389947,
-            "unit": "iter/sec",
-            "range": "stddev: 0.03172862244499479",
-            "extra": "mean: 36.269918428571046 msec\nrounds: 7"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_coloring",
-            "value": 594.0682876707394,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009708588525088147",
-            "extra": "mean: 1.6833081663403768 msec\nrounds: 511"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_materialization",
-            "value": 11.967658131533296,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0008004938389573723",
-            "extra": "mean: 83.55853659999894 msec\nrounds: 5"
-          },
-          {
-            "name": "tests/test_benchmarks.py::test_gnn_end_to_end",
-            "value": 10.66058391580681,
-            "unit": "iter/sec",
-            "range": "stddev: 0.02850853596532837",
-            "extra": "mean: 93.8034921818181 msec\nrounds: 11"
           }
         ]
       }
