@@ -72,6 +72,8 @@ def check_jacobian_correctness(
             m = coloring.sparsity.m
             n = coloring.sparsity.n
             ref_mode: Literal["fwd", "rev"] = "fwd" if m >= n else "rev"
+        case _ as unreachable:
+            assert_never(unreachable)
 
     J_sparse = jacobian_from_coloring(f, coloring)(x)
 
@@ -141,6 +143,8 @@ def check_hessian_correctness(
             hessian_mode = coloring.mode
         case "fwd" | "rev":
             raise ValueError(f"Expected a Hessian mode, got {coloring.mode!r}.")
+        case _ as unreachable:
+            assert_never(unreachable)
 
     H_sparse = hessian_from_coloring(f, coloring)(x)
 

@@ -14,6 +14,7 @@ See also: Dalle & Montoison (2025), https://arxiv.org/abs/2505.07308
 
 import warnings
 from collections.abc import Callable
+from typing import assert_never
 
 import numpy as np
 from numpy.typing import NDArray
@@ -180,6 +181,9 @@ def jacobian_coloring_from_sparsity(
             )
             _warn_if_dense(num_row, sparsity.m, "Jacobian", sparsity.shape)
             return result
+
+        case _ as unreachable:
+            assert_never(unreachable)
 
 
 def hessian_coloring_from_sparsity(
@@ -443,6 +447,8 @@ def _empty_jacobian_pattern(
         case "fwd" | None:
             n_vertices = sparsity.n
             mode = "fwd"
+        case _ as unreachable:
+            assert_never(unreachable)
     return ColoredPattern(
         sparsity,
         colors=np.full(n_vertices, -1, dtype=np.int32),
