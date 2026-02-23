@@ -125,8 +125,7 @@ def _try_single_dim_gather(
 
     if dim_nums.start_index_map != (d,):
         return False
-    if slice_sizes[d] != 1:
-        return False
+    assert slice_sizes[d] == 1  # JAX enforces collapsed dims have slice_size == 1
 
     # All non-collapsed slice sizes must match the operand shape.
     for i, (ss, os) in enumerate(zip(slice_sizes, operand_shape, strict=True)):
@@ -230,10 +229,8 @@ def _try_multi_dim_gather(
     if dim_nums.start_index_map != collapsed:
         return False
 
-    # All collapsed dims must have slice_size == 1.
-    for d in collapsed:
-        if slice_sizes[d] != 1:
-            return False
+    # JAX enforces collapsed dims have slice_size == 1.
+    assert all(slice_sizes[d] == 1 for d in collapsed)
 
     # Non-collapsed slice sizes must match the operand shape.
     for i, (ss, os) in enumerate(zip(slice_sizes, operand_shape, strict=True)):

@@ -71,10 +71,7 @@ def prop_scan(
     for x_var in xs:
         x_indices = index_sets(deps, x_var)
         x_shape = tuple(getattr(x_var.aval, "shape", ()))
-        if len(x_shape) == 0:
-            # Scalar xs — shouldn't happen but handle gracefully
-            x_slice_indices.append(x_indices)
-            continue
+        assert len(x_shape) > 0  # scan xs must have a leading length dim
         length = x_shape[0]
         slice_numel = len(x_indices) // length
         # Union deps across all length slices for each element position
@@ -101,9 +98,7 @@ def prop_scan(
     y_slice_outputs = body_output[num_carry:]
     for outvar, slice_indices in zip(ys, y_slice_outputs, strict=True):
         y_shape = tuple(getattr(outvar.aval, "shape", ()))
-        if len(y_shape) == 0:
-            deps[outvar] = slice_indices
-            continue
+        assert len(y_shape) > 0  # scan ys must have a leading length dim
         length = y_shape[0]
         # Tile: repeat the slice deps for each time step
         deps[outvar] = slice_indices * length

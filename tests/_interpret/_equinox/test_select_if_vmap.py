@@ -55,3 +55,32 @@ def test_select_if_vmap_elementwise():
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
     expected = np.eye(3, dtype=int)
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.control_flow
+def test_select_if_vmap_all_const_propagation():
+    """All-const select_if_vmap propagates concrete values for downstream precision.
+
+    When pred, on_true, and on_false are all statically known constants,
+    the handler propagates the result through const_vals,
+    enabling downstream gathers to use precise indices.
+    """
+
+    def f(x):
+        pred = jnp.array(True)
+        true_idx = jnp.array([2, 0, 1])
+        false_idx = jnp.array([0, 1, 2])
+        indices = select_if_vmap_p.bind(pred, true_idx, false_idx)
+        return x[indices]
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # pred=True selects true_idx=[2, 0, 1], so output is x[[2, 0, 1]].
+    expected = np.array(
+        [
+            [0, 0, 1],  # out[0] = x[2]
+            [1, 0, 0],  # out[1] = x[0]
+            [0, 1, 0],  # out[2] = x[1]
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)

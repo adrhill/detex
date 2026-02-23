@@ -162,7 +162,7 @@ def test_reshape_size_mismatch_raises():
         prop_reshape(eqn, deps, {})  # type: ignore[arg-type]
 
 
-# Conservative fallback tests
+# Integration tests for precise handlers
 
 
 @pytest.mark.array_ops

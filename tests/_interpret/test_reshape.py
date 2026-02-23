@@ -380,3 +380,33 @@ def test_reshape_then_rev():
     for out_idx, in_idx in enumerate([3, 4, 5, 0, 1, 2]):
         expected[out_idx, in_idx] = 1
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_reshape_with_dimensions_const_propagation():
+    """Reshape with ``dimensions`` propagates const values for downstream precision.
+
+    A constant index array reshaped with ``dimensions=(1, 0)``
+    transposes before flattening.
+    The propagated const value enables the downstream gather
+    to use precise indices.
+    """
+
+    def f(x):
+        indices = jnp.array([[2, 0], [1, 2]])
+        # Column-major flatten: transpose then reshape.
+        flat_indices = lax.reshape(indices, (4,), dimensions=(1, 0))
+        # flat_indices = [2, 1, 0, 2]
+        return x[flat_indices]
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.array(
+        [
+            [0, 0, 1],  # out[0] = x[2]
+            [0, 1, 0],  # out[1] = x[1]
+            [1, 0, 0],  # out[2] = x[0]
+            [0, 0, 1],  # out[3] = x[2]
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)

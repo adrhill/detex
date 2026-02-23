@@ -609,3 +609,186 @@ def test_gather_3d_last_dim_direct():
     ]
     expected = _perm_matrix(18, 30, mapping)
     np.testing.assert_array_equal(result, expected)
+
+
+# Multi-dim gather with non-collapsed dims
+
+
+@pytest.mark.array_ops
+def test_gather_multi_dim_with_kept_dim():
+    """Multi-dim index into first two dims of a 3D array, keeping the third.
+
+    ``arr[rows, cols]`` on shape (3, 4, 5) selects 2 slices of length 5.
+    Each output row depends on exactly one input slice.
+    """
+
+    def f(x):
+        t = x.reshape(3, 4, 5)
+        return t[jnp.array([0, 2]), jnp.array([1, 3])].flatten()
+
+    result = jacobian_sparsity(f, input_shape=60).todense().astype(int)
+    # out[i, c] = t[rows[i], cols[i], c]
+    # Flat input: rows[i]*20 + cols[i]*5 + c
+    mapping = [r * 20 + c * 5 + k for r, c in [(0, 1), (2, 3)] for k in range(5)]
+    expected = _perm_matrix(10, 60, mapping)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_gather_multi_dim_single_coordinate():
+    """Multi-dim gather with a single 1D coordinate vector.
+
+    ``lax.gather`` with 1D start_indices (a single coordinate)
+    selects one scalar element from a 2D array.
+    """
+
+    def f(x):
+        arr = x.reshape(3, 4)
+        # Single coordinate (1, 2) → element at flat index 6.
+        return lax.gather(
+            arr,
+            jnp.array([1, 2]),
+            dimension_numbers=lax.GatherDimensionNumbers(
+                offset_dims=(),
+                collapsed_slice_dims=(0, 1),
+                start_index_map=(0, 1),
+            ),
+            slice_sizes=(1, 1),
+        ).reshape(1)
+
+    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    expected = _perm_matrix(1, 12, [6])
+    np.testing.assert_array_equal(result, expected)
+
+
+# Low-level gather patterns (lax.gather with explicit dimension_numbers)
+
+
+@pytest.mark.array_ops
+def test_gather_single_dim_start_map_mismatch():
+    """Single collapsed dim with start_index_map pointing elsewhere falls back.
+
+    collapsed_slice_dims=(0,) but start_index_map=(1,):
+    indices address dim 1, not the collapsed dim.
+    """
+
+    def f(x):
+        arr = x.reshape(3, 4)
+        return lax.gather(
+            arr,
+            jnp.array([[1], [3]]),
+            dimension_numbers=lax.GatherDimensionNumbers(
+                offset_dims=(1,),
+                collapsed_slice_dims=(0,),
+                start_index_map=(1,),
+            ),
+            slice_sizes=(1, 1),
+        ).flatten()
+
+    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    # Conservative: all outputs depend on all inputs.
+    assert result.sum() == result.size
+
+
+@pytest.mark.array_ops
+def test_gather_single_dim_partial_slice():
+    """Single collapsed dim with partial non-collapsed slice falls back.
+
+    slice_sizes[1]=2 but operand has shape[1]=4:
+    the non-collapsed dim doesn't span the full operand.
+    """
+
+    def f(x):
+        arr = x.reshape(3, 4)
+        return lax.gather(
+            arr,
+            jnp.array([[0], [2]]),
+            dimension_numbers=lax.GatherDimensionNumbers(
+                offset_dims=(1,),
+                collapsed_slice_dims=(0,),
+                start_index_map=(0,),
+            ),
+            slice_sizes=(1, 2),
+        ).flatten()
+
+    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    # Conservative: all outputs depend on all inputs.
+    assert result.sum() == result.size
+
+
+@pytest.mark.array_ops
+def test_gather_multi_dim_start_map_mismatch():
+    """Multi-dim collapse with reversed start_index_map falls back.
+
+    collapsed_slice_dims=(0, 1) but start_index_map=(1, 0).
+    """
+
+    def f(x):
+        arr = x.reshape(3, 4, 5)
+        return lax.gather(
+            arr,
+            jnp.array([[0, 1], [2, 3]]),
+            dimension_numbers=lax.GatherDimensionNumbers(
+                offset_dims=(1,),
+                collapsed_slice_dims=(0, 1),
+                start_index_map=(1, 0),
+            ),
+            slice_sizes=(1, 1, 5),
+        ).flatten()
+
+    result = jacobian_sparsity(f, input_shape=60).todense().astype(int)
+    # Conservative: all outputs depend on all inputs.
+    assert result.sum() == result.size
+
+
+@pytest.mark.array_ops
+def test_gather_multi_dim_partial_non_collapsed():
+    """Multi-dim collapse with partial non-collapsed slice falls back.
+
+    slice_sizes[2]=3 but operand has shape[2]=5.
+    """
+
+    def f(x):
+        arr = x.reshape(3, 4, 5)
+        return lax.gather(
+            arr,
+            jnp.array([[0, 1], [2, 3]]),
+            dimension_numbers=lax.GatherDimensionNumbers(
+                offset_dims=(1,),
+                collapsed_slice_dims=(0, 1),
+                start_index_map=(0, 1),
+            ),
+            slice_sizes=(1, 1, 3),
+        ).flatten()
+
+    result = jacobian_sparsity(f, input_shape=60).todense().astype(int)
+    # Conservative: all outputs depend on all inputs.
+    assert result.sum() == result.size
+
+
+@pytest.mark.array_ops
+def test_gather_batching_dims():
+    """Gather with operand_batching_dims falls back to conservative.
+
+    Batching dims are a newer JAX gather feature.
+    The handler does not yet track per-batch dependencies precisely.
+    """
+
+    def f(x):
+        arr = x.reshape(2, 3)
+        return lax.gather(
+            arr,
+            jnp.array([[1], [0]]),
+            dimension_numbers=lax.GatherDimensionNumbers(
+                offset_dims=(),
+                collapsed_slice_dims=(1,),
+                start_index_map=(1,),
+                operand_batching_dims=(0,),
+                start_indices_batching_dims=(0,),
+            ),
+            slice_sizes=(1, 1),
+        )
+
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    # Conservative: all outputs depend on all inputs.
+    assert result.sum() == result.size

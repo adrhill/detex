@@ -310,13 +310,13 @@ def fixed_point_loop(
 
         if not changed:
             break
-    else:
+    else:  # pragma: no cover
         msg = (
             f"Fixed-point iteration did not converge after "
             f"{_MAX_FIXED_POINT_ITERS} iterations. "
             "Please help out asdex's development by reporting this at "
             "https://github.com/adrhill/asdex/issues"
         )
-        raise RuntimeError(msg)  # pragma: no cover
+        raise RuntimeError(msg)
 
     return body_output

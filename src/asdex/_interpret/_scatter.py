@@ -12,7 +12,6 @@ from ._commons import (
     atom_shape,
     check_no_index_sets,
     conservative_indices,
-    empty_index_set,
     index_sets,
     numel,
 )
@@ -133,10 +132,8 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
                         else:
                             last_row = update_row_list[-1]
                             u_flat = last_row * row_size + d
-                            if u_flat < len(updates_indices):
-                                out_indices.append(updates_indices[u_flat].copy())
-                            else:
-                                out_indices.append(empty_index_set())
+                            assert u_flat < len(updates_indices)
+                            out_indices.append(updates_indices[u_flat].copy())
                 else:
                     out_indices.extend(
                         operand_indices[out_row * row_size + d].copy()
