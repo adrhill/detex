@@ -71,7 +71,10 @@ def prop_scan(
     for x_var in xs:
         x_indices = index_sets(deps, x_var)
         x_shape = tuple(getattr(x_var.aval, "shape", ()))
-        assert len(x_shape) > 0  # scan xs must have a leading length dim
+        if len(x_shape) == 0:
+            # JAX enforces this at trace time:
+            # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/control_flow/loops.py#L336
+            raise AssertionError("scan xs must have a leading length dim")
         length = x_shape[0]
         slice_numel = len(x_indices) // length
         # Union deps across all length slices for each element position
@@ -98,7 +101,10 @@ def prop_scan(
     y_slice_outputs = body_output[num_carry:]
     for outvar, slice_indices in zip(ys, y_slice_outputs, strict=True):
         y_shape = tuple(getattr(outvar.aval, "shape", ()))
-        assert len(y_shape) > 0  # scan ys must have a leading length dim
+        if len(y_shape) == 0:
+            # JAX enforces this at trace time:
+            # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/control_flow/loops.py#L336
+            raise AssertionError("scan ys must have a leading length dim")
         length = y_shape[0]
         # Tile: repeat the slice deps for each time step
         deps[outvar] = slice_indices * length

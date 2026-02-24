@@ -132,7 +132,12 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
                         else:
                             last_row = update_row_list[-1]
                             u_flat = last_row * row_size + d
-                            assert u_flat < len(updates_indices)
+                            if u_flat >= len(updates_indices):
+                                # JAX validates scatter updates shape at trace time:
+                                # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/slicing.py#L2544
+                                raise AssertionError(
+                                    f"update index {u_flat} out of range for {len(updates_indices)} elements"
+                                )
                             out_indices.append(updates_indices[u_flat].copy())
                 else:
                     out_indices.extend(

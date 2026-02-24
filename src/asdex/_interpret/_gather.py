@@ -125,7 +125,12 @@ def _try_single_dim_gather(
 
     if dim_nums.start_index_map != (d,):
         return False
-    assert slice_sizes[d] == 1  # JAX enforces collapsed dims have slice_size == 1
+    if slice_sizes[d] != 1:
+        # JAX enforces this at trace time:
+        # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/slicing.py#L1961
+        raise AssertionError(
+            f"collapsed dim {d} has slice_size {slice_sizes[d]}, expected 1"
+        )
 
     # All non-collapsed slice sizes must match the operand shape.
     for i, (ss, os) in enumerate(zip(slice_sizes, operand_shape, strict=True)):
@@ -229,8 +234,12 @@ def _try_multi_dim_gather(
     if dim_nums.start_index_map != collapsed:
         return False
 
-    # JAX enforces collapsed dims have slice_size == 1.
-    assert all(slice_sizes[d] == 1 for d in collapsed)
+    # JAX enforces collapsed dims have slice_size == 1:
+    # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/slicing.py#L1961
+    if not all(slice_sizes[d] == 1 for d in collapsed):
+        raise AssertionError(
+            f"collapsed dims {collapsed} have slice_sizes {[slice_sizes[d] for d in collapsed]}"
+        )
 
     # Non-collapsed slice sizes must match the operand shape.
     for i, (ss, os) in enumerate(zip(slice_sizes, operand_shape, strict=True)):
