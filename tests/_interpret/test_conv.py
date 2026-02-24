@@ -6,6 +6,7 @@ References:
 
 import jax
 import jax.lax as lax
+import jax.numpy as jnp
 import numpy as np
 import pytest
 from flax import nnx
@@ -448,3 +449,56 @@ def test_rhs_dilation():
         actual_nonzero,
         "Dilated kernel conv sparsity should match actual Jacobian",
     )
+
+
+@pytest.mark.array_ops
+@pytest.mark.fallback
+def test_conv_batch_group_count():
+    """Conv with batch_group_count > 1 falls back to conservative.
+
+    batch_group_count appears mainly in JAX backprop internals.
+    The handler does not yet track per-group dependencies precisely.
+    """
+    input_size = 4 * 1 * 3 * 3  # (N=4, C=1, H=3, W=3)
+
+    def f(x):
+        lhs = x.reshape(4, 1, 3, 3)
+        rhs = jnp.ones((2, 1, 2, 2))
+        return lax.conv_general_dilated(
+            lhs,
+            rhs,
+            window_strides=(1, 1),
+            padding="VALID",
+            dimension_numbers=("NCHW", "OIHW", "NCHW"),
+            batch_group_count=2,
+        ).flatten()
+
+    result = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
+    # TODO(conv_general_dilated): should be block-diagonal (64/576 nnz).
+    # Each batch group's outputs depend only on that group's inputs:
+    # group 0 (batches 0–1) → inputs 0–17, group 1 (batches 2–3) → inputs 18–35.
+    # Within each group, the standard 2×2 conv sparsity applies (4 nnz per output).
+    assert result.sum() == result.size
+
+
+@pytest.mark.array_ops
+def test_conv_input_dependent_kernel_raises():
+    """Conv with a kernel derived from the function input raises ValueError.
+
+    The handler assumes the kernel is a constant (no input dependencies).
+    Input-dependent kernels (e.g., hypernetworks) are not yet supported.
+    """
+
+    def f(x):
+        kernel = x[:4].reshape(1, 1, 2, 2)
+        input_data = x[4:].reshape(1, 1, 3, 3)
+        return lax.conv_general_dilated(
+            input_data,
+            kernel,
+            window_strides=(1, 1),
+            padding="VALID",
+            dimension_numbers=("NCHW", "OIHW", "NCHW"),
+        ).flatten()
+
+    with pytest.raises(ValueError, match="non-empty index sets"):
+        jacobian_sparsity(f, input_shape=13)

@@ -12,7 +12,6 @@ from ._commons import (
     atom_shape,
     check_no_index_sets,
     conservative_indices,
-    empty_index_set,
     index_sets,
     numel,
 )
@@ -133,10 +132,14 @@ def prop_scatter(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
                         else:
                             last_row = update_row_list[-1]
                             u_flat = last_row * row_size + d
-                            if u_flat < len(updates_indices):
-                                out_indices.append(updates_indices[u_flat].copy())
-                            else:
-                                out_indices.append(empty_index_set())
+                            if u_flat >= len(updates_indices):
+                                # JAX validates updates shape matches indices shape at trace time,
+                                # which prevents the out-of-bounds flat index we check here:
+                                # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/slicing.py#L2544
+                                raise AssertionError(
+                                    f"update index {u_flat} out of range for {len(updates_indices)} elements"
+                                )
+                            out_indices.append(updates_indices[u_flat].copy())
                 else:
                     out_indices.extend(
                         operand_indices[out_row * row_size + d].copy()

@@ -625,3 +625,21 @@ def test_elementwise_matmul_elementwise_chain():
     # Elementwise ops don't change sparsity structure.
     expected = jacobian_sparsity(f_plain, input_shape=12).todense().astype(int)
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_scalar_dot_zero_skipping():
+    """Scalar dot product skips terms where a factor is a known zero.
+
+    When a constant operand has zero entries,
+    the corresponding contracting positions contribute nothing.
+    ``jnp.dot(x, [1, 0, 1])`` has zero derivative w.r.t. ``x[1]``.
+    """
+
+    def f(x):
+        w = jnp.array([1.0, 0.0, 1.0])
+        return jnp.dot(x, w).reshape(1)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.array([[1, 0, 1]], dtype=int)
+    np.testing.assert_array_equal(result, expected)
