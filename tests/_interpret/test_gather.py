@@ -665,6 +665,7 @@ def test_gather_multi_dim_single_coordinate():
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_gather_single_dim_start_map_mismatch():
     """Single collapsed dim with start_index_map pointing elsewhere falls back.
 
@@ -686,11 +687,13 @@ def test_gather_single_dim_start_map_mismatch():
         ).flatten()
 
     result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
-    # Conservative: all outputs depend on all inputs.
+    # TODO(gather): should be a permutation matrix (2/24 nnz).
+    # out[0] = arr[0, 1] = x[1], out[1] = arr[0, 3] = x[3].
     assert result.sum() == result.size
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_gather_single_dim_partial_slice():
     """Single collapsed dim with partial non-collapsed slice falls back.
 
@@ -712,11 +715,14 @@ def test_gather_single_dim_partial_slice():
         ).flatten()
 
     result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
-    # Conservative: all outputs depend on all inputs.
+    # TODO(gather): should be a permutation matrix (4/48 nnz).
+    # out[0] = arr[0, 0] = x[0], out[1] = arr[0, 1] = x[1],
+    # out[2] = arr[2, 0] = x[8], out[3] = arr[2, 1] = x[9].
     assert result.sum() == result.size
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_gather_multi_dim_start_map_mismatch():
     """Multi-dim collapse with reversed start_index_map falls back.
 
@@ -737,11 +743,15 @@ def test_gather_multi_dim_start_map_mismatch():
         ).flatten()
 
     result = jacobian_sparsity(f, input_shape=60).todense().astype(int)
-    # Conservative: all outputs depend on all inputs.
+    # TODO(gather): should select two slices of 5 (10/600 nnz),
+    # but 5 of those are dead (reversed map swaps dims → arr[1,0] and arr[3,2],
+    # and arr[3,2] is out of bounds, yielding 5 zero rows).
+    # True nnz is 5: out[0..4] = arr[1, 0, 0..4] = x[20..24].
     assert result.sum() == result.size
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_gather_multi_dim_partial_non_collapsed():
     """Multi-dim collapse with partial non-collapsed slice falls back.
 
@@ -762,11 +772,14 @@ def test_gather_multi_dim_partial_non_collapsed():
         ).flatten()
 
     result = jacobian_sparsity(f, input_shape=60).todense().astype(int)
-    # Conservative: all outputs depend on all inputs.
+    # TODO(gather): should select two partial slices of 3 (6/360 nnz).
+    # out[0..2] = arr[0, 1, 0..2] = x[5..7],
+    # out[3..5] = arr[2, 3, 0..2] = x[55..57].
     assert result.sum() == result.size
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_gather_batching_dims():
     """Gather with operand_batching_dims falls back to conservative.
 
@@ -790,5 +803,6 @@ def test_gather_batching_dims():
         )
 
     result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
-    # Conservative: all outputs depend on all inputs.
+    # TODO(gather): should be a permutation matrix (2/12 nnz).
+    # out[0] = arr[0, 1] = x[1], out[1] = arr[1, 0] = x[3].
     assert result.sum() == result.size

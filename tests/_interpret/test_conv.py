@@ -452,6 +452,7 @@ def test_rhs_dilation():
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_conv_batch_group_count():
     """Conv with batch_group_count > 1 falls back to conservative.
 
@@ -473,7 +474,10 @@ def test_conv_batch_group_count():
         ).flatten()
 
     result = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
-    # Conservative: all outputs depend on all inputs.
+    # TODO(conv_general_dilated): should be block-diagonal (64/576 nnz).
+    # Each batch group's outputs depend only on that group's inputs:
+    # group 0 (batches 0–1) → inputs 0–17, group 1 (batches 2–3) → inputs 18–35.
+    # Within each group, the standard 2×2 conv sparsity applies (4 nnz per output).
     assert result.sum() == result.size
 
 
