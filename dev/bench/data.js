@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771726562592,
+  "lastUpdate": 1771951079818,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -7170,6 +7170,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.002322823161517912",
             "extra": "mean: 39.05916436000041 msec\nrounds: 25"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b973e62bb93c706055194fa8177e37b5e52d3050",
+          "message": "test: increase code coverage to 100% (#67)\n\n* test: push code coverage to 100%\n\nReplace unreachable defensive branches with assertions in\n`_gather`, `_scan`, `_scatter`, and `_commons`.\n\nAdd tests covering:\n- `check_no_index_sets` error via input-dependent conv kernel\n- `batch_group_count > 1` conservative fallback in conv\n- scalar dot product zero-skipping in `dot_general`\n- multi-dim gather with kept dims, 1D coordinates, batching dims,\n  and pattern-mismatch fallbacks\n- const propagation through `reshape` with `dimensions`\n- all-const `select_if_vmap` propagation (Equinox)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: add fallback markers and TODO comments to conservative tests\n\nMark six tests with `@pytest.mark.fallback` and document the true\nsparsity patterns from `jax.jacobian`:\n- `conv_general_dilated` with `batch_group_count > 1` (64/576 nnz)\n- Five `gather` patterns with unrecognized dimension_numbers\n\nAdd corresponding entries to TODO.md (sections 5–6).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: add JAX source permalinks to assertion comments\n\nReplace bare asserts with explicit AssertionError raises and add\npermalink comments to the JAX source where these invariants are\nenforced at trace time.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: fix assertion comments to match actual JAX validation mechanisms\n\nScan: clarify that JAX rejects 0-d arrays via IndexError on shape[0],\nnot an explicit check. Update permalink from L336 to L334.\nScatter: clarify the indirect relationship between JAX's shape validation\nand asdex's flat-index bounds check.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-24T17:37:19+01:00",
+          "tree_id": "611299995948666b40b9a5b701304c8a571c888f",
+          "url": "https://github.com/adrhill/asdex/commit/b973e62bb93c706055194fa8177e37b5e52d3050"
+        },
+        "date": 1771951078626,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 880.9980606850563,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002707396870998843",
+            "extra": "mean: 1.1350762783999873 msec\nrounds: 176"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3347.9863383023753,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000007072497426665018",
+            "extra": "mean: 298.6870013654412 usec\nrounds: 2199"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 59.244768778626465,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00037101548064503705",
+            "extra": "mean: 16.879127400034122 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 104.57113693113632,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003011483525232324",
+            "extra": "mean: 9.562868200032426 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.117895258419367,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013743550095311334",
+            "extra": "mean: 47.35320389475443 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 250.22417689215231,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003395728920455152",
+            "extra": "mean: 3.9964163831818866 msec\nrounds: 214"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 31.23112761516873,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009150282281053453",
+            "extra": "mean: 32.019336999996995 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 27.87412639909137,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007756923707773017",
+            "extra": "mean: 35.875563800004784 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 124.06967799446019,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016842842513783122",
+            "extra": "mean: 8.059987066659838 msec\nrounds: 15"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3330.2806898214485,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000012533514670249688",
+            "extra": "mean: 300.27498974977226 usec\nrounds: 2244"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 24.20928106171649,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001223986733515063",
+            "extra": "mean: 41.30647240001508 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 25.978517783459854,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001002026558603782",
+            "extra": "mean: 38.49334316666386 msec\nrounds: 24"
           }
         ]
       }
