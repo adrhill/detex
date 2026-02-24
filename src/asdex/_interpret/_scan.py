@@ -72,8 +72,9 @@ def prop_scan(
         x_indices = index_sets(deps, x_var)
         x_shape = tuple(getattr(x_var.aval, "shape", ()))
         if len(x_shape) == 0:
-            # JAX enforces this at trace time:
-            # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/control_flow/loops.py#L336
+            # JAX rejects scalar scan inputs at trace time
+            # (0-d arrays fail with IndexError on shape[0] access):
+            # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/control_flow/loops.py#L334
             raise AssertionError("scan xs must have a leading length dim")
         length = x_shape[0]
         slice_numel = len(x_indices) // length
@@ -102,8 +103,9 @@ def prop_scan(
     for outvar, slice_indices in zip(ys, y_slice_outputs, strict=True):
         y_shape = tuple(getattr(outvar.aval, "shape", ()))
         if len(y_shape) == 0:
-            # JAX enforces this at trace time:
-            # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/control_flow/loops.py#L336
+            # JAX rejects scalar scan inputs at trace time
+            # (0-d arrays fail with IndexError on shape[0] access):
+            # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/control_flow/loops.py#L334
             raise AssertionError("scan ys must have a leading length dim")
         length = y_shape[0]
         # Tile: repeat the slice deps for each time step
