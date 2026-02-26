@@ -1187,7 +1187,10 @@
 <h1 id="asdex">asdex<a class="headerlink" href="#asdex" title="Permanent link">&para;</a></h1>
 <p><a href="https://github.com/adrhill/asdex/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/adrhill/asdex/actions/workflows/ci.yml/badge.svg" /></a>
 <a href="https://codecov.io/gh/adrhill/asdex"><img alt="codecov" src="https://codecov.io/gh/adrhill/asdex/graph/badge.svg" /></a>
-<a href="https://adrianhill.de/asdex/dev/bench/"><img alt="Benchmarks" src="https://img.shields.io/badge/benchmarks-view-blue" /></a></p>
+<a href="https://pypi.org/project/asdex/"><img alt="PyPI" src="https://img.shields.io/pypi/v/asdex" /></a>
+<a href="https://doi.org/10.5281/zenodo.18788242"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.18788242.svg" /></a>
+<a href="https://adrianhill.de/asdex/dev/bench/"><img alt="Benchmarks" src="https://img.shields.io/badge/benchmarks-view-blue" /></a>
+<a href="https://github.com/adrhill/asdex/blob/main/CHANGELOG.md"><img alt="Changelog" src="https://img.shields.io/badge/news-changelog-yellow" /></a></p>
 <p><strong>Automatic Sparse Differentiation in JAX.</strong></p>
 <p><code>asdex</code> (pronounced <em>Aztecs</em>) exploits sparsity structure to efficiently compute sparse Jacobians and Hessians.
 It implements a custom <a href="https://docs.jax.dev/en/latest/jaxpr.html">Jaxpr</a> interpreter
@@ -1195,17 +1198,11 @@ that uses <a href="explanation/sparsity-detection/">abstract interpretation</a>
 to detect <a href="explanation/global-sparsity/">global sparsity patterns</a> from the computation graph,
 then uses <a href="explanation/coloring/">graph coloring</a> to minimize the number of AD passes needed.
 Refer to our <a href="https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/"><em>Illustrated Guide to Automatic Sparse Differentiation</em></a> for more information.</p>
-<div class="admonition warning">
-<p class="admonition-title">Alpha Software</p>
-<p><code>asdex</code> is in early development.
-The API may change without notice.
-Use at your own risk.</p>
-</div>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/adrhill/asdex.git
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>asdex
 </code></pre></div>
 <p>Or with <a href="https://docs.astral.sh/uv/">uv</a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>add<span class="w"> </span>git+https://github.com/adrhill/asdex.git
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>add<span class="w"> </span>asdex
 </code></pre></div>
 <h2 id="quick-example">Quick Example<a class="headerlink" href="#quick-example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
