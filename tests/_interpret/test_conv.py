@@ -452,12 +452,10 @@ def test_rhs_dilation():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_conv_batch_group_count():
-    """Conv with batch_group_count > 1 falls back to conservative.
+    """Conv with batch_group_count > 1 is block-diagonal.
 
-    batch_group_count appears mainly in JAX backprop internals.
-    The handler does not yet track per-group dependencies precisely.
+    Each batch group's outputs depend only on that group's inputs.
     """
     input_size = 4 * 1 * 3 * 3  # (N=4, C=1, H=3, W=3)
 
@@ -474,11 +472,8 @@ def test_conv_batch_group_count():
         ).flatten()
 
     result = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
-    # TODO(conv_general_dilated): should be block-diagonal (64/576 nnz).
-    # Each batch group's outputs depend only on that group's inputs:
-    # group 0 (batches 0–1) → inputs 0–17, group 1 (batches 2–3) → inputs 18–35.
-    # Within each group, the standard 2×2 conv sparsity applies (4 nnz per output).
-    assert result.sum() == result.size
+    expected = np.abs(jax.jacobian(f)(jnp.ones(input_size))) > 1e-10
+    np.testing.assert_array_equal(result, expected)
 
 
 @pytest.mark.array_ops

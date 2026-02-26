@@ -9,7 +9,6 @@ from ._commons import (
     IndexSet,
     atom_shape,
     check_no_index_sets,
-    conservative_indices,
     empty_index_set,
     flat_to_coords,
     index_sets,
@@ -29,8 +28,9 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     each output channel group only depends on
     the corresponding input channel group.
 
-    Falls back to conservative for ``batch_group_count > 1``,
-    which mainly appears in JAX backprop internals.
+    When ``batch_group_count > 1`` (mainly in JAX backprop internals),
+    each output batch aggregates multiple input batches
+    within the same batch group.
 
     For 2D conv with kernel size (kH, kW), stride s, and C_in input channels:
         out[n, h, w, c_out] = Σ_{kh, kw, c_in} in[n, h·s + kh, w·s + kw, c_in] · W[...]
@@ -57,11 +57,7 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     out_shape = atom_shape(eqn.outvars[0])
     out_size = numel(out_shape)
 
-    # batch_group_count > 1 mainly appears in JAX backprop internals.
     batch_group_count = eqn.params.get("batch_group_count", 1)
-    if batch_group_count > 1:
-        deps[eqn.outvars[0]] = conservative_indices(lhs_indices, out_size)
-        return
 
     # Get shapes from avals
     lhs_shape = atom_shape(eqn.invars[0])
@@ -109,14 +105,21 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     for out_flat in range(out_size):
         out_coord = flat_to_coords(out_flat, out_strides)
 
-        batch_idx = out_coord[out_batch_dim]
+        out_batch_idx = out_coord[out_batch_dim]
         out_feature_idx = out_coord[out_feature_dim]
         out_spatial_coord = [out_coord[d] for d in out_spatial_dims]
 
         # Only iterate over input channels in the same feature group.
-        group_idx = out_feature_idx // group_size_out
-        in_feature_start = group_idx * group_size_in
+        feature_group_idx = out_feature_idx // group_size_out
+        in_feature_start = feature_group_idx * group_size_in
         in_feature_end = in_feature_start + group_size_in
+
+        # With batch_group_count > 1, output channels are split into G groups
+        # and each group reads from a different input batch.
+        n_out_batches = lhs_shape[lhs_batch_dim] // batch_group_count
+        channels_per_batch_group = n_out_features // batch_group_count
+        batch_group = out_feature_idx // channels_per_batch_group
+        in_batch_idx = out_batch_idx + batch_group * n_out_batches
 
         # Collect dependencies from input
         elem_deps: IndexSet = empty_index_set()
@@ -146,7 +149,7 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
             # For each input feature channel in this group
             for in_feature_idx in range(in_feature_start, in_feature_end):
                 in_coord = [0] * len(lhs_shape)
-                in_coord[lhs_batch_dim] = batch_idx
+                in_coord[lhs_batch_dim] = in_batch_idx
                 in_coord[lhs_feature_dim] = in_feature_idx
                 for i, d in enumerate(lhs_spatial_dims):
                     in_coord[d] = in_spatial_coord[i]
