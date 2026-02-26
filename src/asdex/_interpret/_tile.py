@@ -42,8 +42,8 @@ def prop_tile(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     # Build output coordinates and map back to input via modular arithmetic.
     out_coords = np.indices(out_shape)  # (ndim, *out_shape)
     in_coords = tuple(out_coords[d] % in_shape[d] for d in range(len(in_shape)))
-    permutation_map = np.ravel_multi_index(in_coords, in_shape).ravel()
+    flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)
+    deps[eqn.outvars[0]] = permute_indices(in_indices, flat_map)
 
     propagate_const_unary(eqn, const_vals, partial(np.tile, reps=reps))

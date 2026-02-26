@@ -207,8 +207,8 @@ def _try_single_dim_gather(
         for out_ax in offset_dims:
             perm[out_ax] = next(kept_iter)
 
-    permutation_map = selected.transpose(perm).flatten()
-    deps[eqn.outvars[0]] = permute_indices(operand_indices, permutation_map)
+    flat_map = selected.transpose(perm).flatten()
+    deps[eqn.outvars[0]] = permute_indices(operand_indices, flat_map)
     return True
 
 
@@ -310,10 +310,10 @@ def _try_multi_dim_gather(
                 perm[target] = src
             selected = selected.transpose(perm)
 
-        permutation_map = selected.flatten()
+        flat_map = selected.flatten()
     else:
         # All dims collapsed — output is just a selection of scalar elements.
-        permutation_map = flat_operand_positions.flatten()
+        flat_map = flat_operand_positions.flatten()
 
-    deps[eqn.outvars[0]] = permute_indices(operand_indices, permutation_map)
+    deps[eqn.outvars[0]] = permute_indices(operand_indices, flat_map)
     return True

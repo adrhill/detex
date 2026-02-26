@@ -75,6 +75,6 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> N
         out_coords[broadcast_dims[i]] if in_shape[i] > 1 else 0
         for i in range(len(in_shape))
     )
-    permutation_map = np.ravel_multi_index(in_coords, in_shape).ravel()
+    flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    deps[out_var] = permute_indices(in_indices, permutation_map)
+    deps[out_var] = permute_indices(in_indices, flat_map)
