@@ -70,6 +70,7 @@ def rosenbrock(x):
 # Heat Equation benchmarks (Jacobian)
 
 
+@pytest.mark.slow
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="heat_equation")
 def test_heat_detection(benchmark):

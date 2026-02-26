@@ -352,6 +352,7 @@ def _make_vit_fn():
 # Tests
 
 
+@pytest.mark.slow
 @pytest.mark.jacobian
 @pytest.mark.bug
 def test_resnet_sparsity_detection():
@@ -367,6 +368,7 @@ def test_resnet_sparsity_detection():
         jacobian_sparsity(resnet_fn, input_shape=input_shape)
 
 
+@pytest.mark.slow
 @pytest.mark.jacobian
 def test_vit_sparsity_detection():
     """Jacobian sparsity detection traces through a ViT without errors."""

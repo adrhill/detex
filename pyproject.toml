@@ -72,7 +72,7 @@ build-backend = "hatchling.build"
 packages = ["src/asdex"]
 
 [tool.pytest.ini_options]
-addopts = "--tb=short -q --no-header"  # keep output concise for coding agents
+addopts = "--tb=short -q --no-header -m 'not (slow or benchmark)'"
 testpaths = ["tests"]
 markers = [
     "elementwise: simple element-wise operations",
@@ -85,6 +85,7 @@ markers = [
     "hessian: Hessian sparsity detection and computation",
     "fallback: documents conservative fallback behavior",
     "bug: documents known bugs",
+    "slow: tests that take more than 1 second",
 ]
 
 [tool.ruff]
