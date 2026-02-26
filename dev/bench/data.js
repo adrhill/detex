@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772121572974,
+  "lastUpdate": 1772125767328,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -7818,6 +7818,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0002589483007111055",
             "extra": "mean: 39.644333115384654 msec\nrounds: 26"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3fdfe29c0f5ad72158a4945444b83285d2705068",
+          "message": "fix(interpret): handle `batch_group_count > 1` in conv handler (#73)\n\n* fix(interpret): handle `batch_group_count > 1` in conv handler\n\nRemove conservative fallback for `batch_group_count > 1`.\nEach output channel group now correctly maps to its corresponding\ninput batch, producing a precise block-diagonal pattern (64/576 nnz)\ninstead of the previous all-ones conservative result.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(conv): add batch_group_count edge case tests\n\nMulti-channel inputs (C_in=2, batch_group_count=3) and degenerate\nbatch_group_count=N with manually constructed expected patterns.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(conv): clean up batch_group_count implementation\n\nHoist `n_out_batches` and `channels_per_batch_group` out of the\nper-element loop, fix imprecise comments with the exact formula\n`in_batch = out_batch + group * n_out_batches`, document mutual\nexclusivity with `feature_group_count`, and add a test confirming\n`batch_group_count=1` is identity.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-26T18:08:52+01:00",
+          "tree_id": "fe356bf77e478536a59fdf00e122120bbb18a560",
+          "url": "https://github.com/adrhill/asdex/commit/3fdfe29c0f5ad72158a4945444b83285d2705068"
+        },
+        "date": 1772125766598,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 825.8267720314967,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0035606939320637202",
+            "extra": "mean: 1.2109077034885234 msec\nrounds: 172"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3335.6967744158164,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001019626954744871",
+            "extra": "mean: 299.78744101376867 usec\nrounds: 2170"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 60.55016656381888,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005932107805229442",
+            "extra": "mean: 16.515231200000358 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 104.47971400977589,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003419759978114754",
+            "extra": "mean: 9.571235999999317 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 20.064966369231325,
+            "unit": "iter/sec",
+            "range": "stddev: 0.016487749607768096",
+            "extra": "mean: 49.83810994736839 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 249.78721120016797,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003084018833405464",
+            "extra": "mean: 4.003407521126636 msec\nrounds: 213"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 30.807492917096106,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0013430837025436772",
+            "extra": "mean: 32.459635799999376 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 28.540947491870675,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006169419905952192",
+            "extra": "mean: 35.03737920000134 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 102.34690502851964,
+            "unit": "iter/sec",
+            "range": "stddev: 0.008949646711453584",
+            "extra": "mean: 9.770691157894257 msec\nrounds: 57"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3333.3267564558914,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000012769840725856114",
+            "extra": "mean: 300.00059192013765 usec\nrounds: 2203"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 24.85963689666262,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006777380128637502",
+            "extra": "mean: 40.225849000000835 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 25.552205820801074,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001643212977511268",
+            "extra": "mean: 39.135564538461026 msec\nrounds: 26"
           }
         ]
       }
