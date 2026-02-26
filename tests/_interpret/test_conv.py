@@ -452,6 +452,39 @@ def test_rhs_dilation():
 
 
 @pytest.mark.array_ops
+def test_conv_batch_group_count_one_is_identity():
+    """Explicit batch_group_count=1 produces the same result as omitting it."""
+    input_size = 2 * 1 * 3 * 3  # (N=2, C=1, H=3, W=3)
+
+    def with_bgc(x):
+        lhs = x.reshape(2, 1, 3, 3)
+        rhs = jnp.ones((1, 1, 2, 2))
+        return lax.conv_general_dilated(
+            lhs,
+            rhs,
+            window_strides=(1, 1),
+            padding="VALID",
+            dimension_numbers=("NCHW", "OIHW", "NCHW"),
+            batch_group_count=1,
+        ).flatten()
+
+    def without_bgc(x):
+        lhs = x.reshape(2, 1, 3, 3)
+        rhs = jnp.ones((1, 1, 2, 2))
+        return lax.conv_general_dilated(
+            lhs,
+            rhs,
+            window_strides=(1, 1),
+            padding="VALID",
+            dimension_numbers=("NCHW", "OIHW", "NCHW"),
+        ).flatten()
+
+    sp_with = jacobian_sparsity(with_bgc, input_shape=input_size)
+    sp_without = jacobian_sparsity(without_bgc, input_shape=input_size)
+    np.testing.assert_array_equal(sp_with.todense(), sp_without.todense())
+
+
+@pytest.mark.array_ops
 def test_conv_batch_group_count():
     """Conv with batch_group_count > 1 is block-diagonal.
 
@@ -484,11 +517,8 @@ def test_conv_batch_group_count_multi_channel():
     Output (2,6,2,2): each output feature pair reads from a different
     input batch pair, with full channel mixing within each pair.
 
-    Batch group mapping (output feature → input batch offset):
-        features 0-1 -> group 0 -> input batches {b+0}
-        features 2-3 -> group 1 -> input batches {b+2}
-        features 4-5 -> group 2 -> input batches {b+4}
-    where b is the output batch index.
+    Batch group mapping: in_batch = out_batch + group * 2,
+    where group = out_feature // 2 and n_out_batches = 6 // 3 = 2.
     """
     input_size = 6 * 2 * 4 * 4  # (N=6, C_in=2, H=4, W=4)
 

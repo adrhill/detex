@@ -85,6 +85,7 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     rhs_dilation = eqn.params.get("rhs_dilation", (1,) * n_spatial)
     padding = eqn.params.get("padding", ((0, 0),) * n_spatial)
     feature_group_count = eqn.params.get("feature_group_count", 1)
+    # JAX requires at most one of these to be > 1 at a time.
 
     lhs_strides = row_strides(lhs_shape)
     out_strides = row_strides(out_shape)
@@ -100,6 +101,12 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     group_size_in = n_in_features // feature_group_count
     group_size_out = n_out_features // feature_group_count
 
+    # With batch_group_count > 1, output features are split into G groups
+    # and each group reads from a shifted input batch:
+    # in_batch = out_batch + group * n_out_batches.
+    n_out_batches = lhs_shape[lhs_batch_dim] // batch_group_count
+    channels_per_batch_group = n_out_features // batch_group_count
+
     out_indices: list[IndexSet] = []
 
     for out_flat in range(out_size):
@@ -114,10 +121,6 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
         in_feature_start = feature_group_idx * group_size_in
         in_feature_end = in_feature_start + group_size_in
 
-        # With batch_group_count > 1, output channels are split into G groups
-        # and each group reads from a different input batch.
-        n_out_batches = lhs_shape[lhs_batch_dim] // batch_group_count
-        channels_per_batch_group = n_out_features // batch_group_count
         batch_group = out_feature_idx // channels_per_batch_group
         in_batch_idx = out_batch_idx + batch_group * n_out_batches
 
