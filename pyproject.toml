@@ -22,7 +22,7 @@ keywords = [
     "scientific-computing",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -44,6 +44,8 @@ Documentation = "https://adrianhill.de/asdex"
 Benchmarks = "https://adrianhill.de/asdex/benchmarks"
 Repository = "https://github.com/adrhill/asdex"
 Issues = "https://github.com/adrhill/asdex/issues"
+PyPI = "https://pypi.org/project/asdex/"
+Zenodo = "https://doi.org/10.5281/zenodo.18788242"
 
 [dependency-groups]
 dev = [

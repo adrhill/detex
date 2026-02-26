@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/adrhill/asdex/actions/workflows/ci.yml/badge.svg)](https://github.com/adrhill/asdex/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/adrhill/asdex/graph/badge.svg)](https://codecov.io/gh/adrhill/asdex)
+[![PyPI](https://img.shields.io/pypi/v/asdex)](https://pypi.org/project/asdex/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18788242.svg)](https://doi.org/10.5281/zenodo.18788242)
 [![Benchmarks](https://img.shields.io/badge/benchmarks-view-blue)](https://adrianhill.de/asdex/dev/bench/)
 
 **Automatic Sparse Differentiation in JAX.**
@@ -13,22 +15,16 @@ to detect [global sparsity patterns](explanation/global-sparsity.md) from the co
 then uses [graph coloring](explanation/coloring.md) to minimize the number of AD passes needed.
 Refer to our [*Illustrated Guide to Automatic Sparse Differentiation*](https://iclr-blogposts.github.io/2025/blog/sparse-autodiff/) for more information.
 
-!!! warning "Alpha Software"
-
-    `asdex` is in early development.
-    The API may change without notice.
-    Use at your own risk.
-
 ## Installation
 
 ```bash
-pip install git+https://github.com/adrhill/asdex.git
+pip install asdex
 ```
 
 Or with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv add git+https://github.com/adrhill/asdex.git
+uv add asdex
 ```
 
 ## Quick Example
