@@ -267,10 +267,10 @@ def _compute_hvps(
     _assert_hessian_mode(coloring.mode)
     match coloring.mode:
         case "fwd_over_rev":
+            _, hvp_fn = jax.linearize(jax.grad(f), x)
 
             def single_hvp(v: jax.Array) -> jax.Array:
-                _, hvp = jax.jvp(jax.grad(f), (x,), (v.reshape(x.shape),))
-                return hvp.ravel()
+                return hvp_fn(v.reshape(x.shape)).ravel()
 
         case "rev_over_fwd":
 
@@ -280,11 +280,10 @@ def _compute_hvps(
                 ).ravel()
 
         case "rev_over_rev":
+            _, hvp_fn = jax.vjp(jax.grad(f), x)
 
             def single_hvp(v: jax.Array) -> jax.Array:
-                return jax.grad(lambda y: jnp.vdot(jax.grad(f)(y), v.reshape(x.shape)))(
-                    x
-                ).ravel()
+                return hvp_fn(v.reshape(x.shape))[0].ravel()
 
         case _ as unreachable:
             assert_never(unreachable)  # type: ignore[type-assertion-failure]
