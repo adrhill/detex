@@ -195,6 +195,18 @@ def position_map(shape: Sequence[int]) -> np.ndarray:
     return np.arange(numel(shape)).reshape(shape)
 
 
+def permute_indices(
+    in_indices: list[IndexSet], flat_map: Sequence[int] | np.ndarray
+) -> list[IndexSet]:
+    """Build output index sets by looking up input positions from a flat map.
+
+    Each output element copies its index set from ``in_indices[flat_map[i]]``.
+    Used by handlers that already have a precomputed flat integer map
+    (broadcast, tile, gather).
+    """
+    return [in_indices[j] for j in flat_map]
+
+
 def transform_indices(
     in_indices: list[IndexSet],
     in_shape: Sequence[int],
@@ -210,11 +222,11 @@ def transform_indices(
     Each output element copies its index set from the input position
     determined by the transformed position map.
     This is the common pattern for permutation-like ops
-    (transpose, rev, slice, reshape, split, gather, dynamic_slice)
+    (transpose, rev, slice, reshape, split, dynamic_slice)
     where each output reads exactly one input element.
     """
     flat_map = transform(position_map(in_shape)).ravel()
-    return [in_indices[j] for j in flat_map]
+    return permute_indices(in_indices, flat_map)
 
 
 # Coordinate helpers

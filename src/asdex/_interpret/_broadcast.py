@@ -10,6 +10,7 @@ from ._commons import (
     atom_shape,
     index_sets,
     numel,
+    permute_indices,
 )
 
 
@@ -76,4 +77,4 @@ def prop_broadcast_in_dim(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> N
     )
     flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    deps[out_var] = [in_indices[j] for j in flat_map]
+    deps[out_var] = permute_indices(in_indices, flat_map)

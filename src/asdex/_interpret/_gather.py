@@ -12,6 +12,7 @@ from ._commons import (
     check_no_index_sets,
     conservative_indices,
     index_sets,
+    permute_indices,
     position_map,
 )
 
@@ -207,7 +208,7 @@ def _try_single_dim_gather(
             perm[out_ax] = next(kept_iter)
 
     flat_map = selected.transpose(perm).flatten()
-    deps[eqn.outvars[0]] = [operand_indices[j] for j in flat_map]
+    deps[eqn.outvars[0]] = permute_indices(operand_indices, flat_map)
     return True
 
 
@@ -314,5 +315,5 @@ def _try_multi_dim_gather(
         # All dims collapsed — output is just a selection of scalar elements.
         flat_map = flat_operand_positions.flatten()
 
-    deps[eqn.outvars[0]] = [operand_indices[j] for j in flat_map]
+    deps[eqn.outvars[0]] = permute_indices(operand_indices, flat_map)
     return True

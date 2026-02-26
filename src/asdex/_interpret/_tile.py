@@ -10,6 +10,7 @@ from ._commons import (
     Deps,
     atom_shape,
     index_sets,
+    permute_indices,
     propagate_const_unary,
 )
 
@@ -43,6 +44,6 @@ def prop_tile(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     in_coords = tuple(out_coords[d] % in_shape[d] for d in range(len(in_shape)))
     flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    deps[eqn.outvars[0]] = [in_indices[j] for j in flat_map]
+    deps[eqn.outvars[0]] = permute_indices(in_indices, flat_map)
 
     propagate_const_unary(eqn, const_vals, partial(np.tile, reps=reps))

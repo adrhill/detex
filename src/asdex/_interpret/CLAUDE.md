@@ -52,10 +52,15 @@ not every handler.
   builds an array where each element holds its own flat position.
   Applying operations (transpose, slice, flip) to this array
   reveals which input position each output position reads from.
+- **`permute_indices(in_indices, flat_map)`** —
+  builds output index sets by looking up ``in_indices[flat_map[i]]``
+  for each output position.
+  Used by handlers that already have a precomputed flat integer map
+  (broadcast, tile, gather).
 - **`transform_indices(in_indices, in_shape, transform)`** —
   builds output index sets by applying ``transform`` to a position map of ``in_shape``.
   The transform function receives an ndarray and returns an ndarray;
-  the result is raveled and used to look up index sets from ``in_indices``.
+  the result is raveled and passed to ``permute_indices``.
   Used by handlers where each output reads exactly one input element
   (transpose, rev, slice, reshape, split, dynamic_slice).
 - **`fixed_point_loop(iterate_fn, carry, n_carry)`** —
