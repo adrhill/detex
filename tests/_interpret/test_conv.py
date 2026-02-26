@@ -477,6 +477,89 @@ def test_conv_batch_group_count():
 
 
 @pytest.mark.array_ops
+def test_conv_batch_group_count_multi_channel():
+    """Conv with batch_group_count > 1 and multiple input channels.
+
+    Input (6,2,4,4) with batch_group_count=3 and kernel (6,2,3,3).
+    Output (2,6,2,2): each output feature pair reads from a different
+    input batch pair, with full channel mixing within each pair.
+
+    Batch group mapping (output feature → input batch offset):
+        features 0-1 -> group 0 -> input batches {b+0}
+        features 2-3 -> group 1 -> input batches {b+2}
+        features 4-5 -> group 2 -> input batches {b+4}
+    where b is the output batch index.
+    """
+    input_size = 6 * 2 * 4 * 4  # (N=6, C_in=2, H=4, W=4)
+
+    def f(x):
+        return lax.conv_general_dilated(
+            x.reshape(6, 2, 4, 4),
+            jnp.ones((6, 2, 3, 3)),
+            window_strides=(1, 1),
+            padding="VALID",
+            dimension_numbers=("NCHW", "OIHW", "NCHW"),
+            batch_group_count=3,
+        ).flatten()
+
+    # Spatial block: each of 2×2 output positions reads a 3×3 window
+    # across both input channels (2 channels × 4×4 = 32 elements per batch).
+    spatial_block = np.zeros((4, 32), dtype=int)
+    for h, w in np.ndindex(2, 2):
+        for ch, kh, kw in np.ndindex(2, 3, 3):
+            spatial_block[h * 2 + w, ch * 16 + (h + kh) * 4 + (w + kw)] = 1
+
+    # Place blocks: out (n, c, :, :) reads from input batch n + (c // 2) * 2.
+    expected = np.zeros((48, 192), dtype=int)
+    for n in range(2):
+        for c in range(6):
+            in_batch = n + (c // 2) * 2
+            out_start = n * 24 + c * 4
+            in_start = in_batch * 32
+            expected[out_start : out_start + 4, in_start : in_start + 32] = (
+                spatial_block
+            )
+
+    result = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_conv_batch_group_count_equals_n():
+    """Conv with batch_group_count = N (degenerate: every batch is its own group).
+
+    Input (6,1,3,3) with batch_group_count=6 and kernel (6,1,2,2).
+    Output (1,6,2,2): each output feature reads from exactly one input batch.
+    The pattern is block-diagonal with 6 identical 2x2-conv-on-3x3 blocks.
+    """
+    input_size = 6 * 1 * 3 * 3  # (N=6, C_in=1, H=3, W=3)
+
+    def f(x):
+        return lax.conv_general_dilated(
+            x.reshape(6, 1, 3, 3),
+            jnp.ones((6, 1, 2, 2)),
+            window_strides=(1, 1),
+            padding="VALID",
+            dimension_numbers=("NCHW", "OIHW", "NCHW"),
+            batch_group_count=6,
+        ).flatten()
+
+    # Single block: 2×2 conv with 2×2 kernel on 3×3 input.
+    block = np.zeros((4, 9), dtype=int)
+    for h, w in np.ndindex(2, 2):
+        for kh, kw in np.ndindex(2, 2):
+            block[h * 2 + w, (h + kh) * 3 + (w + kw)] = 1
+
+    # 6 identical blocks along the diagonal (one per batch/feature).
+    expected = np.zeros((24, 54), dtype=int)
+    for c in range(6):
+        expected[c * 4 : (c + 1) * 4, c * 9 : (c + 1) * 9] = block
+
+    result = jacobian_sparsity(f, input_shape=input_size).todense().astype(int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
 def test_conv_input_dependent_kernel_raises():
     """Conv with a kernel derived from the function input raises ValueError.
 
