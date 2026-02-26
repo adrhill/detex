@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772107535686,
+  "lastUpdate": 1772114582622,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -7386,6 +7386,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0017733301361524815",
             "extra": "mean: 43.120512772727764 msec\nrounds: 22"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "59bf84fe5bccb6d09ac75fabff36fcc69877b257",
+          "message": "refactor(interpret): add `transform_indices` (#69)\n\n* refactor: replace `permute_indices` with `transform_indices`\n\nThe `position_map → transform → .ravel() → permute_indices()` pipeline\nwas repeated across handler files. `transform_indices` absorbs this into\none call, eliminating the `.ravel()` footgun and reducing boilerplate.\n\nCall sites using `np.ravel_multi_index` (tile, broadcast, gather,\ndynamic_update_slice) inline the one-liner instead.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor: restore `permute_indices` alongside `transform_indices`\n\nKeep both utilities for their natural use cases:\n- `permute_indices` for handlers with a precomputed flat map\n  (broadcast, tile, gather)\n- `transform_indices` for handlers that transform an ndarray\n  (transpose, rev, slice, reshape, split, dynamic_slice)\n\n`transform_indices` now delegates to `permute_indices` internally,\neliminating raw `[in_indices[j] for j in flat_map]` list comprehensions.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-02-26T15:02:23+01:00",
+          "tree_id": "2c23e1d05d4effdb5fb4e249f4005ced52c07516",
+          "url": "https://github.com/adrhill/asdex/commit/59bf84fe5bccb6d09ac75fabff36fcc69877b257"
+        },
+        "date": 1772114581224,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 778.0144825479838,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004199208434481189",
+            "extra": "mean: 1.2853231172831354 msec\nrounds: 162"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3259.2969696735904,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000370590470623779",
+            "extra": "mean: 306.81463189902183 usec\nrounds: 2138"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 57.26647943733294,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005869992517597614",
+            "extra": "mean: 17.462222400004634 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 103.72390389559858,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00019792618144412572",
+            "extra": "mean: 9.640979199997446 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 20.324084296831316,
+            "unit": "iter/sec",
+            "range": "stddev: 0.018308252891349738",
+            "extra": "mean: 49.20270873684124 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 245.42861289509926,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001378404306884008",
+            "extra": "mean: 4.074504550239293 msec\nrounds: 209"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 29.411578720898948,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011102177545178544",
+            "extra": "mean: 34.00021500000037 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 26.191269287054826,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009344920682729239",
+            "extra": "mean: 38.18066199999919 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 93.17280563044542,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012497141794383942",
+            "extra": "mean: 10.732745388888846 msec\nrounds: 54"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3267.477486401105,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001510803659360926",
+            "extra": "mean: 306.0464851439356 usec\nrounds: 2154"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 23.101643790533476,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008230525480828906",
+            "extra": "mean: 43.2869629999999 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 22.825949992927328,
+            "unit": "iter/sec",
+            "range": "stddev: 0.003140215051811267",
+            "extra": "mean: 43.80978668181838 msec\nrounds: 22"
           }
         ]
       }
