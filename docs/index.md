@@ -5,6 +5,7 @@
 [![PyPI](https://img.shields.io/pypi/v/asdex)](https://pypi.org/project/asdex/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18788242.svg)](https://doi.org/10.5281/zenodo.18788242)
 [![Benchmarks](https://img.shields.io/badge/benchmarks-view-blue)](https://adrianhill.de/asdex/dev/bench/)
+[![Changelog](https://img.shields.io/badge/news-changelog-yellow)](https://github.com/adrhill/asdex/blob/main/CHANGELOG.md)
 
 **Automatic Sparse Differentiation in JAX.**
 
