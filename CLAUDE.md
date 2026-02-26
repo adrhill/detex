@@ -90,6 +90,22 @@ Precompute: hessian_coloring(f, shape) = detect + color_symmetric
 Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for all commit messages (e.g. `feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
 For breaking changes, add `!` after the type (e.g. `feat!:`).
 
+## Releases
+
+When preparing a release:
+
+1. Update `version` in `pyproject.toml`
+2. Add a new section to `CHANGELOG.md` following the existing badge format
+3. Tag the release with `git tag vX.Y.Z`
+4. Push the tag with `git push --tags` — this triggers the PyPI publish workflow
+5. Create a GitHub release with `gh release create vX.Y.Z --title "vX.Y.Z" --notes-file -`
+   using the changelog entry as the body
+
+Determine the version bump from the commit history using semver:
+`feat!:` → MAJOR, `feat:` → MINOR, `fix:` → PATCH.
+Map commit types to changelog badge types: `feat:` → `badge-feature`, `fix:` → `badge-bugfix`,
+`feat!:` / `fix!:` → `badge-breaking`, etc. Each entry links to the relevant PR.
+
 ## Design philosophy
 
 When writing new code, adhere to these design principles:
