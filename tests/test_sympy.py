@@ -309,6 +309,7 @@ class TestSympyComparison:
         for seed in range(5):
             self._run_comparison(n_inputs=8, n_outputs=2, max_depth=2, seed=seed)
 
+    @pytest.mark.slow
     def test_wide_outputs(self):
         """Test with many output components."""
         for seed in range(5):
@@ -502,11 +503,13 @@ class TestHessianSympyComparison:
         for seed in range(10):
             self._run_comparison(n_inputs=3, max_depth=1, seed=seed)
 
+    @pytest.mark.slow
     def test_medium_expressions(self):
         """Test medium complexity expressions with depth 2."""
         for seed in range(10):
             self._run_comparison(n_inputs=4, max_depth=2, seed=seed)
 
+    @pytest.mark.slow
     def test_wide_inputs(self):
         """Test with many input variables."""
         for seed in range(5):

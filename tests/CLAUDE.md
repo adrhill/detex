@@ -14,7 +14,7 @@ Always run linting and type checking before tests:
 uv run ruff check --fix .  # lint + auto-fix
 uv run ruff format .       # format
 uv run ty check            # type check
-uv run pytest              # run tests
+uv run pytest              # run tests (skips slow and benchmark by default: we only run these in CI)
 ```
 
 ## Markers
@@ -33,10 +33,12 @@ Use markers to run subsets of tests:
 | `hessian` | Hessian sparsity detection and computation |
 | `fallback` | Documents conservative fallback behavior (TODO) |
 | `bug` | Documents known bugs |
+| `slow` | Tests that take more than 1 second |
 
 ```bash
 uv run pytest -m fallback        # Run only fallback tests
 uv run pytest -m "not fallback"  # Skip fallback tests
+uv run pytest -m "not slow"     # Skip slow tests
 uv run pytest -m coloring        # Run only coloring tests
 uv run pytest -m jacobian        # Run only sparse Jacobian tests
 uv run pytest -m hessian         # Run only Hessian tests

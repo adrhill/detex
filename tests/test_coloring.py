@@ -971,6 +971,7 @@ def test_str_row_contains_downarrow():
 # hessian with coloring tests
 
 
+@pytest.mark.slow
 @pytest.mark.hessian
 def test_hessian_with_coloring():
     """Hessian works with a pre-computed ColoredPattern."""
@@ -1039,6 +1040,7 @@ def test_color_empty_pattern():
     assert len(result.colors) == 0
 
 
+@pytest.mark.slow
 @pytest.mark.hessian
 def test_hessian_star_decompression_non_unique_branch():
     """Star decompression uses fallback when a color is not unique in a column.

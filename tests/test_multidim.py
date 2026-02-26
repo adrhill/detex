@@ -269,6 +269,7 @@ def test_lenet_sparsity_detection():
     assert np.all(dense.sum(axis=1) <= max_deps)
 
 
+@pytest.mark.slow
 @pytest.mark.jacobian
 def test_lenet_jacobian_values():
     """Sparse Jacobian of LeNet matches dense jax.jacobian."""
