@@ -10,9 +10,8 @@ from ._commons import (
     Deps,
     atom_shape,
     index_sets,
-    permute_indices,
-    position_map,
     propagate_const_unary,
+    transform_indices,
 )
 
 
@@ -40,8 +39,8 @@ def prop_transpose(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     in_shape = atom_shape(eqn.invars[0])
     permutation = eqn.params["permutation"]
 
-    permutation_map = position_map(in_shape).transpose(permutation).ravel()
-
-    deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)
+    deps[eqn.outvars[0]] = transform_indices(
+        in_indices, in_shape, lambda p: p.transpose(permutation)
+    )
 
     propagate_const_unary(eqn, const_vals, partial(np.transpose, axes=permutation))

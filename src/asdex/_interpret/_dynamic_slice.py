@@ -13,7 +13,7 @@ from ._commons import (
     conservative_indices,
     index_sets,
     numel,
-    permute_indices,
+    transform_indices,
 )
 
 
@@ -66,13 +66,9 @@ def prop_dynamic_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None
         deps[eqn.outvars[0]] = conservative_indices(in_indices, numel(slice_sizes))
         return
 
-    # Build flat index map: for each output element, which input element it reads
     in_shape = atom_shape(operand)
-    out_coords = np.indices(tuple(slice_sizes))
-    in_coords = tuple(s + out_coords[d] for d, s in enumerate(starts))
-    permutation_map = np.ravel_multi_index(in_coords, in_shape).ravel()
-
-    deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)
+    slices = tuple(slice(s, s + sz) for s, sz in zip(starts, slice_sizes, strict=True))
+    deps[eqn.outvars[0]] = transform_indices(in_indices, in_shape, lambda p: p[slices])
 
 
 def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -120,9 +116,9 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
     # Map each update element to its flat position in the operand
     upd_coords = np.indices(upd_shape)
     op_coords = tuple(s + upd_coords[d] for d, s in enumerate(starts))
-    permutation_map = np.ravel_multi_index(op_coords, operand_shape).ravel()
+    flat_map = np.ravel_multi_index(op_coords, operand_shape).ravel()
 
-    for upd_flat, op_flat in enumerate(permutation_map):
+    for upd_flat, op_flat in enumerate(flat_map):
         out_indices[op_flat] = upd_indices[upd_flat]
 
     deps[eqn.outvars[0]] = out_indices

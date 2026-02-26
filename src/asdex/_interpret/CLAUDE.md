@@ -42,9 +42,7 @@ not every handler.
 - `in1_val` / `in2_val`: const values for binary inputs.
   Use descriptive prefixes when roles differ:
   `lhs_val` / `rhs_val` (dot_general), `pred_val` / `which_val` (select), etc.
-- `permutation_map`: the flat integer array passed to `permute_indices()`
-- `in_position_map`: when a `position_map()` result is stored
-  (e.g., reused across loop iterations in `_split.py`)
+- `flat_map`: a flat integer array mapping output positions to input positions
 
 **Docstrings** — avoid the term "deps"; prefer "index sets" or "input index sets".
 
@@ -54,10 +52,12 @@ not every handler.
   builds an array where each element holds its own flat position.
   Applying operations (transpose, slice, flip) to this array
   reveals which input position each output position reads from.
-- **`permute_indices(in_indices, permutation_map)`** —
-  builds output index sets by sharing references from input positions according to a map.
+- **`transform_indices(in_indices, in_shape, transform)`** —
+  builds output index sets by applying ``transform`` to a position map of ``in_shape``.
+  The transform function receives an ndarray and returns an ndarray;
+  the result is raveled and used to look up index sets from ``in_indices``.
   Used by handlers where each output reads exactly one input element
-  (transpose, rev, slice, reshape, broadcast, split, tile, gather, dynamic_slice).
+  (transpose, rev, slice, reshape, split, dynamic_slice).
 - **`fixed_point_loop(iterate_fn, carry, n_carry)`** —
   runs a body function on carry index sets until they stabilize.
   Used by `while_loop` and `scan`.

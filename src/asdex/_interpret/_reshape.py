@@ -9,9 +9,8 @@ from ._commons import (
     atom_shape,
     index_sets,
     numel,
-    permute_indices,
-    position_map,
     propagate_const_unary,
+    transform_indices,
 )
 
 
@@ -58,8 +57,9 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         # Build the flat index mapping: position map transposed then raveled
         # tells us which original flat index each output position reads.
         in_shape = atom_shape(eqn.invars[0])
-        permutation_map = position_map(in_shape).transpose(dimensions).ravel()
-        deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)
+        deps[eqn.outvars[0]] = transform_indices(
+            in_indices, in_shape, lambda p: p.transpose(dimensions)
+        )
     else:
         deps[eqn.outvars[0]] = in_indices
 

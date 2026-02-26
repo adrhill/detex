@@ -3,13 +3,7 @@
 import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import (
-    Deps,
-    atom_shape,
-    index_sets,
-    permute_indices,
-    position_map,
-)
+from ._commons import Deps, atom_shape, index_sets, transform_indices
 
 
 def prop_rev(eqn: JaxprEqn, deps: Deps) -> None:
@@ -36,6 +30,6 @@ def prop_rev(eqn: JaxprEqn, deps: Deps) -> None:
     in_shape = atom_shape(eqn.invars[0])
     dimensions = eqn.params["dimensions"]
 
-    permutation_map = np.flip(position_map(in_shape), axis=dimensions).ravel()
-
-    deps[eqn.outvars[0]] = permute_indices(in_indices, permutation_map)
+    deps[eqn.outvars[0]] = transform_indices(
+        in_indices, in_shape, lambda p: np.flip(p, axis=dimensions)
+    )
