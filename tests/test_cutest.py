@@ -14,10 +14,9 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import sif2jax
 
-sif2jax = pytest.importorskip("sif2jax")
-
-import asdex  # noqa: E402
+import asdex
 
 FIXTURE_DIR = Path(__file__).parent / "cutest_fixtures"
 
