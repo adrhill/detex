@@ -56,6 +56,7 @@ dev = [
     "pytest-benchmark>=5.0.0",
     "pytest-cov>=6.0.0",
     "ruff>=0.9.0",
+    "sif2jax>=0.0.1",
     "sympy>=1.13.0",
     "ty>=0.0.1a6",
 ]
@@ -74,7 +75,7 @@ build-backend = "hatchling.build"
 packages = ["src/asdex"]
 
 [tool.pytest.ini_options]
-addopts = "--tb=short -q --no-header -m 'not (slow or benchmark)'"
+addopts = "--tb=short -q --no-header -m 'not (slow or benchmark or cutest)'"
 testpaths = ["tests"]
 filterwarnings = [
     "ignore:Setting `jax_pmap_shmap_merge`:DeprecationWarning",
@@ -91,6 +92,7 @@ markers = [
     "fallback: documents conservative fallback behavior",
     "bug: documents known bugs",
     "slow: tests that take more than 1 second",
+    "cutest: CUTEst benchmark problem tests (requires sif2jax)",
 ]
 
 [tool.ruff]

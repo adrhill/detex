@@ -34,6 +34,7 @@ Use markers to run subsets of tests:
 | `fallback` | Documents conservative fallback behavior (TODO) |
 | `bug` | Documents known bugs |
 | `slow` | Tests that take more than 1 second |
+| `cutest` | CUTEst benchmark problem tests (requires sif2jax) |
 
 ```bash
 uv run pytest -m fallback        # Run only fallback tests
