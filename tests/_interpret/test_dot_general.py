@@ -628,6 +628,46 @@ def test_elementwise_matmul_elementwise_chain():
 
 
 @pytest.mark.array_ops
+def test_scalar_constant_times_vector():
+    """Scalar constant dot vector via dot_general with no contracting dims.
+
+    ``jnp.dot(scalar, vector)`` lowers to ``dot_general`` with
+    ``dimension_numbers=(([], []), ([], []))``.
+    The scalar operand has shape ``()`` so ``ravel_multi_index`` returns
+    a scalar index that must be broadcast to match the output size.
+    """
+
+    def f(x):
+        return jnp.dot(jnp.array(2.0), x)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # out[i] = 2.0 * x[i], so the Jacobian is diagonal.
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_hilbert_matrix_pattern():
+    """Hilbert-like pattern: sum of c[i,j] * x[i] * x[j].
+
+    This is the pattern that triggers the bug in HILBERTA:
+    constant-folded coefficients are scalar-broadcast during dot_general.
+    """
+
+    def f(x):
+        n = x.shape[0]
+        # Build Hilbert matrix coefficients.
+        i = jnp.arange(1, n + 1, dtype=x.dtype)
+        H = 1.0 / (i[:, None] + i[None, :] - 1.0)
+        return x @ H @ x
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    # Scalar output depends on all inputs.
+    expected = np.ones((1, 4), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
 def test_scalar_dot_zero_skipping():
     """Scalar dot product skips terms where a factor is a known zero.
 

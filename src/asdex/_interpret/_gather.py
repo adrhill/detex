@@ -190,6 +190,11 @@ def _try_single_dim_gather(
         new_shape[d : d + 1] = list(batch_shape)
         selected = selected.reshape(new_shape)
 
+        # Verify permutation matches reshaped array.
+        # If dimensions don't align, fall back to other gather patterns.
+        if selected.ndim != out_ndim:
+            return False
+
         # Recompute permutation for the expanded batch dims.
         out_ndim = len(atom_shape(eqn.outvars[0]))
         offset_dims = dim_nums.offset_dims

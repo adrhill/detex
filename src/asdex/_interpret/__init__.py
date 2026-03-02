@@ -240,6 +240,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             | "real"
             | "imag"
             | "rsqrt"
+            | "erf"
             | "square"
         ):
             prop_unary_elementwise(eqn, deps)

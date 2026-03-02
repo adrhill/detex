@@ -63,3 +63,13 @@ Unrecognized configurations fall back to conservative.
 | `test_gather_batching_dims` | `operand_batching_dims` not yet supported; true pattern is a permutation (2/12 nnz) |
 
 All five tests carry `@pytest.mark.fallback` and `TODO(gather)` comments.
+
+# Bugs
+
+Found via CUTEst integration tests (`tests/test_cutest.py`).
+
+## 1. Missing `cumsum` primitive handler
+
+| Primitive | CUTEst problems |
+|-----------|-----------------|
+| `cumsum` | HADAMARD, HS91, HS92 (constraint Jacobian) |
