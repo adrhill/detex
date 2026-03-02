@@ -38,6 +38,7 @@ def test_diagonal():
 
 
 @pytest.mark.jacobian
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_lower_triangular():
     """Lower triangular Jacobian."""
 
@@ -52,6 +53,7 @@ def test_lower_triangular():
 
 
 @pytest.mark.jacobian
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_upper_triangular():
     """Upper triangular Jacobian."""
 
@@ -80,6 +82,7 @@ def test_mixed_sparsity():
 
 
 @pytest.mark.jacobian
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_dense():
     """Dense Jacobian: all outputs depend on all inputs."""
 
@@ -166,6 +169,7 @@ def test_different_input_points():
 
 
 @pytest.mark.jacobian
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_single_output():
     """Single output (scalar-valued function)."""
 
@@ -180,6 +184,7 @@ def test_single_output():
 
 
 @pytest.mark.jacobian
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_single_input():
     """Single input dimension."""
 
@@ -233,6 +238,7 @@ def test_block_diagonal():
 
 
 @pytest.mark.jacobian
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_nonlinear_functions():
     """Various nonlinear functions."""
 
@@ -270,6 +276,7 @@ def test_wide_jacobian():
 
 
 @pytest.mark.jacobian
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_tall_jacobian():
     """More outputs than inputs."""
 
@@ -391,6 +398,7 @@ def test_precomputed_col_colors():
 
 
 @pytest.mark.jacobian
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_auto_picks_column_for_tall():
     """Auto mode picks column coloring for tall-skinny Jacobians.
 
@@ -417,6 +425,7 @@ def test_auto_picks_column_for_tall():
 
 
 @pytest.mark.jacobian
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_auto_picks_row_for_wide():
     """Auto mode picks row coloring for wide Jacobians.
 
@@ -554,6 +563,7 @@ def test_hessian_zero():
 
 
 @pytest.mark.hessian
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_hessian_single_input():
     """Hessian with single input dimension."""
 

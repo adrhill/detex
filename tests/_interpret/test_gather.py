@@ -452,6 +452,7 @@ def test_gather_indices_through_tile():
 
 
 @pytest.mark.array_ops
+@pytest.mark.filterwarnings("ignore:Explicitly requested dtype int64:UserWarning")
 def test_gather_indices_through_convert_element_type():
     """Indices surviving convert_element_type remain statically known.
 

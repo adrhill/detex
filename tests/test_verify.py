@@ -351,6 +351,7 @@ def test_check_jacobian_with_hessian_coloring_raises():
 
 
 @pytest.mark.hessian
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_check_hessian_with_jacobian_coloring_raises():
     """check_hessian_correctness raises ValueError for Jacobian-mode colorings."""
 

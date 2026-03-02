@@ -1184,6 +1184,7 @@ def test_empty_hessian_symmetric_non_square_raises():
 
 
 @pytest.mark.coloring
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_color_zero_row_pattern():
     """Coloring a (0, n) pattern exercises _greedy_color with 0 vertices."""
     sparsity = _make_pattern([0], [0], (1, 3))

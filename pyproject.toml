@@ -76,6 +76,9 @@ packages = ["src/asdex"]
 [tool.pytest.ini_options]
 addopts = "--tb=short -q --no-header -m 'not (slow or benchmark)'"
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore:Setting `jax_pmap_shmap_merge`:DeprecationWarning",
+]
 markers = [
     "elementwise: simple element-wise operations",
     "array_ops: array manipulation (slice, concat, reshape)",
