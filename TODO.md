@@ -64,29 +64,16 @@ Unrecognized configurations fall back to conservative.
 
 All five tests carry `@pytest.mark.fallback` and `TODO(gather)` comments.
 
-# Bugs
-
-Found via CUTEst integration tests (`tests/test_cutest.py`).
-
-## 1. Missing `cumsum` primitive handler
-
-| Primitive | CUTEst problems |
-|-----------|-----------------|
-| `cumsum` | HADAMARD, HS91, HS92 (constraint Jacobian) |
-
 # CUTEst
 
 Conservative patterns found via CUTEst integration tests (`tests/test_cutest.py`).
-349 passed, 5 xfailed. Of those that pass, ~60 emit conservativeness warnings.
+349 passed, 1 xfailed. Of those that pass, ~60 emit conservativeness warnings.
 
 ## Xfailed (internal errors)
 
 | Problem | Kind | Reason |
 |---------|------|--------|
 | POWERSUM | hessian | `axes don't match array` (gather handler bug) |
-| HADAMARD | jacobian_eq, jacobian_ineq | Missing `cumsum` handler |
-| HS91 | jacobian_ineq | Missing `cumsum` handler |
-| HS92 | jacobian_ineq | Missing `cumsum` handler |
 
 ## Conservative Hessians (27 problems)
 
@@ -207,6 +194,7 @@ but evaluates to zero for all inputs (e.g., `x_i * 0 * x_j`).
 
 | Problem | Extra nnz | True density | Key primitives |
 |---------|-----------|--------------|----------------|
+| HADAMARD | 76,000 | 5.0% | `scan`, `gather`, `select_n`, `cumsum` |
 | TRO11X3 | 8,554 | 5.0% | `gather`, `scatter`, `scatter-add` |
 | MSS1 | 6,192 | 5.8% | `gather`, `iota`, `lt`, `select_n` |
 | TRO5X5 | 4,022 | 6.9% | `gather`, `scatter`, `scatter-add` |
@@ -411,14 +399,7 @@ OET2/4/6/7 (inequality Jacobian), and partially MSS1, VANDANMSLS, HAIFAM.
 ~12–15 problems affected across Hessian and Jacobian tests.
 This is the single highest-impact improvement.
 
-### 2. Add `cumsum` primitive handler
-
-`cumsum` produces a lower-triangular dependency pattern:
-`out[i]` depends on `in[0..i]`.
-
-**Impact**: Resolves HADAMARD, HS91, HS92 (currently xfailed).
-
-### 3. Recognize more gather/scatter dimension patterns
+### 2. Recognize more gather/scatter dimension patterns
 
 The gather handler only matches two specific `GatherDimensionNumbers` configurations.
 Extending it to handle reversed `start_index_map`,
@@ -430,7 +411,7 @@ See TODO §5 for the specific test cases.
 **Impact**: Improves precision for problems using advanced indexing patterns.
 Indirect CUTEst impact through gradient jaxprs.
 
-### 4. Zero-skipping in `div` and `integer_pow`
+### 3. Zero-skipping in `div` and `integer_pow`
 
 `div(0, x)` should produce zero deps (like `mul(0, x)` already does).
 `integer_pow(0, n)` for `n > 0` should produce zero deps.
@@ -438,7 +419,7 @@ Indirect CUTEst impact through gradient jaxprs.
 **Impact**: Resolves some TENBARS spurious nonzeros.
 Small improvements across many moderately conservative problems.
 
-### 5. Abstract value range tracking (architectural)
+### 4. Abstract value range tracking (architectural)
 
 Track value ranges (intervals) instead of just exact const values.
 This would let `gather`/`scatter`/`dynamic_slice` narrow their fallback

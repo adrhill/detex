@@ -26,6 +26,7 @@ from ._commons import (
 from ._concatenate import prop_concatenate
 from ._cond import prop_cond
 from ._conv import prop_conv_general_dilated
+from ._cumsum import prop_cumsum
 from ._dot_general import prop_dot_general
 from ._dynamic_slice import prop_dynamic_slice, prop_dynamic_update_slice
 from ._elementwise import (
@@ -168,7 +169,7 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             | "reduce_xor"
         ):
             prop_zero_derivative(eqn, deps)
-        case "eq" | "ne" | "lt" | "le" | "gt" | "ge":
+        case "eq" | "ne" | "lt" | "le" | "gt" | "ge" | "lt_to" | "le_to":
             prop_zero_derivative(eqn, deps)
             propagate_const_elementwise(eqn, const_vals)
         case "and" | "or" | "xor":
@@ -290,6 +291,8 @@ def prop_dispatch(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             prop_tile(eqn, deps, const_vals)
         case "sort":
             prop_sort(eqn, deps)
+        case "cumsum":
+            prop_cumsum(eqn, deps)
         # Conservative fallback: all outputs depend on all inputs.
         case (
             "nonbatchable"
