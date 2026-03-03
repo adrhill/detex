@@ -1,5 +1,6 @@
 """Types, constants, and utilities for dependency tracking."""
 
+import itertools
 import math
 from collections.abc import Callable, Sequence
 
@@ -80,6 +81,40 @@ while covering the common cases
 (e.g. one ``argmax`` index with up to 64 possible values,
 or two indices each with up to 8 possible values).
 """
+
+
+def enumerate_bounded_patterns(
+    ranges: Sequence[range],
+    out_size: int,
+    make_pattern: Callable[[tuple[int, ...]], list[IndexSet] | None],
+) -> list[IndexSet] | None:
+    """Enumerate all candidate index combinations and union the resulting patterns.
+
+    Used by ``gather``, ``scatter``, ``dynamic_slice``, and ``dynamic_update_slice``
+    when indices are bounded but not statically known.
+    Each call site builds its own ``ranges`` (from ``atom_value_bounds``
+    or ``_resolve_start_bounds``) and provides a ``make_pattern`` callback
+    that computes the sparsity pattern for one concrete index combination.
+
+    Returns ``None`` if the total number of combinations exceeds
+    ``_MAX_ENUM_COMBINATIONS`` or if ``make_pattern`` returns ``None``
+    (indicating an unrecognized pattern, as in scatter).
+    """
+    if math.prod(len(r) for r in ranges) > _MAX_ENUM_COMBINATIONS:
+        return None
+
+    accumulated: list[IndexSet] | None = None
+    for candidate_values in itertools.product(*ranges):
+        pattern = make_pattern(candidate_values)
+        if pattern is None:
+            return None
+        if accumulated is None:
+            accumulated = pattern
+        else:
+            for i in range(out_size):
+                accumulated[i] = accumulated[i] | pattern[i]
+
+    return accumulated
 
 
 # Shape and size

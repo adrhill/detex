@@ -1,16 +1,11 @@
 """Propagation rule for gather operations."""
 
-import itertools
-import math
-
 import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    _MAX_ENUM_COMBINATIONS,
     ConstVals,
     Deps,
-    IndexSet,
     ValueBounds,
     atom_const_val,
     atom_numel,
@@ -18,6 +13,7 @@ from ._commons import (
     atom_value_bounds,
     check_no_index_sets,
     conservative_indices,
+    enumerate_bounded_patterns,
     index_sets,
     permute_indices,
     position_map,
@@ -168,31 +164,21 @@ def prop_gather(
     bounds = atom_value_bounds(eqn.invars[1], const_vals, value_bounds)
     if bounds is not None:
         lo, hi = bounds
-        lo_flat = lo.flatten()
-        hi_flat = hi.flatten()
-        n_elements = len(lo_flat)
+        lo_flat, hi_flat = lo.flatten(), hi.flatten()
+        si_shape = atom_shape(eqn.invars[1])
+        ranges = [
+            range(int(lo_flat[i]), int(hi_flat[i]) + 1) for i in range(len(lo_flat))
+        ]
 
-        n_candidate_valuess = math.prod(
-            int(hi_flat[i]) - int(lo_flat[i]) + 1 for i in range(n_elements)
-        )
-        if n_candidate_valuess <= _MAX_ENUM_COMBINATIONS:
-            si_shape = atom_shape(eqn.invars[1])
-            ranges = [
-                range(int(lo_flat[i]), int(hi_flat[i]) + 1) for i in range(n_elements)
-            ]
-            accumulated: list[IndexSet] | None = None
+        def _make(vals: tuple[int, ...]) -> list[set[int]]:
+            candidate = np.array(vals, dtype=lo.dtype).reshape(si_shape)
+            return permute_indices(
+                operand_indices, _gather_flat_map(candidate, eqn, operand_shape)
+            )
 
-            for candidate_values in itertools.product(*ranges):
-                candidate = np.array(candidate_values, dtype=lo.dtype).reshape(si_shape)
-                flat_map = _gather_flat_map(candidate, eqn, operand_shape)
-                pattern = permute_indices(operand_indices, flat_map)
-                if accumulated is None:
-                    accumulated = pattern
-                else:
-                    for i in range(out_size):
-                        accumulated[i] = accumulated[i] | pattern[i]
-
-            deps[eqn.outvars[0]] = accumulated  # type: ignore[assignment]
+        result = enumerate_bounded_patterns(ranges, out_size, _make)
+        if result is not None:
+            deps[eqn.outvars[0]] = result
             return
 
     # Conservative fallback: every output depends on every input.

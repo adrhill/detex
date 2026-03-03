@@ -1,13 +1,9 @@
 """Propagation rule for scatter operations."""
 
-import itertools
-import math
-
 import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    _MAX_ENUM_COMBINATIONS,
     ConstVals,
     Deps,
     IndexSet,
@@ -18,6 +14,7 @@ from ._commons import (
     atom_value_bounds,
     check_no_index_sets,
     conservative_indices,
+    enumerate_bounded_patterns,
     index_sets,
     numel,
 )
@@ -257,45 +254,23 @@ def prop_scatter(
         bounds = atom_value_bounds(indices_atom, const_vals, value_bounds)
         if bounds is not None:
             lo, hi = bounds
-            lo_flat = lo.flatten()
-            hi_flat = hi.flatten()
-            n_elements = len(lo_flat)
+            lo_flat, hi_flat = lo.flatten(), hi.flatten()
+            si_shape = atom_shape(indices_atom)
+            out_size = atom_numel(eqn.outvars[0])
+            ranges = [
+                range(int(lo_flat[i]), int(hi_flat[i]) + 1) for i in range(len(lo_flat))
+            ]
 
-            n_candidate_valuess = math.prod(
-                int(hi_flat[i]) - int(lo_flat[i]) + 1 for i in range(n_elements)
-            )
-            if n_candidate_valuess <= _MAX_ENUM_COMBINATIONS:
-                si_shape = atom_shape(indices_atom)
-                ranges = [
-                    range(int(lo_flat[i]), int(hi_flat[i]) + 1)
-                    for i in range(n_elements)
-                ]
-                out_size = atom_numel(eqn.outvars[0])
-                accumulated: list[IndexSet] | None = None
+            def _make(vals: tuple[int, ...]) -> list[set[int]] | None:
+                candidate = np.array(vals, dtype=lo.dtype).reshape(si_shape)
+                return _scatter_for_indices(
+                    candidate, eqn, operand_indices, updates_indices
+                )
 
-                for candidate_values in itertools.product(*ranges):
-                    candidate = np.array(candidate_values, dtype=lo.dtype).reshape(
-                        si_shape
-                    )
-                    pattern = _scatter_for_indices(
-                        candidate,
-                        eqn,
-                        operand_indices,
-                        updates_indices,
-                    )
-                    if pattern is None:
-                        # Unrecognized scatter pattern; fall through.
-                        accumulated = None
-                        break
-                    if accumulated is None:
-                        accumulated = pattern
-                    else:
-                        for i in range(out_size):
-                            accumulated[i] = accumulated[i] | pattern[i]
-
-                if accumulated is not None:
-                    deps[eqn.outvars[0]] = accumulated
-                    return
+            result = enumerate_bounded_patterns(ranges, out_size, _make)
+            if result is not None:
+                deps[eqn.outvars[0]] = result
+                return
 
     # Dynamic indices or complex scatter - conservative fallback
     deps[eqn.outvars[0]] = conservative_indices(

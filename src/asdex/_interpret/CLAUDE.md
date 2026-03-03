@@ -73,6 +73,13 @@ not every handler.
 - **`propagate_const_unary(eqn, const_vals, transform)`** —
   propagates a const value through a unary op by applying `transform`.
   Mirrors `propagate_const_binary` for the single-input case.
+- **`enumerate_bounded_patterns(ranges, out_size, make_pattern)`** —
+  enumerates all candidate index combinations from ``ranges``
+  (capped at ``_MAX_ENUM_COMBINATIONS``),
+  calls ``make_pattern`` for each,
+  and unions the results element-wise.
+  Used by ``gather``, ``scatter``, ``dynamic_slice``, and ``dynamic_update_slice``
+  when indices are bounded but not statically known.
 - **`conservative_indices(all_indices, out_size)`** —
   conservative fallback where every output element depends on the union of all inputs.
 - **`atom_value_bounds(atom, const_vals, value_bounds)`** —

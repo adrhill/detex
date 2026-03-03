@@ -1,13 +1,9 @@
 """Propagation rules for dynamic_slice and dynamic_update_slice."""
 
-import itertools
-import math
-
 import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    _MAX_ENUM_COMBINATIONS,
     ConstVals,
     Deps,
     IndexSet,
@@ -19,6 +15,7 @@ from ._commons import (
     clamp_starts,
     conservative_indices,
     copy_index_sets,
+    enumerate_bounded_patterns,
     index_sets,
     numel,
     transform_indices,
@@ -110,28 +107,19 @@ def prop_dynamic_slice(
     # Try bounded enumeration.
     start_bounds = _resolve_start_bounds(eqn, 1, const_vals, value_bounds)
     if start_bounds is not None:
-        n_candidate_valuess = math.prod(hi - lo + 1 for lo, hi in start_bounds)
-        if n_candidate_valuess <= _MAX_ENUM_COMBINATIONS:
-            in_shape = atom_shape(operand)
-            out_size = numel(slice_sizes)
-            ranges = [range(lo, hi + 1) for lo, hi in start_bounds]
-            accumulated: list[IndexSet] | None = None
+        in_shape = atom_shape(operand)
+        ranges = [range(lo, hi + 1) for lo, hi in start_bounds]
 
-            for candidate_values in itertools.product(*ranges):
-                clamped = clamp_starts(candidate_values, in_shape, slice_sizes)
-                slices = tuple(
-                    slice(s, s + sz) for s, sz in zip(clamped, slice_sizes, strict=True)
-                )
-                pattern = transform_indices(
-                    in_indices, in_shape, lambda p, sl=slices: p[sl]
-                )
-                if accumulated is None:
-                    accumulated = pattern
-                else:
-                    for i in range(out_size):
-                        accumulated[i] = accumulated[i] | pattern[i]
+        def _make_slice(vals: tuple[int, ...]) -> list[set[int]]:
+            clamped = clamp_starts(vals, in_shape, slice_sizes)
+            sl = tuple(
+                slice(s, s + sz) for s, sz in zip(clamped, slice_sizes, strict=True)
+            )
+            return transform_indices(in_indices, in_shape, lambda p, sl=sl: p[sl])
 
-            deps[eqn.outvars[0]] = accumulated  # type: ignore[assignment]
+        result = enumerate_bounded_patterns(ranges, numel(slice_sizes), _make_slice)
+        if result is not None:
+            deps[eqn.outvars[0]] = result
             return
 
     deps[eqn.outvars[0]] = conservative_indices(in_indices, numel(slice_sizes))
@@ -190,29 +178,21 @@ def prop_dynamic_update_slice(
     # Try bounded enumeration.
     start_bounds = _resolve_start_bounds(eqn, 2, const_vals, value_bounds)
     if start_bounds is not None:
-        n_candidate_valuess = math.prod(hi - lo + 1 for lo, hi in start_bounds)
-        if n_candidate_valuess <= _MAX_ENUM_COMBINATIONS:
-            out_size = numel(operand_shape)
-            ranges = [range(lo, hi + 1) for lo, hi in start_bounds]
-            accumulated: list[IndexSet] | None = None
+        ranges = [range(lo, hi + 1) for lo, hi in start_bounds]
 
-            for candidate_values in itertools.product(*ranges):
-                # Clamp to valid bounds (same as dynamic_slice clamping).
-                clamped = clamp_starts(candidate_values, operand_shape, upd_shape)
-                pattern = _dynamic_update_for_starts(
-                    list(clamped),
-                    operand_indices,
-                    upd_indices,
-                    operand_shape,
-                    upd_shape,
-                )
-                if accumulated is None:
-                    accumulated = pattern
-                else:
-                    for i in range(out_size):
-                        accumulated[i] = accumulated[i] | pattern[i]
+        def _make_update(vals: tuple[int, ...]) -> list[set[int]]:
+            clamped = clamp_starts(vals, operand_shape, upd_shape)
+            return _dynamic_update_for_starts(
+                list(clamped),
+                operand_indices,
+                upd_indices,
+                operand_shape,
+                upd_shape,
+            )
 
-            deps[eqn.outvars[0]] = accumulated  # type: ignore[assignment]
+        result = enumerate_bounded_patterns(ranges, numel(operand_shape), _make_update)
+        if result is not None:
+            deps[eqn.outvars[0]] = result
             return
 
     deps[eqn.outvars[0]] = conservative_indices(
