@@ -8,6 +8,7 @@ through primitives to determine Jacobian sparsity patterns.
 - `__init__.py` — `prop_jaxpr`, `prop_dispatch`, fallback handling.
 - `_commons.py` — shared types (`IndexSet`, `Deps`, `ConstVals`) and utilities.
 - Each JAX primitive has its own module: `_foo.py` contains `prop_foo`.
+  Includes `_cumsum.py` for cumulative sum.
 - Handlers for external packages (Equinox, Flax, etc.) live in their own subfolders
   (e.g., `_equinox/`).
 
