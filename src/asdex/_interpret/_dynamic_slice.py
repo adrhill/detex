@@ -1,5 +1,8 @@
 """Propagation rules for dynamic_slice and dynamic_update_slice."""
 
+import itertools
+import math
+
 import numpy as np
 from jax._src.core import JaxprEqn
 
@@ -7,14 +10,24 @@ from ._commons import (
     ConstVals,
     Deps,
     IndexSet,
+    ValueBounds,
     atom_const_val,
     atom_shape,
+    atom_value_bounds,
     check_no_index_sets,
     conservative_indices,
+    copy_index_sets,
     index_sets,
     numel,
     transform_indices,
 )
+
+_MAX_ENUM_COMBINATIONS = 64
+"""Maximum number of start-index combinations to enumerate.
+
+Keeps cost bounded for multi-dimensional dynamic starts.
+Falls back to conservative if exceeded.
+"""
 
 
 def _resolve_starts(
@@ -33,11 +46,48 @@ def _resolve_starts(
     return starts
 
 
-def prop_dynamic_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def _resolve_start_bounds(
+    eqn: JaxprEqn,
+    start_offset: int,
+    const_vals: ConstVals,
+    value_bounds: ValueBounds,
+) -> list[tuple[int, int]] | None:
+    """Try to resolve per-dimension (lo, hi) bounds for start indices.
+
+    Returns None if any start has no bounds information.
+    """
+    bounds: list[tuple[int, int]] = []
+    for atom in eqn.invars[start_offset:]:
+        b = atom_value_bounds(atom, const_vals, value_bounds)
+        if b is None:
+            return None
+        lo, hi = b
+        bounds.append((int(lo.flat[0]), int(hi.flat[0])))
+    return bounds
+
+
+def _clamp_starts(
+    starts: tuple[int, ...], in_shape: tuple[int, ...], slice_sizes: tuple[int, ...]
+) -> tuple[int, ...]:
+    """Clamp start indices to valid bounds, matching JAX's dynamic_slice semantics."""
+    return tuple(
+        max(0, min(s, dim - sz))
+        for s, dim, sz in zip(starts, in_shape, slice_sizes, strict=True)
+    )
+
+
+def prop_dynamic_slice(
+    eqn: JaxprEqn,
+    deps: Deps,
+    const_vals: ConstVals,
+    value_bounds: ValueBounds,
+) -> None:
     """dynamic_slice extracts a sub-array at a potentially dynamic offset.
 
     With static start indices, each output element maps to exactly one input element.
-    With dynamic starts, falls back to conservative.
+    With bounded dynamic starts, enumerates all possible start positions
+    and unions the resulting patterns.
+    Otherwise falls back to conservative.
 
     For static starts s and slice_sizes sz:
         out[i₀, i₁, ...] = in[s₀ + i₀, s₁ + i₁, ...]
@@ -62,21 +112,59 @@ def prop_dynamic_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None
         check_no_index_sets(deps, start_atom, eqn.primitive.name)
 
     starts = _resolve_starts(eqn, 1, const_vals)
-    if starts is None:
-        deps[eqn.outvars[0]] = conservative_indices(in_indices, numel(slice_sizes))
+    if starts is not None:
+        in_shape = atom_shape(operand)
+        slices = tuple(
+            slice(s, s + sz) for s, sz in zip(starts, slice_sizes, strict=True)
+        )
+        deps[eqn.outvars[0]] = transform_indices(
+            in_indices, in_shape, lambda p: p[slices]
+        )
         return
 
-    in_shape = atom_shape(operand)
-    slices = tuple(slice(s, s + sz) for s, sz in zip(starts, slice_sizes, strict=True))
-    deps[eqn.outvars[0]] = transform_indices(in_indices, in_shape, lambda p: p[slices])
+    # Try bounded enumeration.
+    start_bounds = _resolve_start_bounds(eqn, 1, const_vals, value_bounds)
+    if start_bounds is not None:
+        n_combos = math.prod(hi - lo + 1 for lo, hi in start_bounds)
+        if n_combos <= _MAX_ENUM_COMBINATIONS:
+            in_shape = atom_shape(operand)
+            out_size = numel(slice_sizes)
+            ranges = [range(lo, hi + 1) for lo, hi in start_bounds]
+            accumulated: list[IndexSet] | None = None
+
+            for combo in itertools.product(*ranges):
+                clamped = _clamp_starts(combo, in_shape, slice_sizes)
+                slices = tuple(
+                    slice(s, s + sz) for s, sz in zip(clamped, slice_sizes, strict=True)
+                )
+                pattern = transform_indices(
+                    in_indices, in_shape, lambda p, sl=slices: p[sl]
+                )
+                if accumulated is None:
+                    accumulated = pattern
+                else:
+                    for i in range(out_size):
+                        accumulated[i] = accumulated[i] | pattern[i]
+
+            deps[eqn.outvars[0]] = accumulated  # type: ignore[assignment]
+            return
+
+    deps[eqn.outvars[0]] = conservative_indices(in_indices, numel(slice_sizes))
 
 
-def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def prop_dynamic_update_slice(
+    eqn: JaxprEqn,
+    deps: Deps,
+    const_vals: ConstVals,
+    value_bounds: ValueBounds,
+) -> None:
     """dynamic_update_slice overwrites a sub-array at a potentially dynamic offset.
 
     With static start indices, updated positions get update deps,
     the rest keep operand deps.
-    With dynamic starts, falls back to conservative.
+    With bounded dynamic starts, enumerates all possible start positions
+    and unions the resulting patterns.
+    Otherwise falls back to conservative.
 
     For static starts s and update shape u_shape:
         out[i] = update[i - s]  if s ≤ i < s + u_shape
@@ -104,16 +192,59 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
         check_no_index_sets(deps, start_atom, eqn.primitive.name)
 
     starts = _resolve_starts(eqn, 2, const_vals)
-    if starts is None:
-        deps[eqn.outvars[0]] = conservative_indices(
-            operand_indices + upd_indices, numel(operand_shape)
+    if starts is not None:
+        deps[eqn.outvars[0]] = _dynamic_update_for_starts(
+            starts,
+            operand_indices,
+            upd_indices,
+            operand_shape,
+            upd_shape,
         )
         return
 
-    # Start with operand deps, then overwrite the update region
-    out_indices: list[IndexSet] = list(operand_indices)
+    # Try bounded enumeration.
+    start_bounds = _resolve_start_bounds(eqn, 2, const_vals, value_bounds)
+    if start_bounds is not None:
+        n_combos = math.prod(hi - lo + 1 for lo, hi in start_bounds)
+        if n_combos <= _MAX_ENUM_COMBINATIONS:
+            out_size = numel(operand_shape)
+            ranges = [range(lo, hi + 1) for lo, hi in start_bounds]
+            accumulated: list[IndexSet] | None = None
 
-    # Map each update element to its flat position in the operand
+            for combo in itertools.product(*ranges):
+                # Clamp to valid bounds (same as dynamic_slice clamping).
+                clamped = _clamp_starts(combo, operand_shape, upd_shape)
+                pattern = _dynamic_update_for_starts(
+                    list(clamped),
+                    operand_indices,
+                    upd_indices,
+                    operand_shape,
+                    upd_shape,
+                )
+                if accumulated is None:
+                    accumulated = pattern
+                else:
+                    for i in range(out_size):
+                        accumulated[i] = accumulated[i] | pattern[i]
+
+            deps[eqn.outvars[0]] = accumulated  # type: ignore[assignment]
+            return
+
+    deps[eqn.outvars[0]] = conservative_indices(
+        operand_indices + upd_indices, numel(operand_shape)
+    )
+
+
+def _dynamic_update_for_starts(
+    starts: list[int] | tuple[int, ...],
+    operand_indices: list[IndexSet],
+    upd_indices: list[IndexSet],
+    operand_shape: tuple[int, ...],
+    upd_shape: tuple[int, ...],
+) -> list[IndexSet]:
+    """Compute output index sets for a dynamic_update_slice with known starts."""
+    out_indices: list[IndexSet] = copy_index_sets(operand_indices)
+
     upd_coords = np.indices(upd_shape)
     op_coords = tuple(s + upd_coords[d] for d, s in enumerate(starts))
     flat_map = np.ravel_multi_index(op_coords, operand_shape).ravel()
@@ -121,4 +252,4 @@ def prop_dynamic_update_slice(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
     for upd_flat, op_flat in enumerate(flat_map):
         out_indices[op_flat] = upd_indices[upd_flat]
 
-    deps[eqn.outvars[0]] = out_indices
+    return out_indices

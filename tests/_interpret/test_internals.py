@@ -52,7 +52,7 @@ def test_nested_jaxpr_missing_param_raises():
     const_vals = {}
 
     with pytest.raises(ValueError, match="has no 'jaxpr' parameter"):
-        prop_nested_jaxpr(eqn, env, const_vals)  # type: ignore[arg-type]
+        prop_nested_jaxpr(eqn, env, const_vals, {})  # type: ignore[arg-type]
 
 
 def test_nested_jaxpr_missing_param_error_message():
@@ -62,7 +62,7 @@ def test_nested_jaxpr_missing_param_error_message():
     const_vals = {}
 
     with pytest.raises(ValueError, match="xla_call"):
-        prop_nested_jaxpr(eqn, env, const_vals)  # type: ignore[arg-type]
+        prop_nested_jaxpr(eqn, env, const_vals, {})  # type: ignore[arg-type]
 
 
 def test_custom_call_missing_param_raises():
@@ -72,7 +72,7 @@ def test_custom_call_missing_param_raises():
     const_vals = {}
 
     with pytest.raises(ValueError, match="has no 'call_jaxpr' parameter"):
-        prop_custom_call(eqn, env, const_vals)  # type: ignore[arg-type]
+        prop_custom_call(eqn, env, const_vals, {})  # type: ignore[arg-type]
 
 
 def test_custom_call_missing_param_error_message():
@@ -82,7 +82,7 @@ def test_custom_call_missing_param_error_message():
     const_vals = {}
 
     with pytest.raises(ValueError, match="custom_vjp_call"):
-        prop_custom_call(eqn, env, const_vals)  # type: ignore[arg-type]
+        prop_custom_call(eqn, env, const_vals, {})  # type: ignore[arg-type]
 
 
 def test_unknown_primitive_raises():
@@ -92,7 +92,7 @@ def test_unknown_primitive_raises():
     const_vals = {}
 
     with pytest.raises(NotImplementedError, match="No handler for primitive"):
-        prop_dispatch(eqn, deps, const_vals)  # type: ignore[arg-type]
+        prop_dispatch(eqn, deps, const_vals, {})  # type: ignore[arg-type]
 
 
 def test_unknown_primitive_error_message():
@@ -102,7 +102,7 @@ def test_unknown_primitive_error_message():
     const_vals = {}
 
     with pytest.raises(NotImplementedError) as exc_info:
-        prop_dispatch(eqn, deps, const_vals)  # type: ignore[arg-type]
+        prop_dispatch(eqn, deps, const_vals, {})  # type: ignore[arg-type]
 
     assert "fake_primitive" in str(exc_info.value)
     assert "https://github.com/adrhill/asdex/issues" in str(exc_info.value)

@@ -41,6 +41,15 @@ Deps = dict[Var, list[IndexSet]]
 ConstVals = dict[Var, np.ndarray]
 """Maps variables to their concrete numpy array values (for static index tracking)."""
 
+ValueBounds = dict[Var, tuple[np.ndarray, np.ndarray]]
+"""Maps variables to per-element inclusive (lo, hi) integer bounds.
+
+Used to track bounded-but-not-constant values
+(e.g. output of ``argmax`` over a small axis)
+so that dynamic index handlers can enumerate all possible values
+instead of falling back to conservative.
+"""
+
 Atom = Var | Literal
 """Atomic elements in jaxpressions: named intermediates (Var) or constants (Literal)."""
 
@@ -106,6 +115,25 @@ def atom_const_val(atom: Atom, const_vals: ConstVals) -> np.ndarray | None:
         return np.asarray(atom.val)
     if isinstance(atom, Var) and atom in const_vals:
         return const_vals[atom]
+    return None
+
+
+def atom_value_bounds(
+    atom: Atom,
+    const_vals: ConstVals,
+    value_bounds: ValueBounds,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """Get per-element inclusive (lo, hi) bounds for an atom.
+
+    Returns exact ``(val, val)`` for constants,
+    tracked bounds for bounded variables,
+    or ``None`` when no information is available.
+    """
+    val = atom_const_val(atom, const_vals)
+    if val is not None:
+        return (val, val)
+    if isinstance(atom, Var) and atom in value_bounds:
+        return value_bounds[atom]
     return None
 
 
@@ -273,6 +301,18 @@ def seed_const_vals(const_vals: ConstVals, constvars, consts) -> None:
     """
     for var, val in zip(constvars, consts, strict=True):
         const_vals[var] = np.asarray(val)
+
+
+def forward_value_bounds(
+    value_bounds: ValueBounds, outer_atoms: Sequence[Atom], inner_vars
+) -> None:
+    """Transfer known value bounds from outer-scope atoms to inner jaxpr variables.
+
+    Same idea as ``forward_const_vals`` but for value bounds.
+    """
+    for outer, inner in zip(outer_atoms, inner_vars, strict=False):
+        if isinstance(outer, Var) and outer in value_bounds:
+            value_bounds[inner] = value_bounds[outer]
 
 
 def forward_const_vals(

@@ -38,14 +38,12 @@ def test_dynamic_slice_static_start():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_dynamic_slice_dynamic_start():
-    """dynamic_slice with runtime-dependent start falls back to conservative.
+    """dynamic_slice with bounded dynamic start enumerates possible windows.
 
-    TODO(dynamic_slice): precise pattern is
-    [[1,1,0,0,0],[0,1,1,0,0],[0,0,1,1,0]]
-    since idx can only be 0 or 1,
+    idx = argmax(x[:2]) can only be 0 or 1,
     so the slice window covers x[0:3] or x[1:4].
+    The union gives each output element at most two input dependencies.
     """
 
     def f(x):
@@ -54,7 +52,10 @@ def test_dynamic_slice_dynamic_start():
         return lax.dynamic_slice(x, (idx,), (3,))
 
     result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
-    expected = np.ones((3, 5), dtype=int)
+    expected = np.array(
+        [[1, 1, 0, 0, 0], [0, 1, 1, 0, 0], [0, 0, 1, 1, 0]],
+        dtype=int,
+    )
     np.testing.assert_array_equal(result, expected)
 
 
@@ -107,13 +108,10 @@ def test_dynamic_update_slice_static_start():
 
 
 @pytest.mark.array_ops
-@pytest.mark.fallback
 def test_dynamic_update_slice_dynamic_start():
-    """dynamic_update_slice with runtime start falls back to conservative.
+    """dynamic_update_slice with bounded dynamic start enumerates possible windows.
 
-    TODO(dynamic_update_slice): precise pattern is
-    [[1,0,1,0],[0,0,1,1],[0,0,1,1],[0,0,0,1]]
-    since idx can only be 0 or 1,
+    idx = argmax(x[:2]) can only be 0 or 1,
     and the update replaces a 2-element window with x[2:4].
     """
 
@@ -122,8 +120,10 @@ def test_dynamic_update_slice_dynamic_start():
         return lax.dynamic_update_slice(x, x[2:4], (idx,))
 
     result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
-    # Conservative: all outputs depend on all inputs
-    expected = np.ones((4, 4), dtype=int)
+    expected = np.array(
+        [[1, 0, 1, 0], [0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 0, 1]],
+        dtype=int,
+    )
     np.testing.assert_array_equal(result, expected)
 
 
