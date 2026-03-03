@@ -18,6 +18,7 @@ through primitives to determine Jacobian sparsity patterns.
 - `list[IndexSet]` — per-element dependency sets for one array
 - `Deps` = `dict[Var, list[IndexSet]]` — maps jaxpr variables to their index sets
 - `ConstVals` = `dict[Var, np.ndarray]` — statically-known values for precise gather/scatter
+- `ValueBounds` = `dict[Var, tuple[np.ndarray, np.ndarray]]` — per-element inclusive (lo, hi) integer bounds
 
 ## Naming Conventions
 
@@ -43,6 +44,8 @@ not every handler.
 - `in1_val` / `in2_val`: const values for binary inputs.
   Use descriptive prefixes when roles differ:
   `lhs_val` / `rhs_val` (dot_general), `pred_val` / `which_val` (select), etc.
+- `in_bounds` / `in1_bounds` / `in2_bounds`: value bounds for inputs
+  (from `atom_value_bounds(atom, const_vals, value_bounds)`)
 - `flat_map`: a flat integer array mapping output positions to input positions
 
 **Docstrings** — avoid the term "deps"; prefer "index sets" or "input index sets".
@@ -72,6 +75,12 @@ not every handler.
   Mirrors `propagate_const_binary` for the single-input case.
 - **`conservative_indices(all_indices, out_size)`** —
   conservative fallback where every output element depends on the union of all inputs.
+- **`atom_value_bounds(atom, const_vals, value_bounds)`** —
+  returns `(lo, hi)` bounds for an atom:
+  exact `(val, val)` for constants, tracked bounds for bounded variables, or `None`.
+- **`forward_value_bounds(value_bounds, outer_atoms, inner_vars)`** —
+  transfers known value bounds from outer-scope atoms to inner jaxpr variables.
+  Called in `_prop_closed_jaxpr` when entering nested jaxprs.
 
 ## Index Set Aliasing
 
@@ -94,6 +103,43 @@ This lets downstream handlers resolve static indices precisely.
 the handler must assume the worst and return a conservative pattern.
 This applies to `gather`, `scatter`, `dynamic_slice`, `dynamic_update_slice`,
 `dot_general` (zero-skipping), and `mul` (zero-clearing).
+
+## Value Bounds Tracking
+
+`ValueBounds` tracks per-element inclusive `(lo, hi)` integer bounds
+for variables that are bounded but not statically constant
+(e.g. the output of `argmax` over a small axis).
+This lets dynamic-index handlers enumerate all possible index values
+instead of falling back to conservative.
+
+**Producers** — handlers that create new bounds:
+- `argmax` / `argmin`: output is in `[0, axis_size - 1]`.
+
+**Propagators** — handlers that forward bounds through transformations:
+- `add`: `[a,b] + [c,d] = [a+c, b+d]` (interval arithmetic).
+- `sub`: `[a,b] - [c,d] = [a-d, b-c]`.
+- `convert_element_type`: casts `(lo, hi)` to the new dtype.
+- `broadcast_in_dim`: broadcasts `(lo, hi)` to the output shape.
+- `select_n`: propagates bounds from the selected branch
+  when the predicate is a known constant.
+
+**Consumers** — handlers that use bounds to tighten sparsity:
+- `gather`, `scatter`, `dynamic_slice`, `dynamic_update_slice`:
+  enumerate all possible index arrays and union the resulting patterns.
+- `comparison` (`lt`, `le`, `gt`, `ge`):
+  derive a const True/False result when bounds prove the comparison
+  is always satisfied or never satisfied,
+  enabling `select_n` to pick the correct branch.
+
+**Enumeration cap**: handlers enumerate at most 64 combinations
+(`_MAX_ENUM_COMBINATIONS`).
+An index with *k* elements where each has *r* possible values
+gives *r^k* combinations.
+If this exceeds 64 the handler falls back to conservative.
+
+**Invariant**: if bounds are unavailable (`atom_value_bounds` returns `None`),
+the handler must assume the worst and return a conservative pattern.
+This mirrors the const-value invariant.
 
 ## Adding a New Handler
 
