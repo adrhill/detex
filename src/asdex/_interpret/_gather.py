@@ -21,28 +21,12 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """Gather extracts slices from operand at positions given by start_indices.
 
     For static start_indices (Literal or tracked const),
-    each output element depends on specific input elements.
+    simulates XLA gather semantics on a position map
+    to determine which input element each output element reads from.
+    Handles any ``GatherDimensionNumbers`` configuration,
+    including mismatched ``start_index_map``,
+    partial slices, and ``operand_batching_dims``.
     For dynamic (traced) start_indices, falls back to conservative.
-
-    Three precise patterns are tried in order:
-
-    1. **Single-dim gather** (any dim ``d``):
-       selects along exactly one dimension and keeps all others intact.
-       ``collapsed_slice_dims=(d,)``, ``start_index_map=(d,)``,
-       ``slice_sizes[d]==1``, other slice sizes match operand.
-       This is the pattern JAX emits for ``x[indices]``, ``x[:, indices]``,
-       ``jnp.take(x, indices, axis=d)``.
-
-    2. **Multi-dim collapse**:
-       all collapsed dims have ``slice_sizes==1``,
-       ``start_index_map == collapsed_slice_dims``.
-       This is the pattern JAX emits for ``x[row_idx, col_idx]``.
-
-    3. **General gather**:
-       simulates XLA gather semantics on a position map.
-       Handles any ``GatherDimensionNumbers`` configuration,
-       including mismatched ``start_index_map``,
-       partial slices, and ``operand_batching_dims``.
 
     The Jacobian is a selection/permutation matrix:
     each output element reads exactly one input element.
@@ -71,287 +55,17 @@ def prop_gather(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     check_no_index_sets(deps, eqn.invars[1], eqn.primitive.name)
     concrete_indices = atom_const_val(eqn.invars[1], const_vals)
 
-    if concrete_indices is not None:
-        dim_nums = eqn.params["dimension_numbers"]
-        slice_sizes = eqn.params["slice_sizes"]
-        operand_shape = atom_shape(eqn.invars[0])
-
-        # Pattern 1 (single-dim), Pattern 2 (multi-dim collapse),
-        # or Pattern 3 (general).
-        if (
-            _try_single_dim_gather(
-                eqn,
-                deps,
-                operand_indices,
-                concrete_indices,
-                dim_nums,
-                slice_sizes,
-                operand_shape,
-            )
-            or _try_multi_dim_gather(
-                eqn,
-                deps,
-                operand_indices,
-                concrete_indices,
-                dim_nums,
-                slice_sizes,
-                operand_shape,
-            )
-            or _try_general_gather(
-                eqn,
-                deps,
-                operand_indices,
-                concrete_indices,
-                dim_nums,
-                slice_sizes,
-                operand_shape,
-            )
-        ):
-            return
-
-    # Conservative fallback: every output depends on every input.
-    # Always correct, but marks the full Jacobian as dense.
-    # Used when indices are dynamic or the gather pattern isn't one we handle.
-    deps[eqn.outvars[0]] = conservative_indices(
-        operand_indices, atom_numel(eqn.outvars[0])
-    )
-
-
-def _try_single_dim_gather(
-    eqn: JaxprEqn,
-    deps: Deps,
-    operand_indices,
-    concrete_indices: np.ndarray,
-    dim_nums,
-    slice_sizes,
-    operand_shape: tuple[int, ...],
-) -> bool:
-    """Handle gather along exactly one dimension ``d``, keeping all others intact.
-
-    Returns True if the pattern matched and index sets were written.
-    """
-    if len(dim_nums.collapsed_slice_dims) != 1:
-        return False
-
-    d = dim_nums.collapsed_slice_dims[0]
-
-    if dim_nums.start_index_map != (d,):
-        return False
-    if slice_sizes[d] != 1:
-        # JAX enforces this at trace time:
-        # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/slicing.py#L1961
-        raise AssertionError(
-            f"collapsed dim {d} has slice_size {slice_sizes[d]}, expected 1"
+    if concrete_indices is None:
+        # Conservative fallback: every output depends on every input.
+        # Always correct, but marks the full Jacobian as dense.
+        deps[eqn.outvars[0]] = conservative_indices(
+            operand_indices, atom_numel(eqn.outvars[0])
         )
+        return
 
-    # All non-collapsed slice sizes must match the operand shape.
-    for i, (ss, os) in enumerate(zip(slice_sizes, operand_shape, strict=True)):
-        if i != d and ss != os:
-            return False
-
-    # Build a position map of the operand and index along dim d
-    # to find which flat input position each output element reads from.
-    op_pos = position_map(operand_shape)
-    # Select the slices along dim d using the concrete index values.
-    # np.take handles arbitrary dim selection cleanly.
-    selected = np.take(op_pos, concrete_indices.flatten(), axis=d)
-
-    # Scalar-index gather: when start_indices is a 1D index vector (no batch dims),
-    # np.take leaves a size-1 axis at position d.
-    # Squeeze it so `selected` matches the scalar output shape.
-    out_ndim = len(atom_shape(eqn.outvars[0]))
-    if selected.shape[d] == 1 and selected.ndim > out_ndim:
-        selected = np.squeeze(selected, axis=d)
-
-    # The output layout is: batch dims (from start_indices shape)
-    # come first at positions NOT in offset_dims,
-    # and the kept operand dims fill in at offset_dims positions.
-    # We need to transpose `selected` so its axes match the output layout.
-    offset_dims = dim_nums.offset_dims
-    batch_positions = [i for i in range(out_ndim) if i not in offset_dims]
-
-    # In `selected`, axis d is the index-batch axis
-    # and the other axes are the kept operand dims (in order).
-    # We need to build a permutation that moves them to match the output layout.
-    n_kept = len(operand_shape) - 1  # dims kept from operand
-    # `selected` axes: 0..d-1 are kept-before, d is batch, d+1..n_kept are kept-after.
-    # Target: offset_dims positions get kept dims, batch_positions get batch dims.
-    source_kept_axes = [i for i in range(n_kept + 1) if i != d]
-    source_batch_axis = d
-
-    # Build inverse permutation: for each output axis, which selected axis provides it.
-    perm = [0] * out_ndim
-    for out_ax in batch_positions:
-        perm[out_ax] = source_batch_axis
-    kept_iter = iter(source_kept_axes)
-    for out_ax in offset_dims:
-        perm[out_ax] = next(kept_iter)
-
-    # Handle case where start_indices has more than 1 batch dim
-    # by reshaping the batch axis into multiple axes.
-    idx_shape = concrete_indices.shape
-    if len(idx_shape) > 1:
-        # start_indices is (batch..., index_vector_dim).
-        # After flattening for np.take, the batch axis in `selected`
-        # has size prod(idx_shape[:-1]).
-        # Reshape it back to the original batch shape before transposing.
-        batch_shape = idx_shape[:-1] if idx_shape[-1] == 1 else idx_shape
-        new_shape = list(selected.shape)
-        new_shape[d : d + 1] = list(batch_shape)
-        selected = selected.reshape(new_shape)
-
-        # Multi-dim start_indices can expand the batch axes beyond what
-        # the offset_dims permutation expects (e.g. POWERSUM via hessian_sparsity).
-        # Fall back to other gather patterns rather than producing a wrong permutation.
-        if selected.ndim != out_ndim:
-            return False
-
-        # Recompute permutation for the expanded batch dims.
-        out_ndim = len(atom_shape(eqn.outvars[0]))
-        offset_dims = dim_nums.offset_dims
-        batch_positions = [i for i in range(out_ndim) if i not in offset_dims]
-        n_batch = len(batch_positions)
-        # selected axes: kept-before (0..d-1), batch (d..d+n_batch-1), kept-after
-        source_batch_axes = list(range(d, d + n_batch))
-        source_kept_axes = list(range(d)) + list(
-            range(d + n_batch, d + n_batch + n_kept - d)
-        )
-        perm = [0] * out_ndim
-        for out_ax, src_ax in zip(batch_positions, source_batch_axes, strict=True):
-            perm[out_ax] = src_ax
-        kept_iter = iter(source_kept_axes)
-        for out_ax in offset_dims:
-            perm[out_ax] = next(kept_iter)
-
-    flat_map = selected.transpose(perm).flatten()
-    deps[eqn.outvars[0]] = permute_indices(operand_indices, flat_map)
-    return True
-
-
-def _try_multi_dim_gather(
-    eqn: JaxprEqn,
-    deps: Deps,
-    operand_indices,
-    concrete_indices: np.ndarray,
-    dim_nums,
-    slice_sizes,
-    operand_shape: tuple[int, ...],
-) -> bool:
-    """Handle multi-dim collapse gather (e.g. ``x[row_idx, col_idx]``).
-
-    All collapsed dims must have ``slice_sizes==1``
-    and ``start_index_map == collapsed_slice_dims``.
-
-    Returns True if the pattern matched and index sets were written.
-    """
-    collapsed = dim_nums.collapsed_slice_dims
-    if len(collapsed) < 2:
-        return False
-    if dim_nums.start_index_map != collapsed:
-        return False
-
-    # JAX enforces collapsed dims have slice_size == 1:
-    # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/slicing.py#L1961
-    if not all(slice_sizes[d] == 1 for d in collapsed):
-        raise AssertionError(
-            f"collapsed dims {collapsed} have slice_sizes {[slice_sizes[d] for d in collapsed]}"
-        )
-
-    # Non-collapsed slice sizes must match the operand shape.
-    for i, (ss, os) in enumerate(zip(slice_sizes, operand_shape, strict=True)):
-        if i not in collapsed and ss != os:
-            return False
-
-    # start_indices has shape (N, len(collapsed))
-    # where each row is a coordinate into the collapsed dims.
-    # Use ravel_multi_index to convert to flat operand positions.
-    collapsed_shape = tuple(operand_shape[d] for d in collapsed)
-
-    # concrete_indices may be 1D (single index) or 2D (N x n_collapsed).
-    if concrete_indices.ndim == 1:
-        # Single multi-dim index.
-        coords = tuple(concrete_indices[i] for i in range(len(collapsed)))
-    else:
-        # (N, n_collapsed) — each column is one dimension's indices.
-        coords = tuple(concrete_indices[:, i] for i in range(len(collapsed)))
-
-    flat_operand_positions = np.ravel_multi_index(coords, collapsed_shape)
-
-    # If there are non-collapsed dims, each gathered position
-    # expands to a full slice over those dims.
-    non_collapsed = [i for i in range(len(operand_shape)) if i not in collapsed]
-    if non_collapsed:
-        # Build a position map and index into it.
-        op_pos = position_map(operand_shape)
-
-        # Transpose so collapsed dims come first, then reshape to merge them.
-        # This lets us index with flat_operand_positions directly.
-        perm_to_front = list(collapsed) + non_collapsed
-        op_pos_t = op_pos.transpose(perm_to_front)
-        # Shape: (collapsed_shape..., non_collapsed_shape...)
-        n_collapsed_elems = int(np.prod(collapsed_shape))
-        non_collapsed_shape = tuple(operand_shape[d] for d in non_collapsed)
-        op_pos_flat = op_pos_t.reshape(n_collapsed_elems, -1)
-        # Index with the flat positions to get (N, non_collapsed_flat) map.
-        selected = op_pos_flat[flat_operand_positions.flatten()]
-        # selected shape: (N, prod(non_collapsed_shape))
-
-        # Output layout: batch dims from index array come at positions
-        # NOT in offset_dims; kept dims fill offset_dims.
-        out_shape = atom_shape(eqn.outvars[0])
-        out_ndim = len(out_shape)
-        offset_dims = dim_nums.offset_dims
-
-        if offset_dims:
-            # Reshape selected to (batch_shape..., non_collapsed_shape...)
-            idx_shape = (
-                concrete_indices.shape[:-1]
-                if concrete_indices.ndim > 1
-                else (len(flat_operand_positions),)
-            )
-            intermediate_shape = tuple(idx_shape) + non_collapsed_shape
-            selected = selected.reshape(intermediate_shape)
-
-            # Transpose to match output layout.
-            batch_positions = [i for i in range(out_ndim) if i not in offset_dims]
-            n_batch = len(batch_positions)
-            n_offset = len(offset_dims)
-            # selected axes: 0..n_batch-1 are batch, n_batch..end are kept.
-            perm = [0] * out_ndim
-            for target, src in zip(batch_positions, range(n_batch), strict=True):
-                perm[target] = src
-            for target, src in zip(
-                offset_dims, range(n_batch, n_batch + n_offset), strict=True
-            ):
-                perm[target] = src
-            selected = selected.transpose(perm)
-
-        flat_map = selected.flatten()
-    else:
-        # All dims collapsed — output is just a selection of scalar elements.
-        flat_map = flat_operand_positions.flatten()
-
-    deps[eqn.outvars[0]] = permute_indices(operand_indices, flat_map)
-    return True
-
-
-def _try_general_gather(
-    eqn: JaxprEqn,
-    deps: Deps,
-    operand_indices,
-    concrete_indices: np.ndarray,
-    dim_nums,
-    slice_sizes,
-    operand_shape: tuple[int, ...],
-) -> bool:
-    """General handler that simulates XLA gather semantics on a position map.
-
-    Works for any ``GatherDimensionNumbers`` configuration with static indices.
-    Handles mismatched ``start_index_map``, partial slices,
-    and ``operand_batching_dims``.
-
-    Returns True if index sets were written.
-    """
+    dim_nums = eqn.params["dimension_numbers"]
+    slice_sizes = eqn.params["slice_sizes"]
+    operand_shape = atom_shape(eqn.invars[0])
     op_ndim = len(operand_shape)
     offset_dims = dim_nums.offset_dims
     collapsed = dim_nums.collapsed_slice_dims
@@ -440,4 +154,3 @@ def _try_general_gather(
 
     flat_map = assembled.transpose(perm).flatten()
     deps[eqn.outvars[0]] = permute_indices(operand_indices, flat_map)
-    return True
