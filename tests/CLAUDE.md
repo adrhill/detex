@@ -14,7 +14,7 @@ Always run linting and type checking before tests:
 uv run ruff check --fix .  # lint + auto-fix
 uv run ruff format .       # format
 uv run ty check            # type check
-uv run pytest              # run tests (skips slow and benchmark by default: we only run these in CI)
+uv run pytest              # run tests (skips slow, benchmark, and cutest by default: we only run these in CI)
 ```
 
 ## Markers
@@ -34,6 +34,7 @@ Use markers to run subsets of tests:
 | `fallback` | Documents conservative fallback behavior (TODO) |
 | `bug` | Documents known bugs |
 | `slow` | Tests that take more than 1 second |
+| `cutest` | CUTEst benchmark problem tests (requires sif2jax) |
 
 ```bash
 uv run pytest -m fallback        # Run only fallback tests
@@ -64,3 +65,21 @@ Handler test files (`_interpret/test_*.py`) should cover:
 - **Real-world usage patterns**: `jnp` functions that lower to the primitive under test.
 - **Jacobian verification**: for at least one test per dimensionality, verify precision by comparing the detected pattern against `(np.abs(jax.jacobian(f)(x)) > 1e-10)` using `assert_array_equal`.
   Choose test functions that avoid local sparsity (e.g. multiply by zero) so the numerical Jacobian matches the structural pattern.
+
+## CUTEst Integration Tests
+
+[CUTEst](https://github.com/ralna/CUTEst) (Constrained and Unconstrained Testing Environment with safe threads)
+is a standard benchmark suite for nonlinear optimization.
+[`sif2jax`](https://github.com/johannahaffner/sif2jax) converts CUTEst SIF problem definitions into JAX-traceable functions.
+These tests compare asdex's detected sparsity against CUTEst ground truth via `sif2jax`.
+
+```bash
+uv run pytest -m cutest  # requires sif2jax
+```
+
+Fixtures live in `tests/cutest_fixtures/` (`hessian/`, `jacobian_eq/`, `jacobian_ineq/`).
+Regenerate with `tests/setup/generate_cutest_fixtures.py` (requires `pycutest`).
+
+`EXPECTED_NNZ` tracks `(detected_nnz, target_nnz)` per problem.
+Tests fail on both regressions and improvements to keep baselines current.
+Update the tuple when a handler improvement reduces detected nnz.

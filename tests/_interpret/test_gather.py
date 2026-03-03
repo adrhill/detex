@@ -666,6 +666,34 @@ def test_gather_multi_dim_single_coordinate():
 
 
 @pytest.mark.array_ops
+def test_gather_multi_dim_start_indices_single_collapse():
+    """Single-dim gather with multi-dimensional start_indices.
+
+    When start_indices has shape (N, 1) and only one dim is collapsed,
+    the batch axis is expanded into multiple axes during reshape.
+    If the reshaped ndim doesn't match out_ndim, the handler must bail out
+    to avoid a permutation mismatch.
+
+    This is the pattern POWERSUM triggers via hessian_sparsity.
+    """
+
+    def f(x):
+        # x^2 + x^3 + x^4 summed, then grad → triggers gather
+        # with multi-dim start_indices.
+        mat = x.reshape(2, 3)
+        idx = jnp.array([[0, 2], [1, 0]])
+        return mat[:, idx].flatten()
+
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    # Each output reads exactly one input element.
+    # mat[:, idx] has shape (2, 2, 2).
+    # mat[r, idx[i,j]] = x[r*3 + idx[i,j]]
+    mapping = [r * 3 + idx for r in range(2) for idx in [0, 2, 1, 0]]
+    expected = _perm_matrix(8, 6, mapping)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
 @pytest.mark.fallback
 def test_gather_single_dim_start_map_mismatch():
     """Single collapsed dim with start_index_map pointing elsewhere falls back.

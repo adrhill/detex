@@ -63,3 +63,389 @@ Unrecognized configurations fall back to conservative.
 | `test_gather_batching_dims` | `operand_batching_dims` not yet supported; true pattern is a permutation (2/12 nnz) |
 
 All five tests carry `@pytest.mark.fallback` and `TODO(gather)` comments.
+
+# Bugs
+
+Found via CUTEst integration tests (`tests/test_cutest.py`).
+
+## 1. Missing `cumsum` primitive handler
+
+| Primitive | CUTEst problems |
+|-----------|-----------------|
+| `cumsum` | HADAMARD, HS91, HS92 (constraint Jacobian) |
+
+# CUTEst
+
+Conservative patterns found via CUTEst integration tests (`tests/test_cutest.py`).
+349 passed, 5 xfailed. Of those that pass, ~60 emit conservativeness warnings.
+
+## Xfailed (internal errors)
+
+| Problem | Kind | Reason |
+|---------|------|--------|
+| POWERSUM | hessian | `axes don't match array` (gather handler bug) |
+| HADAMARD | jacobian_eq, jacobian_ineq | Missing `cumsum` handler |
+| HS91 | jacobian_ineq | Missing `cumsum` handler |
+| HS92 | jacobian_ineq | Missing `cumsum` handler |
+
+## Conservative Hessians (27 problems)
+
+Hessian sparsity is detected as `jacobian_sparsity(grad(f))`.
+The gradient jaxpr contains `gather`, `scatter-add`, and `pad` primitives
+from VJP rules that don't appear in the primal.
+When these VJP-introduced operations use **dynamic indices**
+(e.g., `iota` + `lt` + `select_n` to build index arrays),
+the gather/scatter handlers can't resolve them statically
+and fall back to conservative.
+
+### Root cause: VJP index expressions
+
+The primal jaxpr of problems like GENROSE uses simple `slice` operations
+(e.g., `x[1:]`, `x[:-1]`).
+But `grad(f)` replaces these with scatter-add to accumulate cotangents:
+`iota` generates position arrays, `lt`/`select_n` build masks,
+and `scatter-add` or `gather` uses these as indices.
+Since the indices depend on `iota` (a const tracked in `const_vals`)
+rather than the input, they *should* be resolvable —
+but the current `scatter-add`/`gather` handlers only resolve indices
+that are directly available as `Literal` or in `const_vals`.
+
+**Handler improvement**: Extend const propagation through `select_n` and comparison ops
+so that index arrays built from `iota + lt + select_n` chains
+are tracked in `const_vals` and available to gather/scatter.
+This would make the VJP index expressions as precise as the primal `slice` operations.
+Alternatively, recognize the specific VJP patterns
+(scatter-add with iota-derived indices) as structured operations.
+
+### Severely conservative (detected 100% dense, true density <15%)
+
+| Problem | Extra nnz | True density | Gradient primitives |
+|---------|-----------|--------------|---------------------|
+| GENROSE | 248,502 | 0.6% | `gather`, `scatter-add`, `iota`, `lt`, `select_n`, `pad` |
+| ARGLINA | 39,800 | 0.5% | `reduce_sum`, `split`, `concatenate` |
+| COATING | 15,656 | 12.8% | `gather`, `scatter-add`, `iota`, `lt`, `select_n`, `split` |
+| LUKSAN17LS | 9,408 | 5.9% | `gather`, `scatter-add`, `iota`, `lt`, `select_n`, `pad` |
+| LUKSAN21LS | 9,506 | 4.9% | `gather`, `scatter-add`, `iota`, `lt`, `select_n`, `pad` |
+| ERRINROS | 2,352 | 5.9% | `gather`, `scatter-add`, `iota`, `lt`, `select_n`, `pad` |
+| VANDANMSLS | 468 | 3.3% | `ge`, `le`, `or`, `select_n`, nested `jit` |
+
+GENROSE, COATING, LUKSAN17LS, LUKSAN21LS, ERRINROS all share the same pattern:
+the primal uses `slice` for shifting operations (`x[1:] - x[:-1]`),
+whose VJP introduces `gather`/`scatter-add` with `iota`-derived indices.
+Fixing const propagation through comparison+select chains would resolve all five.
+
+ARGLINA uses `reduce_sum` and `split`/`concatenate`.
+The VJP of `reduce_sum` broadcasts cotangents back,
+and `split`/`concatenate` introduce coupling across all elements.
+This is a structural limitation: the Hessian of `sum(f(Ax))` where `A` is dense
+genuinely couples all inputs through `A^T @ ... @ A`,
+but when `A` is structured (e.g., an appended identity row),
+the true Hessian is sparser than what the graph structure implies.
+
+VANDANMSLS uses `ge`, `le`, `or`, `select_n` to build conditional masks.
+The nested `jit` is inlined by `prop_nested_jaxpr`,
+but the comparison+select chains inside it produce index arrays
+that downstream gather/scatter can't resolve.
+Same root cause as the VJP index expression issue.
+
+### Moderately conservative (detected 100% dense, true density 15–80%)
+
+These are mostly small problems (n ≤ 8) where the Hessian is nearly dense anyway.
+The extra nonzeros come from the same VJP index-expression issue as above,
+or from `reduce_sum` in least-squares objectives
+(`sum(residuals²)`) coupling residual terms.
+
+| Problem | Extra nnz | True density |
+|---------|-----------|--------------|
+| ALLINITU | 10 | 37.5% |
+| COOLHANSLS | 42 | 48.1% |
+| BROWNBS | 2 | 50.0% |
+| CLUSTERLS | 2 | 50.0% |
+| HEART8LS | 32 | 50.0% |
+| GAUSSIAN | 4 | 55.6% |
+| HEART6LS | 16 | 55.6% |
+| VESUVIOULS | 22 | 65.6% |
+| VESUVIALS | 18 | 71.9% |
+| VESUVIOLS | 18 | 71.9% |
+| BEALE | 1 | 75.0% |
+| EXPFIT | 1 | 75.0% |
+| MGH17SLS | 6 | 76.0% |
+| HELIX | 2 | 77.8% |
+
+For least-squares problems (BROWNBS, HEART6LS, HEART8LS, VESUVI*, etc.),
+`f(x) = sum(r_i(x)^2)` produces a Hessian `2 * (J^T J + sum r_i * H_i)`.
+The `J^T J` term couples variables that share a residual,
+but `sum` in the jaxpr unions all residual dependencies,
+making every variable appear coupled to every other.
+The true Hessian is sparser because not all residual pairs share variables.
+
+**Handler improvement**: This is a fundamental limitation of the index-set lattice.
+The union over `reduce_sum` is exact for the sum itself,
+but in the Hessian context, `J^T J` only has nonzeros where `J` columns overlap.
+Resolving this would require second-order analysis
+(tracking which *pairs* of inputs interact),
+which is beyond the current first-order index-set framework.
+
+### Near-exact (few extra nonzeros)
+
+| Problem | Extra nnz | True density |
+|---------|-----------|--------------|
+| HIMMELBH | 1 | 25.0% |
+| LUKSAN13LS | 2 | 5.0% |
+| OSBORNEB | 4 | 96.7% |
+| QING | 1 | 1.0% |
+| SPIN2LS | 15 | 99.9% |
+
+These are nearly exact with only 1–15 extra nonzeros.
+The extras are likely structural zeros:
+positions where `∂²f/∂x_i∂x_j` is structurally present in the jaxpr
+but evaluates to zero for all inputs (e.g., `x_i * 0 * x_j`).
+
+## Conservative Jacobians — equality constraints (14 problems)
+
+### Severely conservative (detected 100% dense, true density <20%)
+
+| Problem | Extra nnz | True density | Key primitives |
+|---------|-----------|--------------|----------------|
+| TRO11X3 | 8,554 | 5.0% | `gather`, `scatter`, `scatter-add` |
+| MSS1 | 6,192 | 5.8% | `gather`, `iota`, `lt`, `select_n` |
+| TRO5X5 | 4,022 | 6.9% | `gather`, `scatter`, `scatter-add` |
+| TRO4X4 | 1,334 | 11.8% | `gather`, `scatter`, `scatter-add` |
+| TRO6X2 | 786 | 12.7% | `gather`, `scatter`, `scatter-add` |
+| TRO3X3 | 298 | 17.2% | `gather`, `scatter`, `scatter-add` |
+
+The TRO problems are structural truss optimizations.
+Their constraints use `gather` with static indices
+to select member properties from a design vector,
+and `scatter`/`scatter-add` to assemble stiffness matrices.
+The `scatter` here uses Pattern 1 (batched along dim 0) but with indices
+that select the same operand row multiple times (repeated scatter targets).
+When multiple updates target the same row, the handler correctly unions deps,
+but the constraint Jacobian is sparse because each constraint
+only involves a small subset of design variables.
+The conservativeness comes from gather/scatter coupling:
+the gather selects a subset of variables,
+then scatter-add writes them into a shared accumulator,
+making downstream reads appear to depend on all gathered variables.
+
+**Handler improvement**: This is a precision-of-composition issue.
+Each gather and scatter is individually correct,
+but composing them through a shared accumulator
+(gather from design → compute → scatter-add into global)
+unions deps from different members.
+Fixing this would require **symbolic index tracking**:
+knowing that `gather` at index `[2,3]` followed by `scatter-add` at index `[5]`
+only creates a dependency `output[5] ← input[2,3]`, not `output[*] ← input[*]`.
+This is architecturally difficult because the current framework
+evaluates each primitive independently.
+
+MSS1 is a network flow problem with similar gather-based indexing.
+The `iota + lt + select_n` pattern (same as the Hessian root cause)
+builds dynamic index arrays that the gather handler can't resolve.
+
+### Fully spurious (ground truth has 0 nnz)
+
+| Problem | Extra nnz |
+|---------|-----------|
+| TENBARS1 | 62 |
+| TENBARS2 | 62 |
+| TENBARS3 | 62 |
+| TENBARS4 | 62 |
+| FLETCHER | 4 |
+| S316-322 | 2 |
+
+These constraints are constant w.r.t. the decision variables,
+but asdex detects structural dependencies.
+This happens when a constraint like `c(x) = sum(x) - constant`
+is implemented as `concatenate([computed_terms, constant_terms])`
+and the primal jaxpr contains `slice` or `gather` operations
+that structurally reference the input even for constant output positions.
+
+For TENBARS1–4, the equality constraints encode structural compatibility
+using `sqrt`, `div`, and `mul` with constants —
+the jaxpr contains `slice` operations on the design vector
+that appear in both variable and constant terms,
+so every constraint output structurally depends on the sliced variables
+even when the dependence cancels algebraically.
+
+**Handler improvement**: Extend zero-skipping in `mul` and `div`
+to detect when one operand is a tracked zero constant.
+Currently `mul` clears deps when one factor is zero,
+but `div(0, x)` doesn't clear deps even though the result is always zero.
+More broadly, this is an **algebraic cancellation** problem —
+detecting `f(x) - f(x) = 0` requires symbolic simplification
+that's beyond index-set propagation.
+
+### Small extras
+
+| Problem | Extra nnz |
+|---------|-----------|
+| BATCH | 6 |
+| BT12 | 1 |
+| BT8 | 2 |
+| HS61 | 2 |
+
+Small extras (1–6 nnz) are structural zeros:
+the jaxpr has a path from input to output,
+but the derivative is algebraically zero for all inputs
+(e.g., `x * y` where `y` is always zero along certain constraint rows).
+
+## Conservative Jacobians — inequality constraints (24 problems)
+
+### Severely conservative
+
+| Problem | Extra nnz | Detected density | True density | Key primitives |
+|---------|-----------|-----------------|--------------|----------------|
+| HAIFAM | 12,039 | 85.9% | 4.8% | `gather`, `scatter`, nested `jit` |
+| OET7 | 3,006 | 100% | 57.1% | `iota`, nested `jit`, `reshape` |
+| OET6 | 2,004 | 100% | 60.0% | `iota`, nested `jit`, `reshape` |
+| OET4 | 1,004 | 100% | 75.0% | `iota`, nested `jit`, `reshape` |
+| OET2 | 1,002 | 100% | 66.7% | `iota`, nested `jit`, `reshape` |
+
+Note: nested `jit` jaxprs *are* inlined by `prop_nested_jaxpr`,
+so the conservativeness comes from primitives *inside* those jaxprs,
+not from the `jit` boundary itself.
+
+HAIFAM is similar to the TRO problems:
+a network/assignment problem using `gather`/`scatter`
+with indices that select subsets of design variables.
+The gather/scatter composition through shared accumulators
+causes the same precision-of-composition issue as the TRO problems.
+
+OET2/4/6/7 are semi-infinite programming problems
+whose constraints are parameterized by a discretization grid.
+Each constraint row depends on a small subset of the 3 decision variables.
+The nested `jit` bodies contain `iota`-based index arithmetic
+and comparison+select chains that build dynamic index arrays.
+The gather/scatter handlers inside the nested jaxpr
+can't resolve these `iota`-derived indices,
+causing conservative fallback.
+
+**Handler improvement**: Same as the Hessian root cause —
+extend const propagation through comparison+select chains
+so that `iota`-derived index arrays are resolvable.
+This would let the gather/scatter handlers inside nested `jit` bodies
+produce precise patterns.
+
+### Moderately conservative
+
+| Problem | Extra nnz | True density |
+|---------|-----------|--------------|
+| HS108 | 20 | 16.2% |
+| HS33 | 4 | 33.3% |
+| S365 | 6 | 45.7% |
+| S365MOD | 6 | 45.7% |
+| HAIFAS | 13 | 15.4% |
+| HS43 | 3 | 75.0% |
+
+HS108 uses `integer_pow` and `mul` with `neg` —
+the extra nonzeros come from products of variables
+where one factor is structurally present but algebraically zero.
+
+HS33 uses `integer_pow` with `slice` —
+the `x^2` terms couple `x[i]` to itself,
+but `concatenate` of independent constraint terms
+makes each output appear to depend on the full sliced range.
+
+S365/S365MOD, HAIFAS: similar structural-zero issues
+from polynomial and product constraint expressions.
+
+**Handler improvement**: These are mostly structural zeros
+that would require algebraic simplification to eliminate.
+Extending zero-skipping in `integer_pow`
+(when the base is a tracked zero, the result is zero)
+could help with some cases.
+
+### Small extras (1–4 nnz)
+
+Structural zeros in the Jacobian:
+the jaxpr has a path from input to output,
+but the derivative evaluates to zero for all inputs.
+
+| Problem | Extra nnz | Likely cause |
+|---------|-----------|--------------|
+| CB2 | 2 | `exp` product terms |
+| CB3 | 2 | `exp` product terms |
+| CHACONN2 | 2 | `integer_pow` product terms |
+| DIPIGRI | 2 | polynomial cross-terms |
+| GIGOMEZ2 | 2 | `integer_pow` product terms |
+| GIGOMEZ3 | 2 | `integer_pow` product terms |
+| HS100 | 2 | polynomial cross-terms |
+| HS113 | 3 | polynomial cross-terms |
+| HS65 | 1 | polynomial cross-terms |
+| MAKELA2 | 1 | `exp` terms |
+| OET1 | 2 | `iota`-derived indices inside nested `jit` |
+| OET3 | 4 | `iota`-derived indices inside nested `jit` |
+| PENTAGON | 3 | trigonometric cross-terms |
+| SIPOW1 | 4 | `iota`-based indexing |
+| SIPOW2 | 4 | `iota`-based indexing |
+
+Most of these (CB2, CB3, CHACONN2, GIGOMEZ*, DIPIGRI, HS*, PENTAGON, MAKELA2)
+have constraints of the form `g(x_i, x_j)` where the jaxpr's `mul` or `exp`
+structurally involves `x_k` but the partial `∂g/∂x_k` is always zero.
+These are inherent to index-set propagation and can't be improved
+without value-dependent analysis.
+
+OET1/OET3, SIPOW1/SIPOW2 would be resolved by
+better const propagation through comparison+select chains (see Summary §1).
+
+## Summary of handler improvements
+
+Ordered by estimated impact (number of CUTEst problems resolved):
+
+### 1. Extend const propagation through comparison+select chains
+
+VJP rules build index arrays via `iota + lt/ge + select_n`.
+These are constant expressions (they don't depend on the input),
+but the intermediate values aren't tracked in `const_vals`
+because `select_n` doesn't propagate const values
+when the predicate is a non-trivial expression.
+
+**Handler improvement**: Propagate const values through `select_n`
+when the predicate, true branch, and false branch are all in `const_vals`.
+Similarly for `lt`, `le`, `gt`, `ge`, `eq`, `ne` — these produce boolean consts
+from const inputs.
+
+**Impact**: Resolves GENROSE, COATING, ERRINROS, LUKSAN17LS, LUKSAN21LS (Hessian),
+OET2/4/6/7 (inequality Jacobian), and partially MSS1, VANDANMSLS, HAIFAM.
+~12–15 problems affected across Hessian and Jacobian tests.
+This is the single highest-impact improvement.
+
+### 2. Add `cumsum` primitive handler
+
+`cumsum` produces a lower-triangular dependency pattern:
+`out[i]` depends on `in[0..i]`.
+
+**Impact**: Resolves HADAMARD, HS91, HS92 (currently xfailed).
+
+### 3. Recognize more gather/scatter dimension patterns
+
+The gather handler only matches two specific `GatherDimensionNumbers` configurations.
+Extending it to handle reversed `start_index_map`,
+partial non-collapsed slices,
+and `operand_batching_dims` would cover more cases.
+
+See TODO §5 for the specific test cases.
+
+**Impact**: Improves precision for problems using advanced indexing patterns.
+Indirect CUTEst impact through gradient jaxprs.
+
+### 4. Zero-skipping in `div` and `integer_pow`
+
+`div(0, x)` should produce zero deps (like `mul(0, x)` already does).
+`integer_pow(0, n)` for `n > 0` should produce zero deps.
+
+**Impact**: Resolves some TENBARS spurious nonzeros.
+Small improvements across many moderately conservative problems.
+
+### 5. Abstract value range tracking (architectural)
+
+Track value ranges (intervals) instead of just exact const values.
+This would let `gather`/`scatter`/`dynamic_slice` narrow their fallback
+when indices are bounded (e.g., `argmax` of a 2-element array → {0,1}).
+
+See TODO §1 for the specific test cases.
+
+**Impact**: Resolves all 4 dynamic-index fallback cases.
+Would help with some TRO/MSS1 problems
+where indices are statically bounded but not statically known.

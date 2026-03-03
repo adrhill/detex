@@ -1,5 +1,6 @@
 """Tests for elementwise operation propagation."""
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -103,6 +104,18 @@ def test_binary_broadcast_dependent_operands():
         [0,0,0, 1,1,1],
     ], dtype=int)
     # fmt: on
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_erf():
+    """Erf is a unary elementwise op that preserves per-element dependencies."""
+
+    def f(x):
+        return jax.lax.erf(x)
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.eye(4, dtype=int)
     np.testing.assert_array_equal(result, expected)
 
 
