@@ -77,14 +77,13 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     lhs_val_flat = np.atleast_1d(lhs_val).ravel() if lhs_val is not None else None
     rhs_val_flat = np.atleast_1d(rhs_val).ravel() if rhs_val is not None else None
 
-    # Disable zero-skipping when a constant was scalar-broadcast
-    # to a larger shape (e.g. jnp.dot(jnp.array(2.0), x)).
-    # The flat array has length 1 but the operand shape is larger,
-    # so indexing with lhs_flat[o] would go out of bounds.
+    # When a constant was scalar-broadcast to a larger shape
+    # (e.g. jnp.dot(jnp.array(2.0), x)), expand it to full size
+    # so zero-skipping still works for scalar constants like 0.0.
     if lhs_val_flat is not None and len(lhs_val_flat) != int(np.prod(lhs_shape)):
-        lhs_val_flat = None
+        lhs_val_flat = np.broadcast_to(lhs_val_flat, int(np.prod(lhs_shape)))
     if rhs_val_flat is not None and len(rhs_val_flat) != int(np.prod(rhs_shape)):
-        rhs_val_flat = None
+        rhs_val_flat = np.broadcast_to(rhs_val_flat, int(np.prod(rhs_shape)))
 
     if not out_shape:
         # Scalar output (e.g., vector dot product).
@@ -143,6 +142,10 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             else np.full(out_shape, contract_coords[rhs_contract.index(d), c_idx])
             for d in range(len(rhs_shape))
         )
+        # When out_shape has axes from both batch and contraction dimensions,
+        # ravel_multi_index may return an array whose shape is a prefix of out_shape
+        # (only the contraction axes). Broadcast to full out_shape before raveling
+        # so that lhs_flat/rhs_flat have length == out_size.
         lhs_flat = np.broadcast_to(
             np.ravel_multi_index(lhs_coord, lhs_shape), out_shape
         ).ravel()

@@ -190,8 +190,9 @@ def _try_single_dim_gather(
         new_shape[d : d + 1] = list(batch_shape)
         selected = selected.reshape(new_shape)
 
-        # Verify permutation matches reshaped array.
-        # If dimensions don't align, fall back to other gather patterns.
+        # Multi-dim start_indices can expand the batch axes beyond what
+        # the offset_dims permutation expects (e.g. POWERSUM via hessian_sparsity).
+        # Fall back to other gather patterns rather than producing a wrong permutation.
         if selected.ndim != out_ndim:
             return False
 

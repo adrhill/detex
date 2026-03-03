@@ -668,6 +668,22 @@ def test_hilbert_matrix_pattern():
 
 
 @pytest.mark.array_ops
+def test_scalar_zero_times_vector():
+    """Scalar zero constant times vector produces an all-zero Jacobian.
+
+    ``jnp.dot(jnp.array(0.0), x)`` has a scalar-broadcast constant.
+    The broadcast-to-full-size path lets zero-skipping eliminate all terms.
+    """
+
+    def f(x):
+        return jnp.dot(jnp.array(0.0), x)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.zeros((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
 def test_scalar_dot_zero_skipping():
     """Scalar dot product skips terms where a factor is a known zero.
 
