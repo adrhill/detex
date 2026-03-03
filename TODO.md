@@ -3,21 +3,7 @@
 Remaining handler issues found during the post-hardening audit (PR #51)
 and the conservative-pattern audit.
 
-## 1. Dynamic-index fallbacks are overly conservative
-
-When indices depend on input, handlers fall back to all-ones.
-In many cases the index range is bounded and could be narrowed.
-
-| Test | Handler | Issue |
-|------|---------|-------|
-| `test_dynamic_slice_dynamic_start` | `dynamic_slice` | Slice window is bounded; `argmax(x[:2])` → {0,1}, so x[4] is never touched |
-| `test_dynamic_update_slice_dynamic_start` | `dynamic_update_slice` | Same bounded-index issue |
-| `test_gather_dynamic_indices_fallback` | `gather` | `argmax(x[:2])` → {0,1}, so indices are `[0,1]` or `[1,2]` — x[3] is unreachable |
-| `test_scatter_dynamic_indices` | `scatter` | `argmax(x[3:])` on 2 elements → {0,1}, so out[2] always equals x[2] |
-
-All four tests now carry `@pytest.mark.fallback` and `TODO` comments with the precise pattern.
-
-## 2. `scan` merges deps across all time steps
+## 1. `scan` merges deps across all time steps
 
 The scan handler unions xs dependencies across all iterations,
 so `ys[t]` appears to depend on all xs slices even when only `xs[t]` matters.
@@ -36,7 +22,7 @@ so `ys[t]` appears to depend on all xs slices even when only `xs[t]` matters.
 
 All nine tests now carry `@pytest.mark.fallback` and `TODO(scan)` comments.
 
-## 3. `diag` via `dynamic_update_slice` is conservative
+## 2. `diag` via `dynamic_update_slice` is conservative
 
 `jnp.diag(x)` lowers to `dynamic_update_slice` with loop indices.
 The true pattern is sparse (out[i*n+i] depends on x[i] only),
@@ -44,7 +30,7 @@ but the handler reports `tile(eye(n), (n, 1))`.
 
 Tracked in `test_diag_1d` in `test_platform_index.py`.
 
-## 4. Scatter Pattern 4 (partial-row scatter)
+## 3. Scatter Pattern 4 (partial-row scatter)
 
 `mat.at[0, :2].set(updates)` still falls back to conservative.
 Already tracked with `@pytest.mark.fallback` in `test_scatter_2d`.
@@ -52,42 +38,38 @@ Already tracked with `@pytest.mark.fallback` in `test_scatter_2d`.
 # CUTEst
 
 Conservative patterns found via CUTEst integration tests (`tests/test_cutest.py`).
-349 passed, 1 xfailed. Of those that pass, ~60 emit conservativeness warnings.
-
-## Xfailed (internal errors)
-
-| Problem | Kind | Reason |
-|---------|------|--------|
-| POWERSUM | hessian | `axes don't match array` (gather handler bug) |
+354 passed. Of those, ~60 emit conservativeness warnings.
 
 ## Conservative Hessians (27 problems)
 
 Hessian sparsity is detected as `jacobian_sparsity(grad(f))`.
 The gradient jaxpr contains `gather`, `scatter-add`, and `pad` primitives
 from VJP rules that don't appear in the primal.
-When these VJP-introduced operations use **dynamic indices**
-(e.g., `iota` + `lt` + `select_n` to build index arrays),
-the gather/scatter handlers can't resolve them statically
-and fall back to conservative.
+The VJP scatter-add uses a `ScatterDimensionNumbers` configuration
+that the scatter handler doesn't recognize,
+causing it to fall back to conservative
+even when the indices are const.
 
-### Root cause: VJP index expressions
+### Root cause: unhandled `scatter-add` dimension configuration
 
 The primal jaxpr of problems like GENROSE uses simple `slice` operations
 (e.g., `x[1:]`, `x[:-1]`).
 But `grad(f)` replaces these with scatter-add to accumulate cotangents:
 `iota` generates position arrays, `lt`/`select_n` build masks,
 and `scatter-add` or `gather` uses these as indices.
-Since the indices depend on `iota` (a const tracked in `const_vals`)
-rather than the input, they *should* be resolvable —
-but the current `scatter-add`/`gather` handlers only resolve indices
-that are directly available as `Literal` or in `const_vals`.
 
-**Handler improvement**: Extend const propagation through `select_n` and comparison ops
-so that index arrays built from `iota + lt + select_n` chains
-are tracked in `const_vals` and available to gather/scatter.
-This would make the VJP index expressions as precise as the primal `slice` operations.
-Alternatively, recognize the specific VJP patterns
-(scatter-add with iota-derived indices) as structured operations.
+The const propagation chain works correctly:
+`iota → add → lt → select_n → broadcast_in_dim` all propagate through `const_vals`,
+and `gather` receives const indices and produces precise patterns.
+However, `scatter-add` falls back to conservative because its
+`ScatterDimensionNumbers(update_window_dims=(1,), inserted_window_dims=(), ...)`
+configuration is not recognized by the scatter handler,
+even though the indices are available as consts.
+
+**Handler improvement**: Extend the scatter handler to recognize
+the VJP scatter-add configuration
+(`update_window_dims=(1,)` with a 2D update and 2D index array).
+This would make the VJP scatter-add as precise as the primal `slice` operations.
 
 ### Severely conservative (detected 100% dense, true density <15%)
 
@@ -104,7 +86,9 @@ Alternatively, recognize the specific VJP patterns
 GENROSE, COATING, LUKSAN17LS, LUKSAN21LS, ERRINROS all share the same pattern:
 the primal uses `slice` for shifting operations (`x[1:] - x[:-1]`),
 whose VJP introduces `gather`/`scatter-add` with `iota`-derived indices.
-Fixing const propagation through comparison+select chains would resolve all five.
+The `gather` half is already precise (const propagation through the
+`iota → lt → select_n` chain works).
+The conservativeness comes entirely from the `scatter-add` half.
 
 ARGLINA uses `reduce_sum` and `split`/`concatenate`.
 The VJP of `reduce_sum` broadcasts cotangents back,
@@ -115,10 +99,9 @@ but when `A` is structured (e.g., an appended identity row),
 the true Hessian is sparser than what the graph structure implies.
 
 VANDANMSLS uses `ge`, `le`, `or`, `select_n` to build conditional masks.
-The nested `jit` is inlined by `prop_nested_jaxpr`,
-but the comparison+select chains inside it produce index arrays
-that downstream gather/scatter can't resolve.
-Same root cause as the VJP index expression issue.
+The nested `jit` is inlined by `prop_nested_jaxpr`.
+The comparison+select chains propagate consts correctly,
+but the downstream scatter/gather uses an unhandled dimension configuration.
 
 ### Moderately conservative (detected 100% dense, true density 15–80%)
 
@@ -213,8 +196,8 @@ This is architecturally difficult because the current framework
 evaluates each primitive independently.
 
 MSS1 is a network flow problem with similar gather-based indexing.
-The `iota + lt + select_n` pattern (same as the Hessian root cause)
-builds dynamic index arrays that the gather handler can't resolve.
+The `iota + lt + select_n` chain propagates consts correctly,
+but the downstream scatter uses an unhandled dimension configuration.
 
 ### Fully spurious (ground truth has 0 nnz)
 
@@ -289,16 +272,9 @@ OET2/4/6/7 are semi-infinite programming problems
 whose constraints are parameterized by a discretization grid.
 Each constraint row depends on a small subset of the 3 decision variables.
 The nested `jit` bodies contain `iota`-based index arithmetic
-and comparison+select chains that build dynamic index arrays.
-The gather/scatter handlers inside the nested jaxpr
-can't resolve these `iota`-derived indices,
-causing conservative fallback.
-
-**Handler improvement**: Same as the Hessian root cause —
-extend const propagation through comparison+select chains
-so that `iota`-derived index arrays are resolvable.
-This would let the gather/scatter handlers inside nested `jit` bodies
-produce precise patterns.
+and comparison+select chains that build index arrays.
+Const propagation through these chains works,
+but the downstream gather/scatter uses unhandled dimension configurations.
 
 ### Moderately conservative
 
@@ -360,24 +336,24 @@ These are inherent to index-set propagation and can't be improved
 without value-dependent analysis.
 
 OET1/OET3, SIPOW1/SIPOW2 would be resolved by
-better const propagation through comparison+select chains (see Summary §1).
+handling the VJP scatter-add dimension configuration (see Summary §1).
 
 ## Summary of handler improvements
 
 Ordered by estimated impact (number of CUTEst problems resolved):
 
-### 1. Extend const propagation through comparison+select chains
+### 1. Handle VJP `scatter-add` dimension configuration
 
-VJP rules build index arrays via `iota + lt/ge + select_n`.
-These are constant expressions (they don't depend on the input),
-but the intermediate values aren't tracked in `const_vals`
-because `select_n` doesn't propagate const values
-when the predicate is a non-trivial expression.
+VJP rules for `slice` produce `scatter-add` with
+`ScatterDimensionNumbers(update_window_dims=(1,), inserted_window_dims=(), ...)`,
+a 2D index array `(n, 1)`, and 2D updates `(n, 1)`.
+The indices are const (propagated through the `iota → lt → select_n` chain),
+but the scatter handler doesn't recognize this configuration.
 
-**Handler improvement**: Propagate const values through `select_n`
-when the predicate, true branch, and false branch are all in `const_vals`.
-Similarly for `lt`, `le`, `gt`, `ge`, `eq`, `ne` — these produce boolean consts
-from const inputs.
+**Handler improvement**: Extend the scatter handler to support
+this dimension configuration with const indices.
+Each row of the index array selects one output position;
+this is essentially a batched single-element scatter.
 
 **Impact**: Resolves GENROSE, COATING, ERRINROS, LUKSAN17LS, LUKSAN21LS (Hessian),
 OET2/4/6/7 (inequality Jacobian), and partially MSS1, VANDANMSLS, HAIFAM.
@@ -391,15 +367,3 @@ This is the single highest-impact improvement.
 
 **Impact**: Resolves some TENBARS spurious nonzeros.
 Small improvements across many moderately conservative problems.
-
-### 3. Abstract value range tracking (architectural)
-
-Track value ranges (intervals) instead of just exact const values.
-This would let `gather`/`scatter`/`dynamic_slice` narrow their fallback
-when indices are bounded (e.g., `argmax` of a 2-element array → {0,1}).
-
-See TODO §1 for the specific test cases.
-
-**Impact**: Resolves all 4 dynamic-index fallback cases.
-Would help with some TRO/MSS1 problems
-where indices are statically bounded but not statically known.
