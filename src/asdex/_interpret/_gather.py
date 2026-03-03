@@ -172,18 +172,18 @@ def prop_gather(
         hi_flat = hi.flatten()
         n_elements = len(lo_flat)
 
-        n_combos = math.prod(
+        n_candidate_valuess = math.prod(
             int(hi_flat[i]) - int(lo_flat[i]) + 1 for i in range(n_elements)
         )
-        if n_combos <= _MAX_ENUM_COMBINATIONS:
+        if n_candidate_valuess <= _MAX_ENUM_COMBINATIONS:
             si_shape = atom_shape(eqn.invars[1])
             ranges = [
                 range(int(lo_flat[i]), int(hi_flat[i]) + 1) for i in range(n_elements)
             ]
             accumulated: list[IndexSet] | None = None
 
-            for combo in itertools.product(*ranges):
-                candidate = np.array(combo, dtype=lo.dtype).reshape(si_shape)
+            for candidate_values in itertools.product(*ranges):
+                candidate = np.array(candidate_values, dtype=lo.dtype).reshape(si_shape)
                 flat_map = _gather_flat_map(candidate, eqn, operand_shape)
                 pattern = permute_indices(operand_indices, flat_map)
                 if accumulated is None:

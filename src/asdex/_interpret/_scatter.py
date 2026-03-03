@@ -42,7 +42,7 @@ def _scatter_for_indices(
     out_size = numel(out_shape)
     updates_shape = atom_shape(eqn.invars[2])
 
-    # Pattern 1: Batched scatter along dim 0 with trailing window dims.
+    # arr.at[indices].set(vals): batched scatter along dim 0 with trailing window dims.
     n_update_window = len(dim_nums.update_window_dims)
     expected_window_dims = tuple(range(1, 1 + n_update_window))
     if (
@@ -92,7 +92,7 @@ def _scatter_for_indices(
 
         return out_indices
 
-    # Pattern 2: Full-window scatter along an arbitrary single dimension.
+    # arr.at[:, idx, :].set(val): full-window scatter along an arbitrary single dimension.
     if (
         len(dim_nums.inserted_window_dims) == 1
         and dim_nums.scatter_dims_to_operand_dims == dim_nums.inserted_window_dims
@@ -135,7 +135,7 @@ def _scatter_for_indices(
 
             return out_indices
 
-    # Pattern 3: Multi-index scatter where each update is a scalar.
+    # mat.at[rows, cols].set(vals): multi-index scatter where each update is a scalar.
     ndim = len(operand_shape)
     if (
         dim_nums.update_window_dims == ()
@@ -261,10 +261,10 @@ def prop_scatter(
             hi_flat = hi.flatten()
             n_elements = len(lo_flat)
 
-            n_combos = math.prod(
+            n_candidate_valuess = math.prod(
                 int(hi_flat[i]) - int(lo_flat[i]) + 1 for i in range(n_elements)
             )
-            if n_combos <= _MAX_ENUM_COMBINATIONS:
+            if n_candidate_valuess <= _MAX_ENUM_COMBINATIONS:
                 si_shape = atom_shape(indices_atom)
                 ranges = [
                     range(int(lo_flat[i]), int(hi_flat[i]) + 1)
@@ -273,8 +273,10 @@ def prop_scatter(
                 out_size = atom_numel(eqn.outvars[0])
                 accumulated: list[IndexSet] | None = None
 
-                for combo in itertools.product(*ranges):
-                    candidate = np.array(combo, dtype=lo.dtype).reshape(si_shape)
+                for candidate_values in itertools.product(*ranges):
+                    candidate = np.array(candidate_values, dtype=lo.dtype).reshape(
+                        si_shape
+                    )
                     pattern = _scatter_for_indices(
                         candidate,
                         eqn,

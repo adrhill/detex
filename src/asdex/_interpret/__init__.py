@@ -33,14 +33,15 @@ from ._cumsum import prop_cumsum
 from ._dot_general import prop_dot_general
 from ._dynamic_slice import prop_dynamic_slice, prop_dynamic_update_slice
 from ._elementwise import (
-    prop_binary_elementwise,
+    prop_add,
+    prop_binary_const,
+    prop_comparison,
     prop_convert_element_type,
     prop_integer_pow,
+    prop_sub,
     prop_unary_elementwise,
     prop_zero_derivative,
-    propagate_bounds_arithmetic,
-    propagate_const_comparison,
-    propagate_const_elementwise,
+    prop_zero_derivative_const,
 )
 from ._equinox._select_if_vmap import prop_select_if_vmap
 from ._gather import prop_gather
@@ -104,63 +105,22 @@ def prop_jaxpr(
     return [index_sets(deps, outvar) for outvar in jaxpr.outvars]
 
 
-def prop_nested_jaxpr(
+def _prop_closed_jaxpr(
     eqn: JaxprEqn,
     deps: Deps,
     const_vals: ConstVals,
     value_bounds: ValueBounds,
+    param_key: str,
 ) -> None:
-    """Handle primitives with nested jaxprs by recursively tracing."""
-    closed = eqn.params.get("jaxpr")
-    if closed is None:
-        msg = (
-            f"Primitive '{eqn.primitive.name}' has no 'jaxpr' parameter. "
-            "Please help out asdex's development by reporting this at "
-            "https://github.com/adrhill/asdex/issues"
-        )
-        raise ValueError(msg)
+    """Recursively trace a closed jaxpr stored in ``eqn.params[param_key]``.
 
-    # Unwrap ClosedJaxpr, seeding const_vals for captured constants
-    if hasattr(closed, "jaxpr"):
-        seed_const_vals(const_vals, closed.jaxpr.constvars, closed.consts)
-        closed = closed.jaxpr
-
-    forward_const_vals(const_vals, eqn.invars, closed.invars)
-    forward_value_bounds(value_bounds, eqn.invars, closed.invars)
-    input_indices = [index_sets(deps, invar) for invar in eqn.invars]
-    output_indices = prop_jaxpr(closed, input_indices, const_vals, value_bounds)
-
-    for outvar, indices, inner_outvar in zip(
-        eqn.outvars,
-        output_indices,
-        closed.outvars,
-        strict=False,
-    ):
-        deps[outvar] = indices
-        # Propagate value bounds from inner output vars to outer output vars.
-        if isinstance(inner_outvar, Var) and inner_outvar in value_bounds:
-            value_bounds[outvar] = value_bounds[inner_outvar]
-
-
-def prop_custom_call(
-    eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
-) -> None:
-    """Custom differentiation wrappers delegate to their forward jaxpr.
-
-    JAX's `custom_jvp` and `custom_vjp` allow users to define custom derivative rules.
-    For sparsity detection, we only need the forward pass behavior,
-    which is stored in the `call_jaxpr` parameter.
-
-    The custom derivative rules don't affect which outputs depend on which
-    inputs — they only change how derivatives are computed.
+    Shared implementation for ``prop_nested_jaxpr`` (param ``"jaxpr"``)
+    and ``prop_custom_call`` (param ``"call_jaxpr"``).
     """
-    closed = eqn.params.get("call_jaxpr")
+    closed = eqn.params.get(param_key)
     if closed is None:
         msg = (
-            f"Primitive '{eqn.primitive.name}' has no 'call_jaxpr' parameter. "
+            f"Primitive '{eqn.primitive.name}' has no '{param_key}' parameter. "
             "Please help out asdex's development by reporting this at "
             "https://github.com/adrhill/asdex/issues"
         )
@@ -212,14 +172,40 @@ def prop_dispatch(
             | "not"
         ):
             prop_zero_derivative(eqn, deps)
-        case "eq" | "ne" | "lt" | "le" | "gt" | "ge" | "lt_to" | "le_to":
-            prop_zero_derivative(eqn, deps)
-            propagate_const_comparison(eqn, const_vals, value_bounds)
+        case "eq" | "ne" | "lt_to" | "le_to":
+            prop_zero_derivative_const(eqn, deps, const_vals)
+        case "lt":
+            prop_comparison(
+                eqn, deps, const_vals, value_bounds, np.less, np.greater_equal
+            )
+        case "le":
+            prop_comparison(
+                eqn, deps, const_vals, value_bounds, np.less_equal, np.greater
+            )
+        case "gt":
+            prop_comparison(
+                eqn,
+                deps,
+                const_vals,
+                value_bounds,
+                np.greater,
+                np.less_equal,
+                swap_bounds=True,
+            )
+        case "ge":
+            prop_comparison(
+                eqn,
+                deps,
+                const_vals,
+                value_bounds,
+                np.greater_equal,
+                np.less,
+                swap_bounds=True,
+            )
         case "and" | "or" | "xor":
-            prop_zero_derivative(eqn, deps)
-            propagate_const_elementwise(eqn, const_vals)
+            prop_zero_derivative_const(eqn, deps, const_vals)
         case "jit" | "pjit" | "xla_call" | "named_call":
-            prop_nested_jaxpr(eqn, deps, const_vals, value_bounds)
+            _prop_closed_jaxpr(eqn, deps, const_vals, value_bounds, "jaxpr")
         case "slice":
             prop_slice(eqn, deps, const_vals)
         case "pad":
@@ -240,13 +226,12 @@ def prop_dispatch(
             prop_integer_pow(eqn, deps)
         case "mul":
             prop_mul(eqn, deps, const_vals)
-            propagate_const_elementwise(eqn, const_vals)
-        case "add" | "sub" | "add_any":
-            prop_binary_elementwise(eqn, deps)
-            propagate_bounds_arithmetic(eqn, const_vals, value_bounds)
+        case "add" | "add_any":
+            prop_add(eqn, deps, const_vals, value_bounds)
+        case "sub":
+            prop_sub(eqn, deps, const_vals, value_bounds)
         case "div" | "pow" | "max" | "min" | "atan2" | "rem" | "nextafter" | "complex":
-            prop_binary_elementwise(eqn, deps)
-            propagate_const_elementwise(eqn, const_vals)
+            prop_binary_const(eqn, deps, const_vals)
         case (
             "neg"
             | "exp"
@@ -291,7 +276,7 @@ def prop_dispatch(
         case "conv_general_dilated":
             prop_conv_general_dilated(eqn, deps)
         case "custom_jvp_call" | "custom_vjp_call":
-            prop_custom_call(eqn, deps, const_vals, value_bounds)
+            _prop_closed_jaxpr(eqn, deps, const_vals, value_bounds, "call_jaxpr")
         case "gather":
             prop_gather(eqn, deps, const_vals, value_bounds)
         case "scatter" | "scatter-add" | "scatter-mul" | "scatter-min" | "scatter-max":

@@ -110,15 +110,15 @@ def prop_dynamic_slice(
     # Try bounded enumeration.
     start_bounds = _resolve_start_bounds(eqn, 1, const_vals, value_bounds)
     if start_bounds is not None:
-        n_combos = math.prod(hi - lo + 1 for lo, hi in start_bounds)
-        if n_combos <= _MAX_ENUM_COMBINATIONS:
+        n_candidate_valuess = math.prod(hi - lo + 1 for lo, hi in start_bounds)
+        if n_candidate_valuess <= _MAX_ENUM_COMBINATIONS:
             in_shape = atom_shape(operand)
             out_size = numel(slice_sizes)
             ranges = [range(lo, hi + 1) for lo, hi in start_bounds]
             accumulated: list[IndexSet] | None = None
 
-            for combo in itertools.product(*ranges):
-                clamped = clamp_starts(combo, in_shape, slice_sizes)
+            for candidate_values in itertools.product(*ranges):
+                clamped = clamp_starts(candidate_values, in_shape, slice_sizes)
                 slices = tuple(
                     slice(s, s + sz) for s, sz in zip(clamped, slice_sizes, strict=True)
                 )
@@ -190,15 +190,15 @@ def prop_dynamic_update_slice(
     # Try bounded enumeration.
     start_bounds = _resolve_start_bounds(eqn, 2, const_vals, value_bounds)
     if start_bounds is not None:
-        n_combos = math.prod(hi - lo + 1 for lo, hi in start_bounds)
-        if n_combos <= _MAX_ENUM_COMBINATIONS:
+        n_candidate_valuess = math.prod(hi - lo + 1 for lo, hi in start_bounds)
+        if n_candidate_valuess <= _MAX_ENUM_COMBINATIONS:
             out_size = numel(operand_shape)
             ranges = [range(lo, hi + 1) for lo, hi in start_bounds]
             accumulated: list[IndexSet] | None = None
 
-            for combo in itertools.product(*ranges):
+            for candidate_values in itertools.product(*ranges):
                 # Clamp to valid bounds (same as dynamic_slice clamping).
-                clamped = clamp_starts(combo, operand_shape, upd_shape)
+                clamped = clamp_starts(candidate_values, operand_shape, upd_shape)
                 pattern = _dynamic_update_for_starts(
                     list(clamped),
                     operand_indices,

@@ -71,9 +71,9 @@ def prop_select_n(
         and len(cases) == 2
         and which_val.dtype == bool
     ):
-        if np.all(which_val == False):  # noqa: E712
+        if not np.any(which_val):
             selected = eqn.invars[1]
-        elif np.all(which_val == True):  # noqa: E712
+        elif np.all(which_val):
             selected = eqn.invars[2]
         else:
             return
