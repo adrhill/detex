@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772557356438,
+  "lastUpdate": 1772562293167,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -8574,6 +8574,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00042911491591416783",
             "extra": "mean: 34.902180678571426 msec\nrounds: 28"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7f1bcee4edd992d4a83dae132abfd30c1cfccb30",
+          "message": "fix(gather): handle all `GatherDimensionNumbers` configurations (#77)\n\n* fix(gather): add general handler for any `GatherDimensionNumbers` config\n\nAdd `_try_general_gather` that simulates XLA gather semantics on a\nposition map, handling mismatched `start_index_map`, partial slices,\nand `operand_batching_dims`. Runs as a third fallback after the two\nexisting specialized pattern matchers.\n\nResolves all 5 gather fallback cases (TODO §5), reducing fallback\ntest count from 22 to 17.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(gather): remove specialized handlers, inline general gather\n\nThe general handler covers all `GatherDimensionNumbers` configurations,\nmaking `_try_single_dim_gather` and `_try_multi_dim_gather` redundant.\nInlines the remaining logic directly into `prop_gather`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-03T19:24:18+01:00",
+          "tree_id": "3c52fd65ba7898328f2d8e76158ffa085a608663",
+          "url": "https://github.com/adrhill/asdex/commit/7f1bcee4edd992d4a83dae132abfd30c1cfccb30"
+        },
+        "date": 1772562292660,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 849.7865816528011,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002800711807866484",
+            "extra": "mean: 1.1767660511360862 msec\nrounds: 176"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3322.6527243099767,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000008350245290242278",
+            "extra": "mean: 300.96434474887 usec\nrounds: 2190"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 70.19533860553557,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00038527381304743693",
+            "extra": "mean: 14.24596020000024 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 125.7245347783584,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00023738397098243882",
+            "extra": "mean: 7.953897000000154 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.339429491700592,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0141927226821178",
+            "extra": "mean: 46.86160894736776 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 248.36025178920795,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000427327225102587",
+            "extra": "mean: 4.026409189054676 msec\nrounds: 201"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 34.71646145939963,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009197203804671878",
+            "extra": "mean: 28.804778999999314 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 33.648530106695304,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008139639598613483",
+            "extra": "mean: 29.718980200000544 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 105.2769193650081,
+            "unit": "iter/sec",
+            "range": "stddev: 0.009380892233353186",
+            "extra": "mean: 9.498758189654811 msec\nrounds: 58"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3308.7631035375266,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00000806063863391197",
+            "extra": "mean: 302.22774151792896 usec\nrounds: 2240"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 28.46524296767296,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004615316424262838",
+            "extra": "mean: 35.13056259999843 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 29.00095424739778,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017832658292664893",
+            "extra": "mean: 34.48162400000093 msec\nrounds: 28"
           }
         ]
       }
