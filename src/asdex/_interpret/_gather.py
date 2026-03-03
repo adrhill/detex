@@ -144,19 +144,17 @@ def _try_single_dim_gather(
     # np.take handles arbitrary dim selection cleanly.
     selected = np.take(op_pos, concrete_indices.flatten(), axis=d)
 
+    # Scalar-index gather: when start_indices is a 1D index vector (no batch dims),
+    # np.take leaves a size-1 axis at position d.
+    # Squeeze it so `selected` matches the scalar output shape.
+    out_ndim = len(atom_shape(eqn.outvars[0]))
+    if selected.shape[d] == 1 and selected.ndim > out_ndim:
+        selected = np.squeeze(selected, axis=d)
+
     # The output layout is: batch dims (from start_indices shape)
     # come first at positions NOT in offset_dims,
     # and the kept operand dims fill in at offset_dims positions.
     # We need to transpose `selected` so its axes match the output layout.
-    #
-    # `selected` currently has shape:
-    #   operand dims before d + (n_indices,) + operand dims after d
-    # where n_indices = len(concrete_indices.flatten()).
-    #
-    # The output has ndim = len(offset_dims) + ndim(start_indices_shape).
-    # offset_dims tells us where the kept operand dims land in the output.
-    # The remaining positions are batch dims from the index array.
-    out_ndim = len(atom_shape(eqn.outvars[0]))
     offset_dims = dim_nums.offset_dims
     batch_positions = [i for i in range(out_ndim) if i not in offset_dims]
 
