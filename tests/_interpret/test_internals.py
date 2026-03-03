@@ -12,7 +12,7 @@ from jax._src.core import Literal, Primitive
 
 from asdex import jacobian_sparsity
 from asdex._interpret import (
-    _prop_closed_jaxpr,
+    prop_closed_jaxpr,
     prop_dispatch,
     prop_jaxpr,
 )
@@ -51,7 +51,7 @@ def test_nested_jaxpr_missing_param_raises():
     const_vals = {}
 
     with pytest.raises(ValueError, match="has no 'jaxpr' parameter"):
-        _prop_closed_jaxpr(eqn, env, const_vals, {}, "jaxpr")  # type: ignore[arg-type]
+        prop_closed_jaxpr(eqn, env, const_vals, {}, "jaxpr")  # type: ignore[arg-type]
 
 
 def test_nested_jaxpr_missing_param_error_message():
@@ -61,7 +61,7 @@ def test_nested_jaxpr_missing_param_error_message():
     const_vals = {}
 
     with pytest.raises(ValueError, match="xla_call"):
-        _prop_closed_jaxpr(eqn, env, const_vals, {}, "jaxpr")  # type: ignore[arg-type]
+        prop_closed_jaxpr(eqn, env, const_vals, {}, "jaxpr")  # type: ignore[arg-type]
 
 
 def test_custom_call_missing_param_raises():
@@ -71,7 +71,7 @@ def test_custom_call_missing_param_raises():
     const_vals = {}
 
     with pytest.raises(ValueError, match="has no 'call_jaxpr' parameter"):
-        _prop_closed_jaxpr(eqn, env, const_vals, {}, "call_jaxpr")  # type: ignore[arg-type]
+        prop_closed_jaxpr(eqn, env, const_vals, {}, "call_jaxpr")  # type: ignore[arg-type]
 
 
 def test_custom_call_missing_param_error_message():
@@ -81,7 +81,7 @@ def test_custom_call_missing_param_error_message():
     const_vals = {}
 
     with pytest.raises(ValueError, match="custom_vjp_call"):
-        _prop_closed_jaxpr(eqn, env, const_vals, {}, "call_jaxpr")  # type: ignore[arg-type]
+        prop_closed_jaxpr(eqn, env, const_vals, {}, "call_jaxpr")  # type: ignore[arg-type]
 
 
 def test_unknown_primitive_raises():

@@ -34,10 +34,6 @@ _BINARY_CONST_UFUNCS: dict[str, np.ufunc] = {
     "rem": np.remainder,
     "nextafter": np.nextafter,
     # comparison
-    "lt": np.less,
-    "le": np.less_equal,
-    "gt": np.greater,
-    "ge": np.greater_equal,
     "eq": np.equal,
     "ne": np.not_equal,
     # bitwise
@@ -111,51 +107,6 @@ def _binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     ]
 
 
-def _resolve_comparison_bounds(
-    eqn: JaxprEqn,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
-    true_op: np.ufunc,
-    false_op: np.ufunc,
-    *,
-    swap_bounds: bool = False,
-) -> None:
-    """Derive const comparison results from value bounds.
-
-    When bounds prove the comparison is always True or always False,
-    store the result as a const value.
-    This enables ``select_n`` to pick the correct branch.
-
-    For ``lt``/``le`` (``swap_bounds=False``):
-    always-true tests ``true_op(hi_lhs, lo_rhs)``,
-    always-false tests ``false_op(lo_lhs, hi_rhs)``.
-
-    For ``gt``/``ge`` (``swap_bounds=True``):
-    always-true tests ``true_op(lo_lhs, hi_rhs)``,
-    always-false tests ``false_op(hi_lhs, lo_rhs)``.
-    """
-    if eqn.outvars[0] in const_vals:
-        return
-    b1 = atom_value_bounds(eqn.invars[0], const_vals, value_bounds)
-    b2 = atom_value_bounds(eqn.invars[1], const_vals, value_bounds)
-    if b1 is None or b2 is None:
-        return
-
-    lo1, hi1 = b1
-    lo2, hi2 = b2
-    out_shape = atom_shape(eqn.outvars[0])
-
-    if swap_bounds:
-        true_args, false_args = (lo1, hi2), (hi1, lo2)
-    else:
-        true_args, false_args = (hi1, lo2), (lo1, hi2)
-
-    if np.all(true_op(*true_args)):
-        const_vals[eqn.outvars[0]] = np.ones(out_shape, dtype=bool)
-    elif np.all(false_op(*false_args)):
-        const_vals[eqn.outvars[0]] = np.zeros(out_shape, dtype=bool)
-
-
 def _propagate_bounds_add(
     eqn: JaxprEqn,
     const_vals: ConstVals,
@@ -219,30 +170,6 @@ def prop_zero_derivative_const(
     """
     _zero_derivative(eqn, deps)
     _propagate_const(eqn, const_vals)
-
-
-def prop_comparison(
-    eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
-    true_op: np.ufunc,
-    false_op: np.ufunc,
-    *,
-    swap_bounds: bool = False,
-) -> None:
-    """Comparison primitives (lt, le, gt, ge) with bounds resolution.
-
-    Zero-derivative (comparisons are piecewise constant),
-    propagates const values,
-    and resolves comparison results from value bounds
-    when bounds prove the result is always True or always False.
-    """
-    _zero_derivative(eqn, deps)
-    _propagate_const(eqn, const_vals)
-    _resolve_comparison_bounds(
-        eqn, const_vals, value_bounds, true_op, false_op, swap_bounds=swap_bounds
-    )
 
 
 def prop_binary_const(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:

@@ -26,6 +26,7 @@ from ._commons import (
     index_sets,
     seed_const_vals,
 )
+from ._comparison import prop_ge, prop_gt, prop_le, prop_lt
 from ._concatenate import prop_concatenate
 from ._cond import prop_cond
 from ._conv import prop_conv_general_dilated
@@ -35,7 +36,6 @@ from ._dynamic_slice import prop_dynamic_slice, prop_dynamic_update_slice
 from ._elementwise import (
     prop_add,
     prop_binary_const,
-    prop_comparison,
     prop_convert_element_type,
     prop_integer_pow,
     prop_sub,
@@ -105,7 +105,7 @@ def prop_jaxpr(
     return [index_sets(deps, outvar) for outvar in jaxpr.outvars]
 
 
-def _prop_closed_jaxpr(
+def prop_closed_jaxpr(
     eqn: JaxprEqn,
     deps: Deps,
     const_vals: ConstVals,
@@ -175,37 +175,17 @@ def prop_dispatch(
         case "eq" | "ne" | "lt_to" | "le_to":
             prop_zero_derivative_const(eqn, deps, const_vals)
         case "lt":
-            prop_comparison(
-                eqn, deps, const_vals, value_bounds, np.less, np.greater_equal
-            )
+            prop_lt(eqn, deps, const_vals, value_bounds)
         case "le":
-            prop_comparison(
-                eqn, deps, const_vals, value_bounds, np.less_equal, np.greater
-            )
+            prop_le(eqn, deps, const_vals, value_bounds)
         case "gt":
-            prop_comparison(
-                eqn,
-                deps,
-                const_vals,
-                value_bounds,
-                np.greater,
-                np.less_equal,
-                swap_bounds=True,
-            )
+            prop_gt(eqn, deps, const_vals, value_bounds)
         case "ge":
-            prop_comparison(
-                eqn,
-                deps,
-                const_vals,
-                value_bounds,
-                np.greater_equal,
-                np.less,
-                swap_bounds=True,
-            )
+            prop_ge(eqn, deps, const_vals, value_bounds)
         case "and" | "or" | "xor":
             prop_zero_derivative_const(eqn, deps, const_vals)
         case "jit" | "pjit" | "xla_call" | "named_call":
-            _prop_closed_jaxpr(eqn, deps, const_vals, value_bounds, "jaxpr")
+            prop_closed_jaxpr(eqn, deps, const_vals, value_bounds, "jaxpr")
         case "slice":
             prop_slice(eqn, deps, const_vals)
         case "pad":
@@ -276,7 +256,7 @@ def prop_dispatch(
         case "conv_general_dilated":
             prop_conv_general_dilated(eqn, deps)
         case "custom_jvp_call" | "custom_vjp_call":
-            _prop_closed_jaxpr(eqn, deps, const_vals, value_bounds, "call_jaxpr")
+            prop_closed_jaxpr(eqn, deps, const_vals, value_bounds, "call_jaxpr")
         case "gather":
             prop_gather(eqn, deps, const_vals, value_bounds)
         case "scatter" | "scatter-add" | "scatter-mul" | "scatter-min" | "scatter-max":
