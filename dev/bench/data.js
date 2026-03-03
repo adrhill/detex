@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772562293167,
+  "lastUpdate": 1772582155722,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -8682,6 +8682,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00017832658292664893",
             "extra": "mean: 34.48162400000093 msec\nrounds: 28"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0292518b956c13e68c3eb0373d32d31bddf3c7d5",
+          "message": "feat(interpret): track value bounds for dynamic-index sparsity (#78)\n\n* feat(interpret): track value bounds for tighter dynamic-index sparsity\n\nWhen `gather`, `scatter`, `dynamic_slice`, and `dynamic_update_slice`\nhave indices from bounded ops like `argmax`, enumerate all possible\nindex values and union the resulting patterns instead of falling back\nto fully conservative all-ones sparsity.\n\nFor example, `argmax(x[:2])` can only return 0 or 1, so\n`x[jnp.array([0, 1]) + jnp.argmax(x[:2])]` gathers from either\n`x[[0,1]]` or `x[[1,2]]` — yielding a 2-nonzero-per-row pattern\ninstead of a dense row.\n\nKey changes:\n- Add `ValueBounds` type and `atom_value_bounds` helper to `_commons`\n- Source bounds from `argmax`/`argmin` in `prop_dispatch`\n- Propagate bounds through `add`/`sub`, `convert_element_type`,\n  `broadcast_in_dim`, comparisons, and `select_n`\n- Forward bounds into/out of nested jaxprs (`jit`, `custom_jvp`/`vjp`)\n- Add bounded enumeration (capped at 64 combinations) to\n  `_dynamic_slice`, `_gather`, and `_scatter` handlers\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): move bounds propagation into handler files\n\nMove value bounds helpers out of `__init__.py` into their\nrespective handler modules, following the one-handler-per-file pattern:\n\n- `_propagate_const_comparison_from_bounds` → `_elementwise.py`\n- `_propagate_bounds_binary` → `_elementwise.py`\n- `_propagate_bounds_convert` → `_elementwise.py`\n- `_propagate_bounds_select_n` → `_select.py`\n- `_propagate_bounds_broadcast` → `_broadcast.py`\n- argmax/argmin bounds sourcing → new `_argmax.py`\n\nDeduplicate `_MAX_ENUM_COMBINATIONS` into `_commons.py`\nwith comprehensive documentation.\nMove `_clamp_starts` to `_commons.py` as `clamp_starts`.\n\nEach dispatch case is now a single function call\nwith no `if name in (...)` routing inside helpers.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): one handler call per dispatch case\n\nEach dispatch case now calls exactly one `prop_*` function\ninstead of composing 2-3 calls inline.\n\n- Deduplicate `prop_nested_jaxpr` / `prop_custom_call` into\n  `_prop_closed_jaxpr` parameterized by jaxpr key\n- Create composite handlers: `prop_zero_derivative_const`,\n  `prop_comparison`, `prop_binary_const`, `prop_add`, `prop_sub`\n- Make `prop_mul` handle const propagation internally\n- Use `atom_value_bounds` in broadcast and convert instead of\n  manual isinstance checks\n- Eliminate dispatch-within-dispatch in comparison and arithmetic\n  bounds (pass ops as parameters instead of matching on name)\n- Rename \"combo\" → \"candidate_values\" in gather/scatter/dynamic_slice\n- Rename \"Pattern N\" comments in scatter to describe JAX operations\n- Remove `noqa: E712` by using `not np.any()` / `np.all()`\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* claude: update `_interpret/CLAUDE.md`\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: update TODO.md for resolved items and corrected root cause\n\nRemove dynamic-index fallbacks (§1) and value range tracking (§3),\nboth resolved by `ValueBounds`. Remove POWERSUM xfail (fixed by\ngather handler). Correct CUTEst root cause: const propagation\nthrough `iota → lt → select_n` already works; the real blocker is\nan unhandled `scatter-add` `ScatterDimensionNumbers` configuration.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): extract bounded enumeration to `enumerate_bounded_patterns`\n\nThe four dynamic-index handlers (gather, scatter, dynamic_slice,\ndynamic_update_slice) shared a ~25-line enumeration block.\nExtract it to a shared helper in `_commons.py` that takes ranges\nand a `make_pattern` callback, simplifying each call site to ~8 lines.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): extract comparison handlers to `_comparison.py`\n\nMove lt/le/gt/ge from `_elementwise.py` to dedicated `_comparison.py`\nwith individual `prop_lt`, `prop_le`, `prop_gt`, `prop_ge` handlers.\nInline bounds resolution with direct comparisons instead of the\n`swap_bounds`/`true_op`/`false_op` indirection.\n\nAlso rename `_prop_closed_jaxpr` → `prop_closed_jaxpr` to match\nthe `prop_*` naming convention, and condense `CLAUDE.md`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-04T00:55:23+01:00",
+          "tree_id": "6b753bd8f534ddc184a767b4c0c3220cadc2734f",
+          "url": "https://github.com/adrhill/asdex/commit/0292518b956c13e68c3eb0373d32d31bddf3c7d5"
+        },
+        "date": 1772582155268,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 781.01343541136,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0038071527622619014",
+            "extra": "mean: 1.2803877048200838 msec\nrounds: 166"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3225.2975103863187,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000011920434162580495",
+            "extra": "mean: 310.04891696959214 usec\nrounds: 1927"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 68.7694711301706,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009719782967636077",
+            "extra": "mean: 14.541336199999932 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 123.55745131114031,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00025422767857888497",
+            "extra": "mean: 8.093401000007816 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 22.669025182272186,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010766530050976475",
+            "extra": "mean: 44.11305699999963 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 239.73320580735935,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000035537277545454584",
+            "extra": "mean: 4.171303664973148 msec\nrounds: 197"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 35.06999627570783,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007935772434681811",
+            "extra": "mean: 28.51440279999906 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 33.136198357526624,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003884306246078974",
+            "extra": "mean: 30.178476999998338 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 114.63950888910735,
+            "unit": "iter/sec",
+            "range": "stddev: 0.007390725455318031",
+            "extra": "mean: 8.7229961964275 msec\nrounds: 56"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3177.1507792373395,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000007455997427089697",
+            "extra": "mean: 314.74741662718486 usec\nrounds: 2105"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 20.629799729206205,
+            "unit": "iter/sec",
+            "range": "stddev: 0.027845891001831234",
+            "extra": "mean: 48.47356799999716 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 28.470888625178933,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00027204663257262315",
+            "extra": "mean: 35.12359635714444 msec\nrounds: 28"
           }
         ]
       }
