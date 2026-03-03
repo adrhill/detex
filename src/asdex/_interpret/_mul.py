@@ -10,8 +10,9 @@ from ._commons import (
     atom_shape,
     empty_index_set,
     numel,
+    propagate_const_binary,
 )
-from ._elementwise import prop_binary_elementwise
+from ._elementwise import _binary_elementwise
 
 
 def prop_mul(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
@@ -31,7 +32,8 @@ def prop_mul(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         invars[0]: first input array
         invars[1]: second input array
     """
-    prop_binary_elementwise(eqn, deps)
+    _binary_elementwise(eqn, deps)
+    propagate_const_binary(eqn, const_vals, np.multiply)
 
     in1_val = atom_const_val(eqn.invars[0], const_vals)
     in2_val = atom_const_val(eqn.invars[1], const_vals)

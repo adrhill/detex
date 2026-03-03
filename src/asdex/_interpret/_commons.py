@@ -1,5 +1,6 @@
 """Types, constants, and utilities for dependency tracking."""
 
+import itertools
 import math
 from collections.abc import Callable, Sequence
 
@@ -41,6 +42,15 @@ Deps = dict[Var, list[IndexSet]]
 ConstVals = dict[Var, np.ndarray]
 """Maps variables to their concrete numpy array values (for static index tracking)."""
 
+ValueBounds = dict[Var, tuple[np.ndarray, np.ndarray]]
+"""Maps variables to per-element inclusive (lo, hi) integer bounds.
+
+Used to track bounded-but-not-constant values
+(e.g. output of ``argmax`` over a small axis)
+so that dynamic index handlers can enumerate all possible values
+instead of falling back to conservative.
+"""
+
 Atom = Var | Literal
 """Atomic elements in jaxpressions: named intermediates (Var) or constants (Literal)."""
 
@@ -51,6 +61,60 @@ PropJaxprFn = Callable[
 
 _MAX_FIXED_POINT_ITERS = 500
 """Safety bound for fixed-point iteration in while_loop and scan."""
+
+_MAX_ENUM_COMBINATIONS = 64
+"""Maximum number of index combinations to enumerate for bounded dynamic indices.
+
+When ``gather``, ``scatter``, ``dynamic_slice``, or ``dynamic_update_slice``
+receive indices that are not statically known but have bounded value ranges
+(e.g. from ``argmax`` over a small axis),
+we enumerate all possible index arrays and union the resulting sparsity patterns.
+This yields a tighter pattern than the conservative all-to-all fallback.
+
+The cap prevents combinatorial blowup for multi-element index arrays:
+an index with *k* elements where each has *r* possible values
+gives *r^k* combinations.
+If this exceeds the cap, the handler falls back to conservative.
+
+The value 64 is chosen to keep enumeration fast
+while covering the common cases
+(e.g. one ``argmax`` index with up to 64 possible values,
+or two indices each with up to 8 possible values).
+"""
+
+
+def enumerate_bounded_patterns(
+    ranges: Sequence[range],
+    out_size: int,
+    make_pattern: Callable[[tuple[int, ...]], list[IndexSet] | None],
+) -> list[IndexSet] | None:
+    """Enumerate all candidate index combinations and union the resulting patterns.
+
+    Used by ``gather``, ``scatter``, ``dynamic_slice``, and ``dynamic_update_slice``
+    when indices are bounded but not statically known.
+    Each call site builds its own ``ranges`` (from ``atom_value_bounds``
+    or ``_resolve_start_bounds``) and provides a ``make_pattern`` callback
+    that computes the sparsity pattern for one concrete index combination.
+
+    Returns ``None`` if the total number of combinations exceeds
+    ``_MAX_ENUM_COMBINATIONS`` or if ``make_pattern`` returns ``None``
+    (indicating an unrecognized pattern, as in scatter).
+    """
+    if math.prod(len(r) for r in ranges) > _MAX_ENUM_COMBINATIONS:
+        return None
+
+    accumulated: list[IndexSet] | None = None
+    for candidate_values in itertools.product(*ranges):
+        pattern = make_pattern(candidate_values)
+        if pattern is None:
+            return None
+        if accumulated is None:
+            accumulated = pattern
+        else:
+            for i in range(out_size):
+                accumulated[i] = accumulated[i] | pattern[i]
+
+    return accumulated
 
 
 # Shape and size
@@ -106,6 +170,25 @@ def atom_const_val(atom: Atom, const_vals: ConstVals) -> np.ndarray | None:
         return np.asarray(atom.val)
     if isinstance(atom, Var) and atom in const_vals:
         return const_vals[atom]
+    return None
+
+
+def atom_value_bounds(
+    atom: Atom,
+    const_vals: ConstVals,
+    value_bounds: ValueBounds,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    """Get per-element inclusive (lo, hi) bounds for an atom.
+
+    Returns exact ``(val, val)`` for constants,
+    tracked bounds for bounded variables,
+    or ``None`` when no information is available.
+    """
+    val = atom_const_val(atom, const_vals)
+    if val is not None:
+        return (val, val)
+    if isinstance(atom, Var) and atom in value_bounds:
+        return value_bounds[atom]
     return None
 
 
@@ -180,6 +263,24 @@ def conservative_indices(all_indices: list[IndexSet], out_size: int) -> list[Ind
     """Build conservative output index sets where every element depends on the union of all inputs."""
     combined = union_all(all_indices)
     return [combined] * out_size
+
+
+# Index clamping
+
+
+def clamp_starts(
+    starts: tuple[int, ...], in_shape: Sequence[int], slice_sizes: Sequence[int]
+) -> tuple[int, ...]:
+    """Clamp start indices to valid bounds.
+
+    Matches JAX's ``dynamic_slice`` and ``gather`` semantics,
+    which silently clamp out-of-bounds starts
+    rather than raising an error.
+    """
+    return tuple(
+        max(0, min(s, dim - sz))
+        for s, dim, sz in zip(starts, in_shape, slice_sizes, strict=True)
+    )
 
 
 # Position maps
@@ -273,6 +374,18 @@ def seed_const_vals(const_vals: ConstVals, constvars, consts) -> None:
     """
     for var, val in zip(constvars, consts, strict=True):
         const_vals[var] = np.asarray(val)
+
+
+def forward_value_bounds(
+    value_bounds: ValueBounds, outer_atoms: Sequence[Atom], inner_vars
+) -> None:
+    """Transfer known value bounds from outer-scope atoms to inner jaxpr variables.
+
+    Same idea as ``forward_const_vals`` but for value bounds.
+    """
+    for outer, inner in zip(outer_atoms, inner_vars, strict=False):
+        if isinstance(outer, Var) and outer in value_bounds:
+            value_bounds[inner] = value_bounds[outer]
 
 
 def forward_const_vals(

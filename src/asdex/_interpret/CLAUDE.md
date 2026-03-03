@@ -18,6 +18,7 @@ through primitives to determine Jacobian sparsity patterns.
 - `list[IndexSet]` — per-element dependency sets for one array
 - `Deps` = `dict[Var, list[IndexSet]]` — maps jaxpr variables to their index sets
 - `ConstVals` = `dict[Var, np.ndarray]` — statically-known values for precise gather/scatter
+- `ValueBounds` = `dict[Var, tuple[np.ndarray, np.ndarray]]` — per-element inclusive (lo, hi) integer bounds
 
 ## Naming Conventions
 
@@ -43,6 +44,8 @@ not every handler.
 - `in1_val` / `in2_val`: const values for binary inputs.
   Use descriptive prefixes when roles differ:
   `lhs_val` / `rhs_val` (dot_general), `pred_val` / `which_val` (select), etc.
+- `in_bounds` / `in1_bounds` / `in2_bounds`: value bounds for inputs
+  (from `atom_value_bounds(atom, const_vals, value_bounds)`)
 - `flat_map`: a flat integer array mapping output positions to input positions
 
 **Docstrings** — avoid the term "deps"; prefer "index sets" or "input index sets".
@@ -70,8 +73,18 @@ not every handler.
 - **`propagate_const_unary(eqn, const_vals, transform)`** —
   propagates a const value through a unary op by applying `transform`.
   Mirrors `propagate_const_binary` for the single-input case.
+- **`enumerate_bounded_patterns(ranges, out_size, make_pattern)`** —
+  enumerates all candidate index combinations from ``ranges``
+  (capped at ``_MAX_ENUM_COMBINATIONS``),
+  calls ``make_pattern`` for each,
+  and unions the results element-wise.
 - **`conservative_indices(all_indices, out_size)`** —
   conservative fallback where every output element depends on the union of all inputs.
+- **`atom_value_bounds(atom, const_vals, value_bounds)`** —
+  returns `(lo, hi)` bounds for an atom:
+  exact `(val, val)` for constants, tracked bounds for bounded variables, or `None`.
+- **`forward_value_bounds(value_bounds, outer_atoms, inner_vars)`** —
+  transfers known value bounds from outer-scope atoms to inner jaxpr variables.
 
 ## Index Set Aliasing
 
@@ -94,6 +107,21 @@ This lets downstream handlers resolve static indices precisely.
 the handler must assume the worst and return a conservative pattern.
 This applies to `gather`, `scatter`, `dynamic_slice`, `dynamic_update_slice`,
 `dot_general` (zero-skipping), and `mul` (zero-clearing).
+
+## Value Bounds Tracking
+
+`ValueBounds` tracks per-element inclusive `(lo, hi)` integer bounds
+for variables that are bounded but not statically constant
+(e.g. the output of `argmax` over a small axis).
+
+Bounds flow through three roles:
+**producers** create bounds (`argmax`/`argmin`),
+**propagators** forward them (`add`, `sub`, `convert_element_type`, `broadcast_in_dim`, `select_n`),
+and **consumers** use them to tighten sparsity
+(`gather`, `scatter`, `dynamic_slice`, `dynamic_update_slice`, comparisons).
+
+**Invariant**: if bounds are unavailable (`atom_value_bounds` returns `None`),
+the handler must assume the worst and return a conservative pattern.
 
 ## Adding a New Handler
 
