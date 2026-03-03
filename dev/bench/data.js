@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772456501905,
+  "lastUpdate": 1772552602880,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -8034,6 +8034,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00026646939634642906",
             "extra": "mean: 35.75596962963135 msec\nrounds: 27"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "91abf2229f40b11778b0c40134f7d4dc15a47efa",
+          "message": "test(cutest): add CUTEst integration tests and fix discovered bugs (#75)\n\n* test(cutest): add CUTEst integration tests via sif2jax\n\nCompare asdex sparsity detection against ground-truth patterns from\nCUTEst benchmark problems. Tests assert no false negatives and warn\non conservativeness (extra nonzeros).\n\n- Add `sif2jax` test dependency and `cutest` pytest marker\n- Add pycutest-based fixture generation script (`tests/setup/`)\n- Add parametrized tests for Hessian, eq/ineq Jacobian sparsity\n- Fixtures discovered via glob, not manifest files\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix(interpret): fix CUTEst-discovered bugs in `dot_general`, `gather`, and `erf`\n\n- `dot_general`: broadcast flat indices to output size for scalar\n  operands, and disable zero-skipping when constant size mismatches\n  operand shape (fixes HILBERTA)\n- `gather`: bail out of `_try_single_dim_gather` when reshape produces\n  wrong ndim for the permutation (fixes POWERSUM)\n- Add `erf` to unary elementwise dispatch (fixes HS68, HS69)\n- Update TODO.md: remove fixed bugs, keep `cumsum` for follow-up\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs(cutest): catalog conservative patterns and handler improvements\n\nDocument ~60 conservative CUTEst patterns in TODO.md with root cause\nanalysis mapping each to specific handler limitations: VJP index\nexpressions, gather/scatter composition, structural zeros, and\n`reduce_sum` lattice limitations. Add prioritized summary of handler\nimprovements, with const propagation through comparison+select chains\nas the highest-impact fix (~12–15 problems).\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test(cutest): add nnz baseline regression and improvement detection\n\nTrack (detected_nnz, target_nnz) for each CUTEst problem in\n`EXPECTED_NNZ`. Tests fail on regressions (nnz increases) and\nimprovements (nnz decreases), prompting developers to update\nbaselines when handlers improve.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* Fix weird import\n\n* refactor(cutest): improve CUTEst test quality and dot_general scalar handling\n\n- Broadcast scalar constants instead of discarding them in `dot_general`,\n  preserving zero-skipping for cases like `jnp.dot(0.0, x)`\n- Narrow xfail to `NotImplementedError` only; `IndexError`/`ValueError`\n  are real bugs that should fail\n- Replace `_find_problem` linear scan with dict lookup\n- Extract shared `_run_sparsity_test` helper and named extractors\n  (`_objective`, `_eq_constraint`, `_ineq_constraint`)\n- Split `EXPECTED_NNZ` into three per-kind dicts\n- Improve comments in `_gather.py` and `_dot_general.py`\n- Document CUTEst tests in `tests/CLAUDE.md` and sif2jax problem\n  structure in the test module docstring\n- Add `test_scalar_zero_times_vector` for the broadcast fix\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix(gather): squeeze size-1 axis for scalar-index gathers\n\nWhen `start_indices` is a 1D index vector with no batch dims (e.g. shape\n`(1,)`), `np.take` leaves a size-1 axis that doesn't match the scalar\noutput shape, causing `transpose(perm)` to fail with \"axes don't match\narray\". Squeeze the axis early so the permutation logic sees the correct\nndim.\n\nFixes the POWERSUM CUTEst failure.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-03T16:42:44+01:00",
+          "tree_id": "a7e0bab9f73c421fb0dfb042666174c71a4ca32a",
+          "url": "https://github.com/adrhill/asdex/commit/91abf2229f40b11778b0c40134f7d4dc15a47efa"
+        },
+        "date": 1772552602083,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 801.9361873141509,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0032810630364491083",
+            "extra": "mean: 1.2469820115603032 msec\nrounds: 173"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3342.2844776173315,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000162292458179323",
+            "extra": "mean: 299.19655454130765 usec\nrounds: 2191"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 70.75870683764339,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005048396192524946",
+            "extra": "mean: 14.132536400001072 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 123.73411646801036,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00035488856650315605",
+            "extra": "mean: 8.081845399999565 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 20.75506028879116,
+            "unit": "iter/sec",
+            "range": "stddev: 0.015354722654999483",
+            "extra": "mean: 48.181021210526346 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 251.95894011084138,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005440990886333517",
+            "extra": "mean: 3.968900645319755 msec\nrounds: 203"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 25.29816685081133,
+            "unit": "iter/sec",
+            "range": "stddev: 0.023418979338653844",
+            "extra": "mean: 39.528555799999765 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 34.383475032333884,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006671486109850144",
+            "extra": "mean: 29.083738599999265 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 104.14907128419831,
+            "unit": "iter/sec",
+            "range": "stddev: 0.009795867225764436",
+            "extra": "mean: 9.6016218644066 msec\nrounds: 59"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3298.9764356851165,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000007859857930839927",
+            "extra": "mean: 303.1243234061854 usec\nrounds: 2149"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 27.758652066502716,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007802578286081197",
+            "extra": "mean: 36.02480400000161 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 28.129354270208847,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00134111487476326",
+            "extra": "mean: 35.55005174999972 msec\nrounds: 28"
           }
         ]
       }
