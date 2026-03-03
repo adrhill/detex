@@ -7,6 +7,7 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
+    _MAX_ENUM_COMBINATIONS,
     ConstVals,
     Deps,
     IndexSet,
@@ -21,8 +22,6 @@ from ._commons import (
     permute_indices,
     position_map,
 )
-
-_MAX_ENUM_COMBINATIONS = 64
 
 
 def _gather_flat_map(

@@ -1,14 +1,16 @@
 """Propagation rules for element-wise operations."""
 
 import numpy as np
-from jax._src.core import JaxprEqn
+from jax._src.core import JaxprEqn, Var
 
 from ._commons import (
     ConstVals,
     Deps,
+    ValueBounds,
     atom_const_val,
     atom_numel,
     atom_shape,
+    atom_value_bounds,
     copy_index_sets,
     empty_index_sets,
     index_sets,
@@ -178,18 +180,57 @@ def propagate_const_elementwise(eqn: JaxprEqn, const_vals: ConstVals) -> None:
     ufunc = _BINARY_CONST_UFUNCS.get(eqn.primitive.name)
     if ufunc is not None:
         propagate_const_binary(eqn, const_vals, ufunc)
-    # Primitives without a ufunc are silently skipped.
-    # Not propagating a const value is always safe —
-    # it just makes downstream gather/scatter fall back to conservative.
 
 
-def prop_convert_element_type(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def propagate_const_comparison(
+    eqn: JaxprEqn,
+    const_vals: ConstVals,
+    value_bounds: ValueBounds,
+) -> None:
+    """Propagate const values through comparison ops, using bounds when available.
+
+    Two levels of tracking:
+
+    1. **Const propagation**: if both inputs are statically known,
+       apply the matching numpy ufunc and store the result.
+    2. **Bounds resolution**: if value bounds prove the comparison
+       is always True or always False, store that as a const.
+       This enables ``select_n`` to pick the correct branch.
+    """
+    propagate_const_elementwise(eqn, const_vals)
+    if eqn.outvars[0] not in const_vals:
+        _resolve_comparison_from_bounds(eqn, const_vals, value_bounds)
+
+
+def propagate_bounds_arithmetic(
+    eqn: JaxprEqn,
+    const_vals: ConstVals,
+    value_bounds: ValueBounds,
+) -> None:
+    """Propagate value bounds through ``add``, ``sub``, or ``add_any``.
+
+    Uses interval arithmetic: ``[a,b] + [c,d] = [a+c, b+d]``,
+    ``[a,b] - [c,d] = [a-d, b-c]``.
+
+    Also propagates const values via ufunc
+    so both tracking systems stay in sync.
+    """
+    propagate_const_elementwise(eqn, const_vals)
+    _propagate_bounds_arithmetic(eqn, const_vals, value_bounds)
+
+
+def prop_convert_element_type(
+    eqn: JaxprEqn,
+    deps: Deps,
+    const_vals: ConstVals,
+    value_bounds: ValueBounds | None = None,
+) -> None:
     """Type conversion (e.g., float32 → float64) changes dtype without changing values.
 
     Dependencies pass through unchanged.
     The Jacobian is the identity matrix.
 
-    Also propagates const values with the new dtype
+    Also propagates const values and value bounds with the new dtype
     so downstream gather/scatter can resolve static indices.
     JAX inserts ``convert_element_type`` for index dtype changes
     (e.g. int64 → int32) before gather/scatter;
@@ -216,3 +257,86 @@ def prop_convert_element_type(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) 
         else:
             # stop_gradient, bitcast_convert_type, etc. — pass through as-is.
             const_vals[eqn.outvars[0]] = in_val
+
+    # Propagate value bounds with dtype cast.
+    if value_bounds is not None:
+        in_var = eqn.invars[0]
+        if isinstance(in_var, Var) and in_var in value_bounds:
+            lo, hi = value_bounds[in_var]
+            new_dtype = eqn.params.get("new_dtype")
+            if new_dtype is not None:
+                value_bounds[eqn.outvars[0]] = (
+                    lo.astype(new_dtype),
+                    hi.astype(new_dtype),
+                )
+            else:
+                value_bounds[eqn.outvars[0]] = (lo, hi)
+
+
+# Value bounds helpers
+
+
+def _resolve_comparison_from_bounds(
+    eqn: JaxprEqn,
+    const_vals: ConstVals,
+    value_bounds: ValueBounds,
+) -> None:
+    """Derive const comparison results from value bounds.
+
+    When bounds prove the comparison is always True or always False,
+    store the result as a const value.
+    This enables ``select_n`` to pick the correct branch.
+    """
+    b1 = atom_value_bounds(eqn.invars[0], const_vals, value_bounds)
+    b2 = atom_value_bounds(eqn.invars[1], const_vals, value_bounds)
+    if b1 is None or b2 is None:
+        return
+
+    lo1, hi1 = b1
+    lo2, hi2 = b2
+    out_shape = atom_shape(eqn.outvars[0])
+
+    result: np.ndarray | None = None
+    match eqn.primitive.name:
+        case "lt":
+            if np.all(hi1 < lo2):
+                result = np.ones(out_shape, dtype=bool)
+            elif np.all(lo1 >= hi2):
+                result = np.zeros(out_shape, dtype=bool)
+        case "le":
+            if np.all(hi1 <= lo2):
+                result = np.ones(out_shape, dtype=bool)
+            elif np.all(lo1 > hi2):
+                result = np.zeros(out_shape, dtype=bool)
+        case "gt":
+            if np.all(lo1 > hi2):
+                result = np.ones(out_shape, dtype=bool)
+            elif np.all(hi1 <= lo2):
+                result = np.zeros(out_shape, dtype=bool)
+        case "ge":
+            if np.all(lo1 >= hi2):
+                result = np.ones(out_shape, dtype=bool)
+            elif np.all(hi1 < lo2):
+                result = np.zeros(out_shape, dtype=bool)
+
+    if result is not None:
+        const_vals[eqn.outvars[0]] = result
+
+
+def _propagate_bounds_arithmetic(
+    eqn: JaxprEqn,
+    const_vals: ConstVals,
+    value_bounds: ValueBounds,
+) -> None:
+    """Propagate value bounds through a binary arithmetic op via interval arithmetic."""
+    b1 = atom_value_bounds(eqn.invars[0], const_vals, value_bounds)
+    b2 = atom_value_bounds(eqn.invars[1], const_vals, value_bounds)
+    if b1 is None or b2 is None:
+        return
+
+    lo1, hi1 = b1
+    lo2, hi2 = b2
+    if eqn.primitive.name == "sub":
+        value_bounds[eqn.outvars[0]] = (lo1 - hi2, hi1 - lo2)
+    else:  # add, add_any
+        value_bounds[eqn.outvars[0]] = (lo1 + lo2, hi1 + hi2)

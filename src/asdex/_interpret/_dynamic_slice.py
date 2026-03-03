@@ -7,6 +7,7 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
+    _MAX_ENUM_COMBINATIONS,
     ConstVals,
     Deps,
     IndexSet,
@@ -15,19 +16,13 @@ from ._commons import (
     atom_shape,
     atom_value_bounds,
     check_no_index_sets,
+    clamp_starts,
     conservative_indices,
     copy_index_sets,
     index_sets,
     numel,
     transform_indices,
 )
-
-_MAX_ENUM_COMBINATIONS = 64
-"""Maximum number of start-index combinations to enumerate.
-
-Keeps cost bounded for multi-dimensional dynamic starts.
-Falls back to conservative if exceeded.
-"""
 
 
 def _resolve_starts(
@@ -64,16 +59,6 @@ def _resolve_start_bounds(
         lo, hi = b
         bounds.append((int(lo.flat[0]), int(hi.flat[0])))
     return bounds
-
-
-def _clamp_starts(
-    starts: tuple[int, ...], in_shape: tuple[int, ...], slice_sizes: tuple[int, ...]
-) -> tuple[int, ...]:
-    """Clamp start indices to valid bounds, matching JAX's dynamic_slice semantics."""
-    return tuple(
-        max(0, min(s, dim - sz))
-        for s, dim, sz in zip(starts, in_shape, slice_sizes, strict=True)
-    )
 
 
 def prop_dynamic_slice(
@@ -133,7 +118,7 @@ def prop_dynamic_slice(
             accumulated: list[IndexSet] | None = None
 
             for combo in itertools.product(*ranges):
-                clamped = _clamp_starts(combo, in_shape, slice_sizes)
+                clamped = clamp_starts(combo, in_shape, slice_sizes)
                 slices = tuple(
                     slice(s, s + sz) for s, sz in zip(clamped, slice_sizes, strict=True)
                 )
@@ -213,7 +198,7 @@ def prop_dynamic_update_slice(
 
             for combo in itertools.product(*ranges):
                 # Clamp to valid bounds (same as dynamic_slice clamping).
-                clamped = _clamp_starts(combo, operand_shape, upd_shape)
+                clamped = clamp_starts(combo, operand_shape, upd_shape)
                 pattern = _dynamic_update_for_starts(
                     list(clamped),
                     operand_indices,

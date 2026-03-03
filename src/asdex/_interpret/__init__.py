@@ -11,16 +11,14 @@ and applies the appropriate handler for each equation.
 import numpy as np
 from jax._src.core import Jaxpr, JaxprEqn, Var
 
+from ._argmax import prop_argmax
 from ._broadcast import prop_broadcast_in_dim
 from ._commons import (
     ConstVals,
     Deps,
     IndexSet,
     ValueBounds,
-    atom_const_val,
     atom_numel,
-    atom_shape,
-    atom_value_bounds,
     conservative_indices,
     empty_index_sets,
     forward_const_vals,
@@ -40,6 +38,8 @@ from ._elementwise import (
     prop_integer_pow,
     prop_unary_elementwise,
     prop_zero_derivative,
+    propagate_bounds_arithmetic,
+    propagate_const_comparison,
     propagate_const_elementwise,
 )
 from ._equinox._select_if_vmap import prop_select_if_vmap
@@ -196,15 +196,7 @@ def prop_dispatch(
     """Propagate dependencies through a single equation."""
     match eqn.primitive.name:
         case "argmax" | "argmin":
-            prop_zero_derivative(eqn, deps)
-            # Source value bounds: output is in [0, axis_size - 1].
-            axes = eqn.params["axes"]
-            in_shape = atom_shape(eqn.invars[0])
-            axis_size = in_shape[axes[0]]
-            out_var = eqn.outvars[0]
-            lo = np.zeros(atom_shape(out_var), dtype=np.int64)
-            hi = np.full(atom_shape(out_var), axis_size - 1, dtype=np.int64)
-            value_bounds[out_var] = (lo, hi)
+            prop_argmax(eqn, deps, value_bounds)
         case (
             "floor"
             | "ceil"
@@ -217,12 +209,12 @@ def prop_dispatch(
             | "reduce_and"
             | "reduce_or"
             | "reduce_xor"
+            | "not"
         ):
             prop_zero_derivative(eqn, deps)
         case "eq" | "ne" | "lt" | "le" | "gt" | "ge" | "lt_to" | "le_to":
             prop_zero_derivative(eqn, deps)
-            propagate_const_elementwise(eqn, const_vals)
-            _propagate_const_comparison_from_bounds(eqn, const_vals, value_bounds)
+            propagate_const_comparison(eqn, const_vals, value_bounds)
         case "and" | "or" | "xor":
             prop_zero_derivative(eqn, deps)
             propagate_const_elementwise(eqn, const_vals)
@@ -235,8 +227,7 @@ def prop_dispatch(
         case "squeeze":
             prop_squeeze(eqn, deps)
         case "broadcast_in_dim":
-            prop_broadcast_in_dim(eqn, deps, const_vals)
-            _propagate_bounds_broadcast(eqn, value_bounds)
+            prop_broadcast_in_dim(eqn, deps, const_vals, value_bounds)
         case "concatenate":
             prop_concatenate(eqn, deps, const_vals)
         case "reshape":
@@ -250,22 +241,12 @@ def prop_dispatch(
         case "mul":
             prop_mul(eqn, deps, const_vals)
             propagate_const_elementwise(eqn, const_vals)
-        case (
-            "add"
-            | "sub"
-            | "div"
-            | "pow"
-            | "max"
-            | "min"
-            | "add_any"
-            | "atan2"
-            | "rem"
-            | "nextafter"
-            | "complex"
-        ):
+        case "add" | "sub" | "add_any":
+            prop_binary_elementwise(eqn, deps)
+            propagate_bounds_arithmetic(eqn, const_vals, value_bounds)
+        case "div" | "pow" | "max" | "min" | "atan2" | "rem" | "nextafter" | "complex":
             prop_binary_elementwise(eqn, deps)
             propagate_const_elementwise(eqn, const_vals)
-            _propagate_bounds_binary(eqn, const_vals, value_bounds)
         case (
             "neg"
             | "exp"
@@ -300,12 +281,13 @@ def prop_dispatch(
             prop_unary_elementwise(eqn, deps)
         case "reduce_sum" | "reduce_max" | "reduce_min" | "reduce_prod":
             prop_reduce(eqn, deps)
-        case "convert_element_type" | "bitcast_convert_type" | "reduce_precision":
-            prop_convert_element_type(eqn, deps, const_vals)
-            _propagate_bounds_convert(eqn, value_bounds)
-        case "stop_gradient":
-            prop_convert_element_type(eqn, deps, const_vals)
-            _propagate_bounds_convert(eqn, value_bounds)
+        case (
+            "convert_element_type"
+            | "bitcast_convert_type"
+            | "reduce_precision"
+            | "stop_gradient"
+        ):
+            prop_convert_element_type(eqn, deps, const_vals, value_bounds)
         case "conv_general_dilated":
             prop_conv_general_dilated(eqn, deps)
         case "custom_jvp_call" | "custom_vjp_call":
@@ -315,8 +297,7 @@ def prop_dispatch(
         case "scatter" | "scatter-add" | "scatter-mul" | "scatter-min" | "scatter-max":
             prop_scatter(eqn, deps, const_vals, value_bounds)
         case "select_n":
-            prop_select_n(eqn, deps, const_vals)
-            _propagate_bounds_select_n(eqn, const_vals, value_bounds)
+            prop_select_n(eqn, deps, const_vals, value_bounds)
         case "select_if_vmap":
             prop_select_if_vmap(eqn, deps, const_vals)
         case "iota":
@@ -333,8 +314,6 @@ def prop_dispatch(
             prop_dynamic_update_slice(eqn, deps, const_vals, value_bounds)
         case "top_k":
             prop_top_k(eqn, deps)
-        case "not":
-            prop_zero_derivative(eqn, deps)
         # TODO: add precise handlers for remaining control flow operators.
         # https://docs.jax.dev/en/latest/jax.lax.html#control-flow-operators
         case "scan":
@@ -359,155 +338,6 @@ def prop_dispatch(
             prop_conservative_fallback(eqn, deps)
         case _:
             prop_throw_error(eqn, deps)
-
-
-# Value bounds propagation
-
-
-def _propagate_const_comparison_from_bounds(
-    eqn: JaxprEqn,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
-) -> None:
-    """Derive const comparison results from value bounds.
-
-    When bounds prove the comparison is always True or always False,
-    store the result as a const value.
-    This enables ``select_n`` to pick the correct branch.
-    """
-    # Skip if already resolved as const.
-    if eqn.outvars[0] in const_vals:
-        return
-
-    b1 = atom_value_bounds(eqn.invars[0], const_vals, value_bounds)
-    b2 = atom_value_bounds(eqn.invars[1], const_vals, value_bounds)
-    if b1 is None or b2 is None:
-        return
-
-    lo1, hi1 = b1
-    lo2, hi2 = b2
-    out_shape = atom_shape(eqn.outvars[0])
-
-    result: np.ndarray | None = None
-    match eqn.primitive.name:
-        case "lt":
-            if np.all(hi1 < lo2):
-                result = np.ones(out_shape, dtype=bool)
-            elif np.all(lo1 >= hi2):
-                result = np.zeros(out_shape, dtype=bool)
-        case "le":
-            if np.all(hi1 <= lo2):
-                result = np.ones(out_shape, dtype=bool)
-            elif np.all(lo1 > hi2):
-                result = np.zeros(out_shape, dtype=bool)
-        case "gt":
-            if np.all(lo1 > hi2):
-                result = np.ones(out_shape, dtype=bool)
-            elif np.all(hi1 <= lo2):
-                result = np.zeros(out_shape, dtype=bool)
-        case "ge":
-            if np.all(lo1 >= hi2):
-                result = np.ones(out_shape, dtype=bool)
-            elif np.all(hi1 < lo2):
-                result = np.zeros(out_shape, dtype=bool)
-
-    if result is not None:
-        const_vals[eqn.outvars[0]] = result
-
-
-def _propagate_bounds_select_n(
-    eqn: JaxprEqn,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
-) -> None:
-    """Propagate value bounds through select_n when the predicate is const.
-
-    ``select_n(pred, x, y)`` returns ``x`` when pred is False, ``y`` when True.
-    If pred is a known constant, forward the bounds of the selected branch.
-    """
-    pred_val = atom_const_val(eqn.invars[0], const_vals)
-    if pred_val is None:
-        return
-
-    # Boolean select_n with two value branches.
-    if len(eqn.invars) == 3 and pred_val.dtype == bool:
-        if np.all(pred_val == False):  # noqa: E712
-            # Selects first value branch (invars[1]).
-            selected = eqn.invars[1]
-        elif np.all(pred_val == True):  # noqa: E712
-            # Selects second value branch (invars[2]).
-            selected = eqn.invars[2]
-        else:
-            return
-
-        # Forward bounds from the selected branch.
-        if isinstance(selected, Var) and selected in value_bounds:
-            value_bounds[eqn.outvars[0]] = value_bounds[selected]
-
-
-def _propagate_bounds_binary(
-    eqn: JaxprEqn,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
-) -> None:
-    """Propagate value bounds through add, sub, and add_any.
-
-    Uses interval arithmetic: [a,b] + [c,d] = [a+c, b+d],
-    [a,b] - [c,d] = [a-d, b-c].
-    Only propagates when at least one input has known bounds.
-    """
-    name = eqn.primitive.name
-    if name not in ("add", "sub", "add_any"):
-        return
-
-    b1 = atom_value_bounds(eqn.invars[0], const_vals, value_bounds)
-    b2 = atom_value_bounds(eqn.invars[1], const_vals, value_bounds)
-    if b1 is None or b2 is None:
-        return
-
-    lo1, hi1 = b1
-    lo2, hi2 = b2
-    if name in ("add", "add_any"):
-        value_bounds[eqn.outvars[0]] = (lo1 + lo2, hi1 + hi2)
-    else:  # sub
-        value_bounds[eqn.outvars[0]] = (lo1 - hi2, hi1 - lo2)
-
-
-def _propagate_bounds_convert(eqn: JaxprEqn, value_bounds: ValueBounds) -> None:
-    """Propagate value bounds through convert_element_type."""
-    in_var = eqn.invars[0]
-    if not isinstance(in_var, Var) or in_var not in value_bounds:
-        return
-    lo, hi = value_bounds[in_var]
-    new_dtype = eqn.params.get("new_dtype")
-    if new_dtype is not None:
-        value_bounds[eqn.outvars[0]] = (lo.astype(new_dtype), hi.astype(new_dtype))
-    else:
-        value_bounds[eqn.outvars[0]] = (lo, hi)
-
-
-def _propagate_bounds_broadcast(eqn: JaxprEqn, value_bounds: ValueBounds) -> None:
-    """Propagate value bounds through broadcast_in_dim.
-
-    Broadcasting replicates values without changing them,
-    so bounds are broadcast to the output shape.
-    """
-    in_var = eqn.invars[0]
-    if not isinstance(in_var, Var) or in_var not in value_bounds:
-        return
-    lo, hi = value_bounds[in_var]
-    out_shape = eqn.params["shape"]
-    broadcast_dims = eqn.params["broadcast_dimensions"]
-    in_shape = lo.shape or (1,)
-
-    intermediate_shape = [1] * len(out_shape)
-    for i, out_dim in enumerate(broadcast_dims):
-        intermediate_shape[out_dim] = in_shape[i]
-
-    value_bounds[eqn.outvars[0]] = (
-        np.broadcast_to(np.reshape(lo, intermediate_shape), out_shape),
-        np.broadcast_to(np.reshape(hi, intermediate_shape), out_shape),
-    )
 
 
 def _prop_iota(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:

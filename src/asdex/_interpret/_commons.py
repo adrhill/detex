@@ -61,6 +61,26 @@ PropJaxprFn = Callable[
 _MAX_FIXED_POINT_ITERS = 500
 """Safety bound for fixed-point iteration in while_loop and scan."""
 
+_MAX_ENUM_COMBINATIONS = 64
+"""Maximum number of index combinations to enumerate for bounded dynamic indices.
+
+When ``gather``, ``scatter``, ``dynamic_slice``, or ``dynamic_update_slice``
+receive indices that are not statically known but have bounded value ranges
+(e.g. from ``argmax`` over a small axis),
+we enumerate all possible index arrays and union the resulting sparsity patterns.
+This yields a tighter pattern than the conservative all-to-all fallback.
+
+The cap prevents combinatorial blowup for multi-element index arrays:
+an index with *k* elements where each has *r* possible values
+gives *r^k* combinations.
+If this exceeds the cap, the handler falls back to conservative.
+
+The value 64 is chosen to keep enumeration fast
+while covering the common cases
+(e.g. one ``argmax`` index with up to 64 possible values,
+or two indices each with up to 8 possible values).
+"""
+
 
 # Shape and size
 
@@ -208,6 +228,24 @@ def conservative_indices(all_indices: list[IndexSet], out_size: int) -> list[Ind
     """Build conservative output index sets where every element depends on the union of all inputs."""
     combined = union_all(all_indices)
     return [combined] * out_size
+
+
+# Index clamping
+
+
+def clamp_starts(
+    starts: tuple[int, ...], in_shape: Sequence[int], slice_sizes: Sequence[int]
+) -> tuple[int, ...]:
+    """Clamp start indices to valid bounds.
+
+    Matches JAX's ``dynamic_slice`` and ``gather`` semantics,
+    which silently clamp out-of-bounds starts
+    rather than raising an error.
+    """
+    return tuple(
+        max(0, min(s, dim - sz))
+        for s, dim, sz in zip(starts, in_shape, slice_sizes, strict=True)
+    )
 
 
 # Position maps

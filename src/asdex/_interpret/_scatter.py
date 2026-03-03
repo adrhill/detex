@@ -7,6 +7,7 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
+    _MAX_ENUM_COMBINATIONS,
     ConstVals,
     Deps,
     IndexSet,
@@ -20,8 +21,6 @@ from ._commons import (
     index_sets,
     numel,
 )
-
-_MAX_ENUM_COMBINATIONS = 64
 
 
 def _scatter_for_indices(
