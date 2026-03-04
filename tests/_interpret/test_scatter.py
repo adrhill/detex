@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 
-from asdex import jacobian_sparsity
+from asdex import hessian_sparsity, jacobian_sparsity
 
 # Existing basic tests
 
@@ -658,14 +658,12 @@ def test_scatter_multi_index_oob():
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.array_ops
 def test_scatter_2d():
-    """2D partial-row scatter ``mat.at[0, :2].set(updates)`` falls back to conservative.
+    """2D partial-row scatter ``mat.at[0, :2].set(updates)`` tracks precise deps.
 
-    TODO(scatter): ``mat.at[0, :2].set(updates)`` could track precise
-    per-element dependencies, but the current handler unions operand
-    and update state_indices across all outputs.
+    Only the two targeted positions depend on the corresponding update elements.
+    All other positions are constant zeros.
     """
 
     def f(x):
@@ -674,23 +672,117 @@ def test_scatter_2d():
         return mat.at[0, :2].set(updates.flatten()).flatten()
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # Conservative: all outputs depend on all update inputs.
-    # TODO(scatter): the true pattern is:
-    #   [[1, 0, 0],   out[0] = mat[0,0] <- x[0]
-    #    [0, 1, 0],   out[1] = mat[0,1] <- x[1]
-    #    [0, 0, 0],   out[2] = mat[0,2] <- constant 0
-    #    [0, 0, 0],   out[3] = mat[1,0] <- constant 0
-    #    [0, 0, 0],   out[4] = mat[1,1] <- constant 0
-    #    [0, 0, 0]]   out[5] = mat[1,2] <- constant 0
     expected = np.array(
         [
-            [1, 1, 0],
-            [1, 1, 0],
-            [1, 1, 0],
-            [1, 1, 0],
-            [1, 1, 0],
-            [1, 1, 0],
+            [1, 0, 0],  # out[0] = mat[0,0] <- x[0]
+            [0, 1, 0],  # out[1] = mat[0,1] <- x[1]
+            [0, 0, 0],  # out[2] = mat[0,2] <- constant 0
+            [0, 0, 0],  # out[3] = mat[1,0] <- constant 0
+            [0, 0, 0],  # out[4] = mat[1,1] <- constant 0
+            [0, 0, 0],  # out[5] = mat[1,2] <- constant 0
         ],
         dtype=int,
     )
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_scatter_window():
+    """Scatter-add with ``update_window_dims=(1,), inserted_window_dims=()`` is precise.
+
+    This is the config JAX emits for the VJP of 2D gather (``features[indices]``).
+    Each update row is added to the operand row at the position given by the index.
+    """
+
+    def f(x):
+        mat = x.reshape(3, 4)
+        indices = jnp.array([[2], [0]])
+        updates = jnp.ones((2, 4))
+        return jax.lax.scatter_add(
+            mat,
+            indices,
+            updates,
+            jax.lax.ScatterDimensionNumbers(
+                update_window_dims=(1,),
+                inserted_window_dims=(0,),
+                scatter_dims_to_operand_dims=(0,),
+            ),
+        ).reshape(-1)
+
+    result = jacobian_sparsity(f, input_shape=12).todense().astype(int)
+    # Updates are constant ones, so scatter-add positions keep identity.
+    expected = np.eye(12, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.hessian
+def test_scatter_hessian_slicing():
+    """Hessian of ``sum((x[1:] - x[:-1])**2)`` is tridiagonal.
+
+    The gradient uses pad (VJP of slice), not scatter,
+    but this validates that the full pipeline handles the slicing pattern.
+    """
+
+    def f(x):
+        return jnp.sum((x[1:] - x[:-1]) ** 2)
+
+    n = 6
+    sp = hessian_sparsity(f, input_shape=n)
+    dense = sp.todense().astype(int)
+
+    # Tridiagonal: each diagonal and the two sub/super-diagonals.
+    expected = np.zeros((n, n), dtype=int)
+    for i in range(n):
+        expected[i, i] = 1
+    for i in range(n - 1):
+        expected[i, i + 1] = 1
+        expected[i + 1, i] = 1
+    np.testing.assert_array_equal(dense, expected)
+
+
+@pytest.mark.array_ops
+def test_scatter_batching_dims():
+    """Scatter with operand_batching_dims tracks per-batch dependencies.
+
+    Each batch element scatters independently into its corresponding operand row.
+    """
+
+    def f(x):
+        mat = x.reshape(2, 3)
+        return jax.lax.scatter_add(
+            mat,
+            jnp.array([[1], [0]]),
+            jnp.ones((2,)),
+            jax.lax.ScatterDimensionNumbers(
+                update_window_dims=(),
+                inserted_window_dims=(1,),
+                scatter_dims_to_operand_dims=(1,),
+                operand_batching_dims=(0,),
+                scatter_indices_batching_dims=(0,),
+            ),
+        ).reshape(-1)
+
+    result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
+    # Updates are constant ones, so all positions keep identity.
+    expected = np.eye(6, dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.array_ops
+def test_scatter_dynamic_too_many_combinations():
+    """Scatter with bounded but too-many-combinations indices falls back to conservative.
+
+    When ``argmax`` over a large axis produces bounds exceeding
+    the enumeration limit, the handler falls back to conservative.
+    """
+
+    def f(x):
+        arr = x[:100]
+        # argmax over 100 elements: bounds (0, 99), 100 > 64 max combinations.
+        idx = jnp.argmax(arr).astype(int)
+        return arr.at[idx].set(x[100])
+
+    result = jacobian_sparsity(f, input_shape=101).todense().astype(int)
+    n_out, n_in = result.shape
+    # Conservative: every output depends on every input.
+    assert result.sum() == n_out * n_in
