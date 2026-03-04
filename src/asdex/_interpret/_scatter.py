@@ -20,154 +20,141 @@ from ._commons import (
 )
 
 
+def _scatter_flat_map(
+    concrete_indices: np.ndarray,
+    eqn: JaxprEqn,
+    operand_shape: tuple[int, ...],
+    updates_shape: tuple[int, ...],
+) -> np.ndarray:
+    """Compute the flat update-to-operand position map for a scatter with known indices.
+
+    Simulates XLA scatter semantics on flat positions.
+    Returns a 1-D integer array where ``flat_map[i]`` is the operand flat position
+    that update element ``i`` writes to, or ``-1`` for OOB.
+    """
+    dim_nums = eqn.params["dimension_numbers"]
+    op_ndim = len(operand_shape)
+    update_window_dims = set(dim_nums.update_window_dims)
+    inserted_window_dims = dim_nums.inserted_window_dims
+    scatter_dims_to_operand_dims = dim_nums.scatter_dims_to_operand_dims
+
+    operand_batching_dims = getattr(dim_nums, "operand_batching_dims", ()) or ()
+    si_batching_dims = getattr(dim_nums, "scatter_indices_batching_dims", ()) or ()
+
+    si_shape = concrete_indices.shape
+    index_vector_dim = len(si_shape) - 1
+
+    si_batch_axes = [
+        d
+        for d in range(len(si_shape))
+        if d != index_vector_dim and d not in si_batching_dims
+    ]
+    si_batch_shape = tuple(si_shape[d] for d in si_batch_axes)
+    batching_shape = tuple(operand_shape[d] for d in operand_batching_dims)
+
+    # Operand dims removed from the window (inserted + batching).
+    removed = set(inserted_window_dims) | set(operand_batching_dims)
+    window_operand_dims = [d for d in range(op_ndim) if d not in removed]
+    window_shape = tuple(updates_shape[d] for d in dim_nums.update_window_dims)
+
+    updates_size = numel(updates_shape)
+    update_ndim = len(updates_shape)
+    flat_map = np.full(updates_size, -1, dtype=np.intp)
+
+    for batch_idx in np.ndindex(*batching_shape) if batching_shape else [()]:
+        for si_batch_idx in np.ndindex(*si_batch_shape) if si_batch_shape else [()]:
+            # Look up index vector from scatter_indices.
+            si_idx: list[int | slice] = [0] * len(si_shape)
+            for i, d in enumerate(si_batching_dims):
+                si_idx[d] = batch_idx[i]
+            for i, d in enumerate(si_batch_axes):
+                si_idx[d] = si_batch_idx[i]
+            si_idx[index_vector_dim] = slice(None)
+            index_vector = concrete_indices[tuple(si_idx)]
+
+            # Build start position in operand.
+            start = [0] * op_ndim
+            for i, d in enumerate(scatter_dims_to_operand_dims):
+                start[d] = int(index_vector[i])
+            for i, d in enumerate(operand_batching_dims):
+                start[d] = int(batch_idx[i])
+
+            for window_idx in np.ndindex(*window_shape) if window_shape else [()]:
+                # Build full operand index: start + window offset at non-removed dims.
+                operand_idx = list(start)
+                w_iter = iter(window_idx)
+                for d in window_operand_dims:
+                    operand_idx[d] += next(w_iter)
+
+                # Scatter drops OOB updates (unlike gather which clamps).
+                if any(
+                    operand_idx[d] < 0 or operand_idx[d] >= operand_shape[d]
+                    for d in range(op_ndim)
+                ):
+                    continue
+
+                # Build update multi-index from batch and window components.
+                update_multi = [0] * update_ndim
+                b_iter = iter(batch_idx + si_batch_idx)
+                w_iter2 = iter(window_idx)
+                for d in range(update_ndim):
+                    if d in update_window_dims:
+                        update_multi[d] = next(w_iter2)
+                    else:
+                        update_multi[d] = next(b_iter)
+
+                operand_flat = int(np.ravel_multi_index(operand_idx, operand_shape))
+                update_flat = int(np.ravel_multi_index(update_multi, updates_shape))
+                flat_map[update_flat] = operand_flat
+
+    return flat_map
+
+
 def _scatter_for_indices(
     concrete_indices: np.ndarray,
     eqn: JaxprEqn,
     operand_indices: list[IndexSet],
     updates_indices: list[IndexSet],
-) -> list[IndexSet] | None:
+) -> list[IndexSet]:
     """Compute output index sets for a scatter with known concrete indices.
 
-    Returns None if the scatter pattern is not recognized.
+    Uses ``_scatter_flat_map`` to determine which operand position
+    each update element targets,
+    then combines index sets according to scatter semantics.
     """
-    dim_nums = eqn.params["dimension_numbers"]
     update_jaxpr = eqn.params.get("update_jaxpr")
     is_combine = update_jaxpr is not None
 
     operand_shape = atom_shape(eqn.invars[0])
-    out_shape = atom_shape(eqn.outvars[0])
-    out_size = numel(out_shape)
+    out_size = numel(operand_shape)
     updates_shape = atom_shape(eqn.invars[2])
 
-    # arr.at[indices].set(vals): batched scatter along dim 0 with trailing window dims.
-    n_update_window = len(dim_nums.update_window_dims)
-    expected_window_dims = tuple(range(1, 1 + n_update_window))
-    if (
-        dim_nums.inserted_window_dims == (0,)
-        and dim_nums.scatter_dims_to_operand_dims == (0,)
-        and dim_nums.update_window_dims == expected_window_dims
-        and updates_shape[1:] == operand_shape[1:]
-    ):
-        row_size = numel(operand_shape[1:]) if len(operand_shape) > 1 else 1
-        n_rows = operand_shape[0]
+    flat_map = _scatter_flat_map(concrete_indices, eqn, operand_shape, updates_shape)
 
-        flat_indices = concrete_indices.flatten()
-        scatter_positions: dict[int, list[int]] = {}
-        for update_row, pos in enumerate(flat_indices):
-            pos_int = int(pos)
-            if 0 <= pos_int < n_rows:
-                if pos_int not in scatter_positions:
-                    scatter_positions[pos_int] = []
-                scatter_positions[pos_int].append(update_row)
+    # Build operand_pos → list of update positions that target it.
+    scatter_positions: dict[int, list[int]] = {}
+    for update_flat, operand_flat in enumerate(flat_map):
+        if operand_flat >= 0:
+            if operand_flat not in scatter_positions:
+                scatter_positions[operand_flat] = []
+            scatter_positions[operand_flat].append(update_flat)
 
-        out_indices: list[IndexSet] = []
-        for out_row in range(n_rows):
-            if out_row in scatter_positions:
-                update_row_list = scatter_positions[out_row]
-                for d in range(row_size):
-                    out_flat = out_row * row_size + d
-                    if is_combine:
-                        combined = operand_indices[out_flat].copy()
-                        for update_row in update_row_list:
-                            u_flat = update_row * row_size + d
-                            if u_flat < len(updates_indices):
-                                combined |= updates_indices[u_flat]
-                        out_indices.append(combined)
-                    else:
-                        last_row = update_row_list[-1]
-                        u_flat = last_row * row_size + d
-                        if u_flat >= len(updates_indices):
-                            raise AssertionError(
-                                f"update index {u_flat} out of range for {len(updates_indices)} elements"
-                            )
-                        out_indices.append(updates_indices[u_flat].copy())
+    out_indices: list[IndexSet] = []
+    for i in range(out_size):
+        if i in scatter_positions:
+            if is_combine:
+                combined = operand_indices[i].copy()
+                for u_flat in scatter_positions[i]:
+                    combined |= updates_indices[u_flat]
+                out_indices.append(combined)
             else:
-                out_indices.extend(
-                    operand_indices[out_row * row_size + d].copy()
-                    for d in range(row_size)
-                )
+                # Replace semantics: last writer wins.
+                last_u = scatter_positions[i][-1]
+                out_indices.append(updates_indices[last_u].copy())
+        else:
+            out_indices.append(operand_indices[i].copy())
 
-        return out_indices
-
-    # arr.at[:, idx, :].set(val): full-window scatter along an arbitrary single dimension.
-    if (
-        len(dim_nums.inserted_window_dims) == 1
-        and dim_nums.scatter_dims_to_operand_dims == dim_nums.inserted_window_dims
-        and not dim_nums.operand_batching_dims
-        and dim_nums.update_window_dims == tuple(range(len(updates_shape)))
-    ):
-        scatter_dim = dim_nums.inserted_window_dims[0]
-        ndim = len(operand_shape)
-
-        expected_updates = tuple(
-            s for i, s in enumerate(operand_shape) if i != scatter_dim
-        )
-        if updates_shape == expected_updates:
-            flat_idx = concrete_indices.flatten()
-            target_set = {
-                int(k) for k in flat_idx if 0 <= int(k) < operand_shape[scatter_dim]
-            }
-
-            out_coords = np.indices(operand_shape)
-            scatter_mask = np.isin(out_coords[scatter_dim], list(target_set)).ravel()
-            window_coords = tuple(
-                out_coords[i] for i in range(ndim) if i != scatter_dim
-            )
-            updates_flat_map = np.ravel_multi_index(
-                window_coords, expected_updates
-            ).ravel()
-
-            out_indices = []
-            for i in range(out_size):
-                if scatter_mask[i]:
-                    u_flat = int(updates_flat_map[i])
-                    if is_combine:
-                        out_indices.append(
-                            operand_indices[i].copy() | updates_indices[u_flat].copy()
-                        )
-                    else:
-                        out_indices.append(updates_indices[u_flat].copy())
-                else:
-                    out_indices.append(operand_indices[i].copy())
-
-            return out_indices
-
-    # mat.at[rows, cols].set(vals): multi-index scatter where each update is a scalar.
-    ndim = len(operand_shape)
-    if (
-        dim_nums.update_window_dims == ()
-        and dim_nums.inserted_window_dims == tuple(range(ndim))
-        and dim_nums.scatter_dims_to_operand_dims == dim_nums.inserted_window_dims
-        and concrete_indices.ndim == 2
-        and concrete_indices.shape[1] == ndim
-    ):
-        scatter_positions_mi: dict[int, list[int]] = {}
-        for update_idx in range(concrete_indices.shape[0]):
-            coords = concrete_indices[update_idx]
-            if any(coords[d] < 0 or coords[d] >= operand_shape[d] for d in range(ndim)):
-                continue
-            flat_pos = int(np.ravel_multi_index(coords, operand_shape))
-            if flat_pos not in scatter_positions_mi:
-                scatter_positions_mi[flat_pos] = []
-            scatter_positions_mi[flat_pos].append(update_idx)
-
-        out_indices = []
-        for i in range(out_size):
-            if i in scatter_positions_mi:
-                if is_combine:
-                    combined = operand_indices[i].copy()
-                    for u_idx in scatter_positions_mi[i]:
-                        combined |= updates_indices[u_idx]
-                    out_indices.append(combined)
-                else:
-                    last_u = scatter_positions_mi[i][-1]
-                    out_indices.append(updates_indices[last_u].copy())
-            else:
-                out_indices.append(operand_indices[i].copy())
-
-        return out_indices
-
-    return None
+    return out_indices
 
 
 def prop_scatter(
@@ -179,30 +166,14 @@ def prop_scatter(
     """Scatter writes updates into operand at positions given by scatter_indices.
 
     For static scatter_indices (Literal or tracked const),
-    we can precisely track which output positions come from the original
-    operand vs which receive scattered updates.
+    simulates XLA scatter semantics on flat positions
+    to determine which operand element each update element targets.
+    Handles any ``ScatterDimensionNumbers`` configuration,
+    including partial windows, multi-index scatters,
+    and ``operand_batching_dims``.
     For bounded dynamic scatter_indices, enumerates all possible index arrays
     and unions the resulting patterns.
     For fully dynamic scatter_indices, falls back to conservative.
-
-    Three precise patterns are handled:
-
-    1. **Batched scatter along dim 0**: each update row targets a different operand row.
-       Pattern: ``inserted_window_dims=(0,)``, ``scatter_dims_to_operand_dims=(0,)``,
-       ``update_window_dims=(1, ..., ndim-1)`` with matching trailing shapes.
-       This is the pattern JAX emits for ``arr.at[indices].set(vals)``
-       and the backward of ``features[indices]`` (scatter-add).
-
-    2. **Full-window scatter along an arbitrary dim**: a single update slice
-       is written at one position along an arbitrary dimension.
-       Pattern: ``inserted_window_dims=(d,)``, ``scatter_dims_to_operand_dims=(d,)``,
-       all update dims are window dims.
-       This is the pattern JAX emits for ``arr.at[:, idx, :].set(val)``.
-
-    3. **Multi-index scatter**: each update is a scalar written at a multi-dim coordinate.
-       Pattern: ``update_window_dims=()``, all dims inserted, ``scatter_dims_to_operand_dims``
-       matches ``inserted_window_dims``, indices shape is ``(N, ndim)``.
-       This is the pattern JAX emits for ``mat.at[rows, cols].set(vals)``.
 
     For scatter (replace): out[idx[i]] = updates[i], else out[j] = operand[j]
         Positions NOT in idx: depend on corresponding operand element.
@@ -239,40 +210,37 @@ def prop_scatter(
     concrete_indices = atom_const_val(indices_atom, state_consts)
 
     if concrete_indices is not None:
-        result = _scatter_for_indices(
+        state_indices[eqn.outvars[0]] = _scatter_for_indices(
             concrete_indices,
             eqn,
             operand_indices,
             updates_indices,
         )
+        return
+
+    # Try bounded enumeration.
+    bounds = atom_value_bounds(indices_atom, state_consts, state_bounds)
+    if bounds is not None:
+        lo, hi = bounds
+        lo_flat, hi_flat = lo.flatten(), hi.flatten()
+        si_shape = atom_shape(indices_atom)
+        out_size = atom_numel(eqn.outvars[0])
+        ranges = [
+            range(int(lo_flat[i]), int(hi_flat[i]) + 1) for i in range(len(lo_flat))
+        ]
+
+        def _make(vals: tuple[int, ...]) -> list[set[int]]:
+            candidate = np.array(vals, dtype=lo.dtype).reshape(si_shape)
+            return _scatter_for_indices(
+                candidate, eqn, operand_indices, updates_indices
+            )
+
+        result = enumerate_bounded_patterns(ranges, out_size, _make)
         if result is not None:
             state_indices[eqn.outvars[0]] = result
             return
 
-    if concrete_indices is None:
-        # Try bounded enumeration.
-        bounds = atom_value_bounds(indices_atom, state_consts, state_bounds)
-        if bounds is not None:
-            lo, hi = bounds
-            lo_flat, hi_flat = lo.flatten(), hi.flatten()
-            si_shape = atom_shape(indices_atom)
-            out_size = atom_numel(eqn.outvars[0])
-            ranges = [
-                range(int(lo_flat[i]), int(hi_flat[i]) + 1) for i in range(len(lo_flat))
-            ]
-
-            def _make(vals: tuple[int, ...]) -> list[set[int]] | None:
-                candidate = np.array(vals, dtype=lo.dtype).reshape(si_shape)
-                return _scatter_for_indices(
-                    candidate, eqn, operand_indices, updates_indices
-                )
-
-            result = enumerate_bounded_patterns(ranges, out_size, _make)
-            if result is not None:
-                state_indices[eqn.outvars[0]] = result
-                return
-
-    # Dynamic indices or complex scatter - conservative fallback
+    # Dynamic indices - conservative fallback.
     state_indices[eqn.outvars[0]] = conservative_indices(
         operand_indices + updates_indices, atom_numel(eqn.outvars[0])
     )
