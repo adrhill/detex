@@ -257,7 +257,7 @@ def test_reshape_after_broadcast():
 
 @pytest.mark.array_ops
 def test_reshape_after_slice():
-    """Reshape after slicing preserves per-element deps from the slice."""
+    """Reshape after slicing preserves per-element state_indices from the slice."""
 
     def f(x):
         sliced = x[1:5]  # 4 elements from indices 1..4

@@ -130,7 +130,7 @@ def test_tile_non_contiguous_deps():
     """Tile preserves non-trivial dependency sets from prior operations."""
 
     def f(x):
-        # Sum pairs to create shared deps, then tile
+        # Sum pairs to create shared state_indices, then tile
         summed = x[:2] + x[2:]  # [x0+x2, x1+x3]
         return jnp.tile(summed, 2)  # [x0+x2, x1+x3, x0+x2, x1+x3]
 

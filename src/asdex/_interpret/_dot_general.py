@@ -4,9 +4,9 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    ConstVals,
-    Deps,
     IndexSet,
+    StateConsts,
+    StateIndices,
     atom_const_val,
     atom_shape,
     empty_index_set,
@@ -15,7 +15,9 @@ from ._commons import (
 )
 
 
-def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def prop_dot_general(
+    eqn: JaxprEqn, state_indices: StateIndices, state_consts: StateConsts
+) -> None:
     """Dot_general contracts and batches two arrays.
 
     Each output element is a sum of products over the contracting dimensions,
@@ -23,16 +25,16 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     Batch dimensions are preserved one-to-one.
 
     For out[b..., i..., j...] = sum_k lhs[b..., i..., k...] * rhs[b..., k..., j...]:
-        deps(out[b,i,j]) = deps(lhs[b, i, :]) | deps(rhs[b, :, j])
+        state_indices(out[b,i,j]) = state_indices(lhs[b, i, :]) | state_indices(rhs[b, :, j])
     where b are batch dims, i are lhs-free dims, j are rhs-free dims,
     and k are contracting dims.
 
     Example: matrix multiply A(2,3) @ B(3,4) -> C(2,4)
         contracting: lhs_dim=1, rhs_dim=0
         out[i,j] depends on lhs[i,:] and rhs[:,j]
-        Input lhs deps:  [{0},{1},{2},{3},{4},{5}]  (shape 2x3)
-        Input rhs deps:  [{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17}]
-        Output deps[0,0] = {0,1,2} | {6,10,14} = {0,1,2,6,10,14}
+        Input lhs state_indices:  [{0},{1},{2},{3},{4},{5}]  (shape 2x3)
+        Input rhs state_indices:  [{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17}]
+        Output state_indices[0,0] = {0,1,2} | {6,10,14} = {0,1,2,6,10,14}
 
     Jaxpr:
         invars[0]: lhs array
@@ -41,8 +43,8 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.dot_general.html
     """
-    lhs_indices = index_sets(deps, eqn.invars[0])
-    rhs_indices = index_sets(deps, eqn.invars[1])
+    lhs_indices = index_sets(state_indices, eqn.invars[0])
+    rhs_indices = index_sets(state_indices, eqn.invars[1])
 
     lhs_shape = atom_shape(eqn.invars[0])
     rhs_shape = atom_shape(eqn.invars[1])
@@ -72,8 +74,8 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     # Get constant values for zero-skipping.
     # When an operand is a known constant with zeros,
     # those contracting positions contribute nothing to the derivative.
-    lhs_val = atom_const_val(eqn.invars[0], const_vals)
-    rhs_val = atom_const_val(eqn.invars[1], const_vals)
+    lhs_val = atom_const_val(eqn.invars[0], state_consts)
+    rhs_val = atom_const_val(eqn.invars[1], state_consts)
     lhs_val_flat = np.atleast_1d(lhs_val).ravel() if lhs_val is not None else None
     rhs_val_flat = np.atleast_1d(rhs_val).ravel() if rhs_val is not None else None
 
@@ -96,7 +98,7 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
                 continue
             result |= lhs_indices[i]
             result |= rhs_indices[i]
-        deps[eqn.outvars[0]] = [result]
+        state_indices[eqn.outvars[0]] = [result]
         return
 
     n_batch = len(lhs_batch)
@@ -163,4 +165,4 @@ def prop_dot_general(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             out_indices[o] |= lhs_indices[lhs_flat[o]]
             out_indices[o] |= rhs_indices[rhs_flat[o]]
 
-    deps[eqn.outvars[0]] = out_indices
+    state_indices[eqn.outvars[0]] = out_indices

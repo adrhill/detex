@@ -4,9 +4,9 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    ConstVals,
-    Deps,
-    ValueBounds,
+    StateBounds,
+    StateConsts,
+    StateIndices,
     atom_const_val,
     atom_numel,
     atom_shape,
@@ -110,9 +110,9 @@ def _gather_flat_map(
 
 def prop_gather(
     eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
+    state_bounds: StateBounds,
 ) -> None:
     """Gather extracts slices from operand at positions given by start_indices.
 
@@ -148,20 +148,20 @@ def prop_gather(
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.gather.html
     """
-    operand_indices = index_sets(deps, eqn.invars[0])
+    operand_indices = index_sets(state_indices, eqn.invars[0])
     # TODO: include start_indices index sets in output dependencies.
-    check_no_index_sets(deps, eqn.invars[1], eqn.primitive.name)
+    check_no_index_sets(state_indices, eqn.invars[1], eqn.primitive.name)
     operand_shape = atom_shape(eqn.invars[0])
     out_size = atom_numel(eqn.outvars[0])
 
-    concrete_indices = atom_const_val(eqn.invars[1], const_vals)
+    concrete_indices = atom_const_val(eqn.invars[1], state_consts)
     if concrete_indices is not None:
         flat_map = _gather_flat_map(concrete_indices, eqn, operand_shape)
-        deps[eqn.outvars[0]] = permute_indices(operand_indices, flat_map)
+        state_indices[eqn.outvars[0]] = permute_indices(operand_indices, flat_map)
         return
 
     # Try bounded enumeration.
-    bounds = atom_value_bounds(eqn.invars[1], const_vals, value_bounds)
+    bounds = atom_value_bounds(eqn.invars[1], state_consts, state_bounds)
     if bounds is not None:
         lo, hi = bounds
         lo_flat, hi_flat = lo.flatten(), hi.flatten()
@@ -178,8 +178,8 @@ def prop_gather(
 
         result = enumerate_bounded_patterns(ranges, out_size, _make)
         if result is not None:
-            deps[eqn.outvars[0]] = result
+            state_indices[eqn.outvars[0]] = result
             return
 
     # Conservative fallback: every output depends on every input.
-    deps[eqn.outvars[0]] = conservative_indices(operand_indices, out_size)
+    state_indices[eqn.outvars[0]] = conservative_indices(operand_indices, out_size)

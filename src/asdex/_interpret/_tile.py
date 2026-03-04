@@ -6,8 +6,8 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    ConstVals,
-    Deps,
+    StateConsts,
+    StateIndices,
     atom_shape,
     index_sets,
     permute_indices,
@@ -15,7 +15,9 @@ from ._commons import (
 )
 
 
-def prop_tile(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def prop_tile(
+    eqn: JaxprEqn, state_indices: StateIndices, state_consts: StateConsts
+) -> None:
     """Tile repeats an array along each dimension.
 
     Each output element depends on exactly one input element
@@ -24,8 +26,8 @@ def prop_tile(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     The Jacobian has exactly one 1 per row.
 
     Example: x = [a, b], tile(x, reps=(2,))
-        Input deps:  [{0}, {1}]
-        Output deps: [{0}, {1}, {0}, {1}]
+        Input state_indices:  [{0}, {1}]
+        Output state_indices: [{0}, {1}, {0}, {1}]
 
     Jaxpr:
         invars[0]: input array
@@ -33,7 +35,7 @@ def prop_tile(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.tile.html
     """
-    in_indices = index_sets(deps, eqn.invars[0])
+    in_indices = index_sets(state_indices, eqn.invars[0])
     in_shape = atom_shape(eqn.invars[0])
     reps = eqn.params["reps"]
 
@@ -44,6 +46,6 @@ def prop_tile(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     in_coords = tuple(out_coords[d] % in_shape[d] for d in range(len(in_shape)))
     flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    deps[eqn.outvars[0]] = permute_indices(in_indices, flat_map)
+    state_indices[eqn.outvars[0]] = permute_indices(in_indices, flat_map)
 
-    propagate_const_unary(eqn, const_vals, partial(np.tile, reps=reps))
+    propagate_const_unary(eqn, state_consts, partial(np.tile, reps=reps))

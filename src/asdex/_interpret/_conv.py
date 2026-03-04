@@ -5,8 +5,8 @@ from itertools import product
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    Deps,
     IndexSet,
+    StateIndices,
     atom_shape,
     check_no_index_sets,
     empty_index_set,
@@ -17,7 +17,7 @@ from ._commons import (
 )
 
 
-def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_conv_general_dilated(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Convolution slides a kernel over the input, computing weighted sums.
 
     Each output element depends on a local spatial window of input elements
@@ -37,9 +37,9 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
     So out[n, h, w, :] depends on in[n, h·s : h·s+kH, w·s : w·s+kW, :].
 
     Example: 1D conv, kernel size 2, input [a, b, c, d]
-        out[0] = a·w0 + b·w1  →  deps {0, 1}
-        out[1] = b·w0 + c·w1  →  deps {1, 2}
-        out[2] = c·w0 + d·w1  →  deps {2, 3}
+        out[0] = a·w0 + b·w1  →  state_indices {0, 1}
+        out[1] = b·w0 + c·w1  →  state_indices {1, 2}
+        out[2] = c·w0 + d·w1  →  state_indices {2, 3}
 
     Jaxpr:
         invars[0]: lhs — rank n+2 input array
@@ -50,9 +50,9 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.conv_general_dilated.html
     """
-    lhs_indices = index_sets(deps, eqn.invars[0])  # Input image dependencies
+    lhs_indices = index_sets(state_indices, eqn.invars[0])  # Input image dependencies
     # TODO: include kernel (rhs) index sets in output dependencies.
-    check_no_index_sets(deps, eqn.invars[1], eqn.primitive.name)
+    check_no_index_sets(state_indices, eqn.invars[1], eqn.primitive.name)
 
     out_shape = atom_shape(eqn.outvars[0])
     out_size = numel(out_shape)
@@ -163,4 +163,4 @@ def prop_conv_general_dilated(eqn: JaxprEqn, deps: Deps) -> None:
 
         out_indices.append(elem_deps)
 
-    deps[eqn.outvars[0]] = out_indices
+    state_indices[eqn.outvars[0]] = out_indices

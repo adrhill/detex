@@ -6,7 +6,7 @@ through primitives to determine Jacobian sparsity patterns.
 ## Structure
 
 - `__init__.py` — `prop_jaxpr`, `prop_dispatch`, fallback handling.
-- `_commons.py` — shared types (`IndexSet`, `Deps`, `ConstVals`) and utilities.
+- `_commons.py` — shared types (`IndexSet`, `StateIndices`, `StateConsts`) and utilities.
 - Each JAX primitive has its own module: `_foo.py` contains `prop_foo`.
   Includes `_cumsum.py` for cumulative sum.
 - Handlers for external packages (Equinox, Flax, etc.) live in their own subfolders
@@ -16,9 +16,9 @@ through primitives to determine Jacobian sparsity patterns.
 
 - `IndexSet` = `set[int]` — a single per-element dependency set
 - `list[IndexSet]` — per-element dependency sets for one array
-- `Deps` = `dict[Var, list[IndexSet]]` — maps jaxpr variables to their index sets
-- `ConstVals` = `dict[Var, np.ndarray]` — statically-known values for precise gather/scatter
-- `ValueBounds` = `dict[Var, tuple[np.ndarray, np.ndarray]]` — per-element inclusive (lo, hi) integer bounds
+- `StateIndices` = `dict[Var, list[IndexSet]]` — maps jaxpr variables to their index sets
+- `StateConsts` = `dict[Var, np.ndarray]` — statically-known values for precise gather/scatter
+- `StateBounds` = `dict[Var, tuple[np.ndarray, np.ndarray]]` — per-element inclusive (lo, hi) integer bounds
 
 ## Naming Conventions
 
@@ -38,14 +38,14 @@ This ensures a future backend swap only requires changing the helpers,
 not every handler.
 
 **Variable names** — use these consistently across handlers:
-- `in_indices`: input index sets (from `index_sets(deps, atom)`)
+- `in_indices`: input index sets (from `index_sets(state_indices, atom)`)
 - `in_shape`: input array shape (from `atom_shape(atom)`)
-- `in_val`: const value for a unary input (from `atom_const_val(atom, const_vals)`)
+- `in_val`: const value for a unary input (from `atom_const_val(atom, state_consts)`)
 - `in1_val` / `in2_val`: const values for binary inputs.
   Use descriptive prefixes when roles differ:
   `lhs_val` / `rhs_val` (dot_general), `pred_val` / `which_val` (select), etc.
 - `in_bounds` / `in1_bounds` / `in2_bounds`: value bounds for inputs
-  (from `atom_value_bounds(atom, const_vals, value_bounds)`)
+  (from `atom_value_bounds(atom, state_consts, state_bounds)`)
 - `flat_map`: a flat integer array mapping output positions to input positions
 
 **Docstrings** — avoid the term "deps"; prefer "index sets" or "input index sets".
@@ -70,7 +70,7 @@ not every handler.
 - **`fixed_point_loop(iterate_fn, carry, n_carry)`** —
   runs a body function on carry index sets until they stabilize.
   Used by `while_loop` and `scan`.
-- **`propagate_const_unary(eqn, const_vals, transform)`** —
+- **`propagate_const_unary(eqn, state_consts, transform)`** —
   propagates a const value through a unary op by applying `transform`.
   Mirrors `propagate_const_binary` for the single-input case.
 - **`enumerate_bounded_patterns(ranges, out_size, make_pattern)`** —
@@ -80,18 +80,18 @@ not every handler.
   and unions the results element-wise.
 - **`conservative_indices(all_indices, out_size)`** —
   conservative fallback where every output element depends on the union of all inputs.
-- **`atom_value_bounds(atom, const_vals, value_bounds)`** —
+- **`atom_value_bounds(atom, state_consts, state_bounds)`** —
   returns `(lo, hi)` bounds for an atom:
   exact `(val, val)` for constants, tracked bounds for bounded variables, or `None`.
-- **`forward_value_bounds(value_bounds, outer_atoms, inner_vars)`** —
+- **`forward_value_bounds(state_bounds, outer_atoms, inner_vars)`** —
   transfers known value bounds from outer-scope atoms to inner jaxpr variables.
 
 ## Index Set Aliasing
 
-Index sets in `Deps` are **shared, not copied**.
+Index sets in `StateIndices` are **shared, not copied**.
 Multiple output elements may reference the same `set[int]` object,
 and output sets may alias input sets.
-Handlers must therefore **never mutate** a set obtained from `deps` or `index_sets()`.
+Handlers must therefore **never mutate** a set obtained from `state_indices` or `index_sets()`.
 Always build new sets (via `union_all`, `|`, or the factory helpers) instead of mutating in place.
 
 The one exception is `fixed_point_loop`,
@@ -100,17 +100,17 @@ which explicitly copies carry sets before mutating them via `|=`.
 ## Const Value Tracking
 
 Handlers like `broadcast_in_dim`, `select_n`, and `propagate_const_elementwise`
-propagate concrete values through `const_vals`.
+propagate concrete values through `state_consts`.
 This lets downstream handlers resolve static indices precisely.
 
-**Invariant**: if a required const value is missing from `const_vals`,
+**Invariant**: if a required const value is missing from `state_consts`,
 the handler must assume the worst and return a conservative pattern.
 This applies to `gather`, `scatter`, `dynamic_slice`, `dynamic_update_slice`,
 `dot_general` (zero-skipping), and `mul` (zero-clearing).
 
 ## Value Bounds Tracking
 
-`ValueBounds` tracks per-element inclusive `(lo, hi)` integer bounds
+`StateBounds` tracks per-element inclusive `(lo, hi)` integer bounds
 for variables that are bounded but not statically constant
 (e.g. the output of `argmax` over a small axis).
 
@@ -125,7 +125,7 @@ the handler must assume the worst and return a conservative pattern.
 
 ## Adding a New Handler
 
-1. Write `prop_<name>(eqn, deps, ...)` in the appropriate module.
+1. Write `prop_<name>(eqn, state_indices, ...)` in the appropriate module.
 2. Add a `case` branch in `prop_dispatch`.
 3. Remove from the fallback `case` group if upgrading from conservative.
 4. Add tests in the corresponding `tests/_interpret/test_<module>.py` file.

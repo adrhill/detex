@@ -4,9 +4,9 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    ConstVals,
-    Deps,
-    ValueBounds,
+    StateBounds,
+    StateConsts,
+    StateIndices,
     atom_const_val,
     atom_numel,
     atom_shape,
@@ -43,7 +43,7 @@ _BINARY_CONST_UFUNCS: dict[str, np.ufunc] = {
 }
 
 
-def _propagate_const(eqn: JaxprEqn, const_vals: ConstVals) -> None:
+def _propagate_const(eqn: JaxprEqn, state_consts: StateConsts) -> None:
     """Propagate a const value through a binary elementwise op.
 
     If both inputs are statically known,
@@ -53,22 +53,22 @@ def _propagate_const(eqn: JaxprEqn, const_vals: ConstVals) -> None:
     """
     ufunc = _BINARY_CONST_UFUNCS.get(eqn.primitive.name)
     if ufunc is not None:
-        propagate_const_binary(eqn, const_vals, ufunc)
+        propagate_const_binary(eqn, state_consts, ufunc)
 
 
 # Building blocks (private)
 
 
-def _zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
+def _zero_derivative(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Set empty index sets for zero-derivative outputs."""
     for outvar in eqn.outvars:
-        deps[outvar] = empty_index_sets(atom_numel(outvar))
+        state_indices[outvar] = empty_index_sets(atom_numel(outvar))
 
 
-def _binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
+def _binary_elementwise(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Union per-element index sets from two inputs."""
-    in1 = index_sets(deps, eqn.invars[0])
-    in2 = index_sets(deps, eqn.invars[1])
+    in1 = index_sets(state_indices, eqn.invars[0])
+    in2 = index_sets(state_indices, eqn.invars[1])
     out_size = 0 if len(in1) == 0 or len(in2) == 0 else max(len(in1), len(in2))
 
     in1_shape = atom_shape(eqn.invars[0])
@@ -78,7 +78,7 @@ def _binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     # Modular indexing handles both correctly:
     # i % len == i for same size, i % 1 == 0 for scalar.
     if in1_shape == in2_shape or len(in1) <= 1 or len(in2) <= 1:
-        deps[eqn.outvars[0]] = [
+        state_indices[eqn.outvars[0]] = [
             in1[i % len(in1)] | in2[i % len(in2)] for i in range(out_size)
         ]
         return
@@ -102,46 +102,46 @@ def _binary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
     in1_flat = _broadcast_flat(in1_shape)
     in2_flat = _broadcast_flat(in2_shape)
 
-    deps[eqn.outvars[0]] = [
+    state_indices[eqn.outvars[0]] = [
         in1[in1_flat[i]] | in2[in2_flat[i]] for i in range(out_size)
     ]
 
 
 def _propagate_bounds_add(
     eqn: JaxprEqn,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
+    state_consts: StateConsts,
+    state_bounds: StateBounds,
 ) -> None:
     """Propagate value bounds through ``add`` or ``add_any`` via interval arithmetic."""
-    b1 = atom_value_bounds(eqn.invars[0], const_vals, value_bounds)
-    b2 = atom_value_bounds(eqn.invars[1], const_vals, value_bounds)
+    b1 = atom_value_bounds(eqn.invars[0], state_consts, state_bounds)
+    b2 = atom_value_bounds(eqn.invars[1], state_consts, state_bounds)
     if b1 is None or b2 is None:
         return
     lo1, hi1 = b1
     lo2, hi2 = b2
-    value_bounds[eqn.outvars[0]] = (lo1 + lo2, hi1 + hi2)
+    state_bounds[eqn.outvars[0]] = (lo1 + lo2, hi1 + hi2)
 
 
 def _propagate_bounds_sub(
     eqn: JaxprEqn,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
+    state_consts: StateConsts,
+    state_bounds: StateBounds,
 ) -> None:
     """Propagate value bounds through ``sub`` via interval arithmetic."""
-    b1 = atom_value_bounds(eqn.invars[0], const_vals, value_bounds)
-    b2 = atom_value_bounds(eqn.invars[1], const_vals, value_bounds)
+    b1 = atom_value_bounds(eqn.invars[0], state_consts, state_bounds)
+    b2 = atom_value_bounds(eqn.invars[1], state_consts, state_bounds)
     if b1 is None or b2 is None:
         return
     lo1, hi1 = b1
     lo2, hi2 = b2
-    value_bounds[eqn.outvars[0]] = (lo1 - hi2, hi1 - lo2)
+    state_bounds[eqn.outvars[0]] = (lo1 - hi2, hi1 - lo2)
 
 
 # Composite handlers (public)
 # Each corresponds to exactly one dispatch case in prop_dispatch.
 
 
-def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_zero_derivative(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Zero-derivative primitives (floor, ceil, sign, ...).
 
     Operations with zero derivative almost everywhere.
@@ -153,14 +153,14 @@ def prop_zero_derivative(eqn: JaxprEqn, deps: Deps) -> None:
     Therefore, output elements have no dependencies on input elements.
 
     Example: y = floor(x) where x = [1.7, 2.3, 3.9]
-        Input deps:  [{0}, {1}, {2}]
-        Output deps: [{}, {}, {}]  (empty sets, no dependence)
+        Input state_indices:  [{0}, {1}, {2}]
+        Output state_indices: [{}, {}, {}]  (empty sets, no dependence)
     """
-    _zero_derivative(eqn, deps)
+    _zero_derivative(eqn, state_indices)
 
 
 def prop_zero_derivative_const(
-    eqn: JaxprEqn, deps: Deps, const_vals: ConstVals
+    eqn: JaxprEqn, state_indices: StateIndices, state_consts: StateConsts
 ) -> None:
     """Zero-derivative primitives that also propagate const values.
 
@@ -168,11 +168,13 @@ def prop_zero_derivative_const(
     where the output is zero-derivative
     but the concrete result may be needed by downstream handlers.
     """
-    _zero_derivative(eqn, deps)
-    _propagate_const(eqn, const_vals)
+    _zero_derivative(eqn, state_indices)
+    _propagate_const(eqn, state_consts)
 
 
-def prop_binary_const(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def prop_binary_const(
+    eqn: JaxprEqn, state_indices: StateIndices, state_consts: StateConsts
+) -> None:
     """Binary elementwise primitives (div, pow, max, min, ...) with const propagation.
 
     Each output element depends on the corresponding elements from both inputs.
@@ -183,48 +185,48 @@ def prop_binary_const(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     So out[i] depends on {x[i], y[i]} (union of dependencies).
 
     Example: z = x + y where x = [a, b], y = [c, d]
-        Input deps:  [{0}, {1}], [{2}, {3}]
-        Output deps: [{0, 2}, {1, 3}]
+        Input state_indices:  [{0}, {1}], [{2}, {3}]
+        Output state_indices: [{0, 2}, {1, 3}]
 
     Jaxpr:
         invars[0]: first input array
         invars[1]: second input array
     """
-    _binary_elementwise(eqn, deps)
-    _propagate_const(eqn, const_vals)
+    _binary_elementwise(eqn, state_indices)
+    _propagate_const(eqn, state_consts)
 
 
 def prop_add(
     eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
+    state_bounds: StateBounds,
 ) -> None:
     """Add / add_any: binary elementwise with interval arithmetic bounds.
 
     ``[a,b] + [c,d] = [a+c, b+d]``.
     """
-    _binary_elementwise(eqn, deps)
-    _propagate_const(eqn, const_vals)
-    _propagate_bounds_add(eqn, const_vals, value_bounds)
+    _binary_elementwise(eqn, state_indices)
+    _propagate_const(eqn, state_consts)
+    _propagate_bounds_add(eqn, state_consts, state_bounds)
 
 
 def prop_sub(
     eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
+    state_bounds: StateBounds,
 ) -> None:
     """Sub: binary elementwise with interval arithmetic bounds.
 
     ``[a,b] - [c,d] = [a-d, b-c]``.
     """
-    _binary_elementwise(eqn, deps)
-    _propagate_const(eqn, const_vals)
-    _propagate_bounds_sub(eqn, const_vals, value_bounds)
+    _binary_elementwise(eqn, state_indices)
+    _propagate_const(eqn, state_consts)
+    _propagate_bounds_sub(eqn, state_consts, state_bounds)
 
 
-def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_integer_pow(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Integer power x^n is element-wise.
 
     Each output depends only on the corresponding input element.
@@ -233,8 +235,8 @@ def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
     ∂(x^n)/∂x = n·x^(n-1), which is zero iff n = 0.
 
     Example: y = x^2 where x = [a, b, c]
-        Input deps:  [{0}, {1}, {2}]
-        Output deps: [{0}, {1}, {2}]  (or [{}, {}, {}] if n=0)
+        Input state_indices:  [{0}, {1}, {2}]
+        Output state_indices: [{0}, {1}, {2}]  (or [{}, {}, {}] if n=0)
 
     Jaxpr:
         invars[0]: input array
@@ -242,14 +244,14 @@ def prop_integer_pow(eqn: JaxprEqn, deps: Deps) -> None:
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.integer_pow.html
     """
-    in_indices = index_sets(deps, eqn.invars[0])
+    in_indices = index_sets(state_indices, eqn.invars[0])
     if eqn.params.get("y", 1) == 0:
-        deps[eqn.outvars[0]] = empty_index_sets(len(in_indices))
+        state_indices[eqn.outvars[0]] = empty_index_sets(len(in_indices))
     else:
-        deps[eqn.outvars[0]] = copy_index_sets(in_indices)
+        state_indices[eqn.outvars[0]] = copy_index_sets(in_indices)
 
 
-def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_unary_elementwise(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Unary element-wise ops (exp, sin, etc.) apply a function to each element.
 
     Each output depends only on the corresponding input element.
@@ -259,20 +261,22 @@ def prop_unary_elementwise(eqn: JaxprEqn, deps: Deps) -> None:
         ∂f[i]/∂x[j] = f'(x[i]) if i = j, else 0
 
     Example: y = exp(x) where x = [a, b, c]
-        Input deps:  [{0}, {1}, {2}]
-        Output deps: [{0}, {1}, {2}]
+        Input state_indices:  [{0}, {1}, {2}]
+        Output state_indices: [{0}, {1}, {2}]
 
     Jaxpr:
         invars[0]: input array
     """
-    deps[eqn.outvars[0]] = copy_index_sets(index_sets(deps, eqn.invars[0]))
+    state_indices[eqn.outvars[0]] = copy_index_sets(
+        index_sets(state_indices, eqn.invars[0])
+    )
 
 
 def prop_convert_element_type(
     eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds | None = None,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
+    state_bounds: StateBounds | None = None,
 ) -> None:
     """Type conversion (e.g., float32 → float64) changes dtype without changing values.
 
@@ -287,8 +291,8 @@ def prop_convert_element_type(
     and gathers fall back to conservative.
 
     Example: y = x.astype(float64) where x = [a, b, c]
-        Input deps:  [{0}, {1}, {2}]
-        Output deps: [{0}, {1}, {2}]
+        Input state_indices:  [{0}, {1}, {2}]
+        Output state_indices: [{0}, {1}, {2}]
 
     Jaxpr:
         invars[0]: input array
@@ -296,27 +300,29 @@ def prop_convert_element_type(
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.convert_element_type.html
     """
-    deps[eqn.outvars[0]] = copy_index_sets(index_sets(deps, eqn.invars[0]))
+    state_indices[eqn.outvars[0]] = copy_index_sets(
+        index_sets(state_indices, eqn.invars[0])
+    )
 
-    in_val = atom_const_val(eqn.invars[0], const_vals)
+    in_val = atom_const_val(eqn.invars[0], state_consts)
     if in_val is not None:
         new_dtype = eqn.params.get("new_dtype")
         if new_dtype is not None:
-            const_vals[eqn.outvars[0]] = in_val.astype(new_dtype)
+            state_consts[eqn.outvars[0]] = in_val.astype(new_dtype)
         else:
             # stop_gradient, bitcast_convert_type, etc. — pass through as-is.
-            const_vals[eqn.outvars[0]] = in_val
+            state_consts[eqn.outvars[0]] = in_val
 
     # Propagate value bounds with dtype cast.
-    if value_bounds is not None:
-        bounds = atom_value_bounds(eqn.invars[0], const_vals, value_bounds)
+    if state_bounds is not None:
+        bounds = atom_value_bounds(eqn.invars[0], state_consts, state_bounds)
         if bounds is not None:
             lo, hi = bounds
             new_dtype = eqn.params.get("new_dtype")
             if new_dtype is not None:
-                value_bounds[eqn.outvars[0]] = (
+                state_bounds[eqn.outvars[0]] = (
                     lo.astype(new_dtype),
                     hi.astype(new_dtype),
                 )
             else:
-                value_bounds[eqn.outvars[0]] = (lo, hi)
+                state_bounds[eqn.outvars[0]] = (lo, hi)

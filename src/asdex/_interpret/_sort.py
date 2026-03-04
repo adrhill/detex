@@ -8,8 +8,8 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    Deps,
     IndexSet,
+    StateIndices,
     atom_numel,
     atom_shape,
     empty_index_sets,
@@ -18,7 +18,7 @@ from ._commons import (
 )
 
 
-def prop_sort(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_sort(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Sort reorders elements along one dimension.
 
     Each output element depends on all input elements in its slice
@@ -30,11 +30,11 @@ def prop_sort(eqn: JaxprEqn, deps: Deps) -> None:
 
     For multiple operands (multi-key sort via ``lax.sort``),
     the permutation is determined by all key inputs jointly,
-    so deps from all operands in the same slice are unioned.
+    so state_indices from all operands in the same slice are unioned.
 
     Example: y = sort(x, dimension=1) where x.shape = (2, 3)
-        Input deps:  [{0}, {1}, {2}, {3}, {4}, {5}]
-        Output deps: [{0, 1, 2}, {0, 1, 2}, {0, 1, 2},
+        Input state_indices:  [{0}, {1}, {2}, {3}, {4}, {5}]
+        Output state_indices: [{0, 1, 2}, {0, 1, 2}, {0, 1, 2},
                       {3, 4, 5}, {3, 4, 5}, {3, 4, 5}]
 
     Jaxpr:
@@ -54,16 +54,16 @@ def prop_sort(eqn: JaxprEqn, deps: Deps) -> None:
         -1, in_shape[dim]
     )
 
-    # Union deps from all operands within each batch slice.
-    all_indices = [index_sets(deps, v) for v in eqn.invars]
+    # Union state_indices from all operands within each batch slice.
+    all_indices = [index_sets(state_indices, v) for v in eqn.invars]
     group_indices = [
         union_all([ids[i] for ids in all_indices for i in g]) for g in groups
     ]
 
-    # Broadcast each slice's deps back to every element in the slice.
+    # Broadcast each slice's state_indices back to every element in the slice.
     for outvar in eqn.outvars:
         out: list[IndexSet] = empty_index_sets(total)
         for gd, g in zip(group_indices, groups, strict=True):
             for i in g:
                 out[i] = gd
-        deps[outvar] = out
+        state_indices[outvar] = out

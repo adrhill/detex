@@ -2,10 +2,10 @@
 
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, index_sets
+from ._commons import StateIndices, index_sets
 
 
-def prop_squeeze(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_squeeze(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Squeeze removes dimensions of size 1 without changing the data.
 
     Since it's a reshape with the same number of elements,
@@ -16,8 +16,8 @@ def prop_squeeze(eqn: JaxprEqn, deps: Deps) -> None:
     The Jacobian is the identity matrix (permuted).
 
     Example: x.shape = (2, 1), y = squeeze(x) with shape (2,)
-        Input deps:  [{0}, {1}]
-        Output deps: [{0}, {1}]
+        Input state_indices:  [{0}, {1}]
+        Output state_indices: [{0}, {1}]
 
     Jaxpr:
         invars[0]: input array
@@ -25,4 +25,4 @@ def prop_squeeze(eqn: JaxprEqn, deps: Deps) -> None:
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.squeeze.html
     """
-    deps[eqn.outvars[0]] = index_sets(deps, eqn.invars[0])
+    state_indices[eqn.outvars[0]] = index_sets(state_indices, eqn.invars[0])

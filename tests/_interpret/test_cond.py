@@ -13,10 +13,10 @@ from asdex import jacobian_sparsity
 
 @pytest.mark.control_flow
 def test_cond_union_of_branches():
-    """Cond unions deps from different branches.
+    """Cond unions state_indices from different branches.
 
     One branch returns x[:2], the other returns x[1:3].
-    The union gives each output deps from both branches.
+    The union gives each output state_indices from both branches.
     """
 
     def f(x):
@@ -43,7 +43,7 @@ def test_cond_union_of_branches():
 
 @pytest.mark.control_flow
 def test_cond_identical_branches():
-    """Cond with identical branches returns the same deps as either branch."""
+    """Cond with identical branches returns the same state_indices as either branch."""
 
     def f(x):
         return jax.lax.cond(
@@ -121,7 +121,7 @@ def test_cond_asymmetric_branches():
 def test_cond_closure_captured_index():
     """Cond branch with closure-captured index array resolves gather precisely.
 
-    Without seeding const_vals from the ClosedJaxpr's captured constants,
+    Without seeding state_consts from the ClosedJaxpr's captured constants,
     the gather in branch_a would be conservative (dense).
     """
     indices = jnp.array([2, 0, 1])

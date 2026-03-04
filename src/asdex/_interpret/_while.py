@@ -3,10 +3,10 @@
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    ConstVals,
-    Deps,
     IndexSet,
     PropJaxprFn,
+    StateConsts,
+    StateIndices,
     fixed_point_loop,
     forward_const_vals,
     index_sets,
@@ -16,8 +16,8 @@ from ._commons import (
 
 def prop_while(
     eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
     prop_jaxpr: PropJaxprFn,
 ) -> None:
     """while_loop iterates a body until a condition becomes false.
@@ -25,7 +25,7 @@ def prop_while(
     The carry variables may accumulate dependencies across iterations,
     so we iterate propagation to a fixed point.
 
-    The cond jaxpr only produces a boolean and doesn't contribute to carry deps.
+    The cond jaxpr only produces a boolean and doesn't contribute to carry state_indices.
 
     Layout:
         invars: [body_consts..., cond_consts..., carry_init...]
@@ -33,8 +33,8 @@ def prop_while(
         params: body_jaxpr, body_nconsts, cond_jaxpr, cond_nconsts
 
     Example: carry = carry + const (accumulation)
-        Input deps:  carry=[{0}, {1}], const=[{}, {}]
-        After 1 iter: carry=[{0}, {1}] (stable immediately since const deps are empty)
+        Input state_indices:  carry=[{0}, {1}], const=[{}, {}]
+        After 1 iter: carry=[{0}, {1}] (stable immediately since const state_indices are empty)
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.while_loop.html
     """
@@ -49,21 +49,25 @@ def prop_while(
     carry_init = eqn.invars[body_nconsts + cond_nconsts :]
     assert len(carry_init) == n_carry
 
-    seed_const_vals(const_vals, body_jaxpr.constvars, body_closed.consts)
-    # Only forward const_vals for body consts, not carry (carry changes each iteration)
-    forward_const_vals(const_vals, body_consts, body_jaxpr.invars[:body_nconsts])
+    seed_const_vals(state_consts, body_jaxpr.constvars, body_closed.consts)
+    # Only forward state_consts for body consts, not carry (carry changes each iteration)
+    forward_const_vals(state_consts, body_consts, body_jaxpr.invars[:body_nconsts])
 
-    # Initialize carry deps from the initial values
-    carry_indices: list[list[IndexSet]] = [index_sets(deps, v) for v in carry_init]
+    # Initialize carry state_indices from the initial values
+    carry_indices: list[list[IndexSet]] = [
+        index_sets(state_indices, v) for v in carry_init
+    ]
 
     # body_jaxpr invars: [body_consts..., carry...]
-    const_inputs: list[list[IndexSet]] = [index_sets(deps, v) for v in body_consts]
+    const_inputs: list[list[IndexSet]] = [
+        index_sets(state_indices, v) for v in body_consts
+    ]
 
     def iterate(carry: list[list[IndexSet]]) -> list[list[IndexSet]]:
-        return prop_jaxpr(body_jaxpr, const_inputs + carry, const_vals)
+        return prop_jaxpr(body_jaxpr, const_inputs + carry, state_consts)
 
     fixed_point_loop(iterate, carry_indices, n_carry)
 
-    # Write final carry deps to outvars
+    # Write final carry state_indices to outvars
     for outvar, out_indices in zip(eqn.outvars, carry_indices, strict=True):
-        deps[outvar] = out_indices
+        state_indices[outvar] = out_indices
