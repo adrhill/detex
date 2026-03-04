@@ -4,6 +4,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from jax import lax
 
 from asdex import jacobian_sparsity
 
@@ -138,6 +139,275 @@ def test_convert_element_type_propagates_const():
             [0, 0, 1],
             [1, 0, 0],
             [0, 1, 0],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+# Division zero-skipping
+
+
+@pytest.mark.elementwise
+def test_div_zero_numerator():
+    """Division with zero numerator clears dependencies.
+
+    d(0/y)/dy = 0, so output positions with known zero numerator
+    have no dependency on any input.
+    """
+    numerator = jnp.array([0.0, 1.0, 0.0])
+
+    def f(x):
+        return numerator / x
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # Only out[1] depends on x[1]; out[0] and out[2] are zero.
+    expected = np.array(
+        [
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_div_zero_numerator_broadcast():
+    """Scalar zero numerator divided by a vector clears all dependencies.
+
+    Broadcasting a scalar zero numerator to the output shape
+    should clear all output index sets.
+    """
+
+    def f(x):
+        return jnp.float32(0.0) / x
+
+    result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
+    expected = np.zeros((4, 4), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+# Integer power zero-skipping
+
+
+@pytest.mark.elementwise
+def test_integer_pow_zero_base():
+    """Zero base with exponent > 1 clears dependencies.
+
+    d(0^n)/dx = n * 0^(n-1) = 0 for n > 1,
+    so output positions with known zero base have no dependencies.
+    """
+    base = jnp.array([0.0, 1.0, 0.0])
+
+    def f(_x):
+        return jax.lax.integer_pow(base, 2)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # All outputs are constants (no dependency on input).
+    expected = np.zeros((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_integer_pow_zero_base_exp_zero():
+    """x^0 = 1 always, so no dependencies regardless of base.
+
+    This tests the existing n=0 special case.
+    """
+
+    def f(x):
+        return jax.lax.integer_pow(x, 0)
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.zeros((3, 3), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+# Bounds propagation through mul, div, integer_pow
+
+
+@pytest.mark.elementwise
+def test_mul_bounds_propagate_to_dynamic_slice():
+    """Bounds from argmax flow through mul to dynamic_slice.
+
+    argmax(x[:2]) ∈ {0,1}, so idx*2 has interval bounds [0,2].
+    dynamic_slice enumerates all integer start positions in [0,2].
+    argmax has zero derivative, so it contributes no index set deps.
+    """
+
+    def f(x):
+        idx = jnp.argmax(x[:2])  # bounds: [0, 1]
+        scaled = idx * 2  # bounds: [0, 2] via mul
+        return lax.dynamic_slice(x, (scaled,), (2,))
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # Interval [0,2] means windows at start=0, 1, 2.
+    # out[0] = x[0] ∪ x[1] ∪ x[2], out[1] = x[1] ∪ x[2] ∪ x[3].
+    expected = np.array(
+        [
+            [1, 1, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_div_bounds_propagate_to_dynamic_slice():
+    """Bounds from div propagate to dynamic_slice via lax.div.
+
+    Uses lax.div directly (not ``//``, which lowers to a nested jaxpr
+    with select_n that doesn't yet merge bounds from both branches).
+    argmax(x[:4]) ∈ {0,1,2,3}, lax.div(idx, 2) ∈ {0,1}.
+    dynamic_slice enumerates start positions {0,1}.
+    """
+
+    def f(x):
+        idx = jnp.argmax(x[:4])  # bounds: [0, 3]
+        start = lax.div(idx, jnp.asarray(2, dtype=idx.dtype))  # bounds: [0, 1] via div
+        return lax.dynamic_slice(x, (start,), (3,))
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # Interval [0,1] means windows at start=0, 1.
+    # out[0] = x[0] ∪ x[1], out[1] = x[1] ∪ x[2], out[2] = x[2] ∪ x[3].
+    expected = np.array(
+        [
+            [1, 1, 0, 0, 0],
+            [0, 1, 1, 0, 0],
+            [0, 0, 1, 1, 0],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_integer_pow_even_bounds_propagate_to_dynamic_slice():
+    """Even power bounds from integer_pow flow to dynamic_slice.
+
+    argmax(x[:2]) ∈ {0,1}, so idx**2 ∈ [0,1] (even power).
+    dynamic_slice enumerates start positions {0,1}.
+    argmax has zero derivative, so it contributes no index set deps.
+    """
+
+    def f(x):
+        idx = jnp.argmax(x[:2])  # bounds: [0, 1]
+        start = jax.lax.integer_pow(idx, 2)  # bounds: [0, 1]
+        return lax.dynamic_slice(x, (start,), (3,))
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # Windows at start=0 and start=1.
+    # out[0] = x[0] ∪ x[1], out[1] = x[1] ∪ x[2], out[2] = x[2] ∪ x[3].
+    expected = np.array(
+        [
+            [1, 1, 0, 0, 0],
+            [0, 1, 1, 0, 0],
+            [0, 0, 1, 1, 0],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_integer_pow_odd_bounds_propagate_to_dynamic_slice():
+    """Odd power preserves monotone bounds through to dynamic_slice.
+
+    argmax(x[:2]) ∈ {0,1}, so idx**3 ∈ [0,1] (odd power, monotone).
+    argmax has zero derivative, so it contributes no index set deps.
+    """
+
+    def f(x):
+        idx = jnp.argmax(x[:2])  # bounds: [0, 1]
+        start = jax.lax.integer_pow(idx, 3)  # bounds: [0, 1]
+        return lax.dynamic_slice(x, (start,), (3,))
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # Same as even power: windows at 0 and 1.
+    expected = np.array(
+        [
+            [1, 1, 0, 0, 0],
+            [0, 1, 1, 0, 0],
+            [0, 0, 1, 1, 0],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_div_bounds_skip_zero_crossing_divisor():
+    """Division bounds are not propagated when divisor spans zero.
+
+    When the divisor range includes zero, interval division is undefined,
+    so bounds should not be propagated and the consumer falls back to conservative.
+    argmax(x[:3]) ∈ {0,1,2}, so idx-1 ∈ {-1,0,1} which spans zero.
+    lax.div(6, idx-1) is undefined at zero, so bounds are dropped.
+    Without bounds, dynamic_slice falls back to conservative (all deps).
+    """
+
+    def f(x):
+        idx = jnp.argmax(x[:3])  # bounds: [0, 2]
+        divisor = idx - jnp.asarray(1, dtype=idx.dtype)  # bounds: [-1, 1] — spans zero
+        start = lax.div(jnp.asarray(6, dtype=divisor.dtype), divisor)  # bounds dropped
+        return lax.dynamic_slice(x, (start,), (2,))
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # All 1s: conservative fallback since div bounds span zero.
+    expected = np.ones((2, 5), dtype=int)
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_mul_zero_second_operand():
+    """Mul clears deps when the second operand is a known zero.
+
+    Exercises the in2_val == 0 branch (vs test_binary_broadcast_size1_dim
+    which uses constant ones).
+    """
+    mask = jnp.array([1.0, 0.0, 1.0])
+
+    def f(x):
+        return x * mask
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    # out[1] has no deps because mask[1] == 0.
+    expected = np.array(
+        [
+            [1, 0, 0],
+            [0, 0, 0],
+            [0, 0, 1],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.elementwise
+def test_integer_pow_zero_bounds():
+    """integer_pow with y=0 propagates bounds (1, 1).
+
+    x^0 = 1 always, so bounds are exactly (1, 1).
+    When this feeds into a downstream add,
+    the resulting bounds should be [1+lo, 1+hi].
+    This exercises the y==0 branch in _propagate_bounds_integer_pow.
+    """
+
+    def f(x):
+        idx = jnp.argmax(x[:3])  # bounds: [0, 2]
+        one = jax.lax.integer_pow(idx, 0)  # bounds: [1, 1]
+        start = one - jnp.int32(1)  # bounds: [0, 0] — constant 0
+        return lax.dynamic_slice(x, (start,), (2,))
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # Start is always 0, so out = [x[0], x[1]].
+    expected = np.array(
+        [
+            [1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
         ],
         dtype=int,
     )

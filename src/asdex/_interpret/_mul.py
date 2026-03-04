@@ -4,10 +4,12 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
+    StateBounds,
     StateConsts,
     StateIndices,
     atom_const_val,
     atom_shape,
+    atom_value_bounds,
     empty_index_set,
     numel,
     propagate_const_binary,
@@ -16,7 +18,10 @@ from ._elementwise import _binary_elementwise
 
 
 def prop_mul(
-    eqn: JaxprEqn, state_indices: StateIndices, state_consts: StateConsts
+    eqn: JaxprEqn,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
+    state_bounds: StateBounds,
 ) -> None:
     """Multiplication is element-wise with a special case for known zeros.
 
@@ -68,3 +73,34 @@ def prop_mul(
             in2_val is not None and in2_val[i] == 0
         ):
             out_indices[i] = empty_index_set()
+
+    # Bounds propagation via interval multiplication.
+    _propagate_bounds_mul(eqn, state_consts, state_bounds)
+
+
+def _propagate_bounds_mul(
+    eqn: JaxprEqn,
+    state_consts: StateConsts,
+    state_bounds: StateBounds,
+) -> None:
+    """Propagate value bounds through ``mul`` via interval arithmetic.
+
+    ``[a,b] * [c,d]`` → ``[min(ac,ad,bc,bd), max(ac,ad,bc,bd)]``.
+    This handles all sign combinations correctly.
+    """
+    in1_bounds = atom_value_bounds(eqn.invars[0], state_consts, state_bounds)
+    in2_bounds = atom_value_bounds(eqn.invars[1], state_consts, state_bounds)
+    if in1_bounds is None or in2_bounds is None:
+        return
+
+    lo1, hi1 = in1_bounds
+    lo2, hi2 = in2_bounds
+
+    c1 = lo1 * lo2
+    c2 = lo1 * hi2
+    c3 = hi1 * lo2
+    c4 = hi1 * hi2
+
+    lo = np.minimum(np.minimum(c1, c2), np.minimum(c3, c4))
+    hi = np.maximum(np.maximum(c1, c2), np.maximum(c3, c4))
+    state_bounds[eqn.outvars[0]] = (lo, hi)

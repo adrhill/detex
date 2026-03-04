@@ -224,11 +224,9 @@ that appear in both variable and constant terms,
 so every constraint output structurally depends on the sliced variables
 even when the dependence cancels algebraically.
 
-**Handler improvement**: Extend zero-skipping in `mul` and `div`
-to detect when one operand is a tracked zero constant.
-Currently `mul` clears deps when one factor is zero,
-but `div(0, x)` doesn't clear deps even though the result is always zero.
-More broadly, this is an **algebraic cancellation** problem —
+Zero-skipping for `div(0, x)` and `integer_pow(0, n)` has been implemented,
+but does not help these problems.
+The spurious nonzeros come from **algebraic cancellation** —
 detecting `f(x) - f(x) = 0` requires symbolic simplification
 that's beyond index-set propagation.
 
@@ -301,9 +299,9 @@ from polynomial and product constraint expressions.
 
 **Handler improvement**: These are mostly structural zeros
 that would require algebraic simplification to eliminate.
-Extending zero-skipping in `integer_pow`
-(when the base is a tracked zero, the result is zero)
-could help with some cases.
+Zero-skipping in `integer_pow` (when the base is a tracked zero)
+has been implemented but doesn't help here —
+the bases are not known constants at trace time.
 
 ### Small extras (1–4 nnz)
 
@@ -360,10 +358,26 @@ OET2/4/6/7 (inequality Jacobian), and partially MSS1, VANDANMSLS, HAIFAM.
 ~12–15 problems affected across Hessian and Jacobian tests.
 This is the single highest-impact improvement.
 
-### 2. Zero-skipping in `div` and `integer_pow`
+### 2. ~~Zero-skipping in `div` and `integer_pow`~~ ✓ Done
 
-`div(0, x)` should produce zero deps (like `mul(0, x)` already does).
-`integer_pow(0, n)` for `n > 0` should produce zero deps.
+Implemented in `_div.py` and `_elementwise.py`:
+- `div(0, x)` now clears deps (like `mul(0, x)` already did).
+- `integer_pow(0, n)` for `n > 1` now clears deps.
+- All three (`mul`, `div`, `integer_pow`) now propagate value bounds
+  via interval arithmetic for downstream gather/scatter precision.
 
-**Impact**: Resolves some TENBARS spurious nonzeros.
-Small improvements across many moderately conservative problems.
+**CUTEst impact**: None of the flagged problems (TENBARS, FLETCHER, S316-322)
+actually benefit — their spurious nonzeros come from algebraic cancellations
+(e.g. `f(x) - f(x) = 0`), not from `div(0, x)` or `integer_pow(0, n)` patterns.
+The bounds propagation will help when `mul`/`div`/`integer_pow`
+appear in index computation chains feeding into gather/scatter.
+
+### 3. Merge value bounds in `select_n` for dynamic predicates
+
+Currently `select_n` only propagates bounds when the predicate is a known constant.
+When the predicate is dynamic, bounds from both branches could be merged
+as `(min(lo_a, lo_b), max(hi_a, hi_b))`.
+
+**Impact**: Would allow Python `//` (floor division) to propagate bounds end-to-end.
+`//` lowers to a nested jaxpr containing `div`, `rem`, `sign`, and `select_n` —
+the `select_n` with a dynamic predicate currently blocks bounds flow.

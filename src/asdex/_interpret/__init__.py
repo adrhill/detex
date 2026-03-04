@@ -31,6 +31,7 @@ from ._concatenate import prop_concatenate
 from ._cond import prop_cond
 from ._conv import prop_conv_general_dilated
 from ._cumsum import prop_cumsum
+from ._div import prop_div
 from ._dot_general import prop_dot_general
 from ._dynamic_slice import prop_dynamic_slice, prop_dynamic_update_slice
 from ._elementwise import (
@@ -203,14 +204,16 @@ def prop_dispatch(
         case "rev":
             prop_rev(eqn, state_indices)
         case "integer_pow":
-            prop_integer_pow(eqn, state_indices)
+            prop_integer_pow(eqn, state_indices, state_consts, state_bounds)
         case "mul":
-            prop_mul(eqn, state_indices, state_consts)
+            prop_mul(eqn, state_indices, state_consts, state_bounds)
         case "add" | "add_any":
             prop_add(eqn, state_indices, state_consts, state_bounds)
         case "sub":
             prop_sub(eqn, state_indices, state_consts, state_bounds)
-        case "div" | "pow" | "max" | "min" | "atan2" | "rem" | "nextafter" | "complex":
+        case "div":
+            prop_div(eqn, state_indices, state_consts, state_bounds)
+        case "pow" | "max" | "min" | "atan2" | "rem" | "nextafter" | "complex":
             prop_binary_const(eqn, state_indices, state_consts)
         case (
             "neg"
