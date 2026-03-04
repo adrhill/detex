@@ -227,6 +227,47 @@ def propagate_const_binary(
         state_consts[eqn.outvars[0]] = transform(in1, in2)
 
 
+# Zero-skipping
+
+
+def broadcast_to_output(
+    val: np.ndarray, in_shape: tuple[int, ...], out_shape: tuple[int, ...]
+) -> np.ndarray:
+    """Broadcast a const value from input shape to output shape, returning a flat array.
+
+    Handles numpy-style broadcasting: left-pads with 1s then expands.
+    """
+    ndim = len(out_shape)
+    arr = np.asarray(val).reshape(in_shape) if in_shape else np.asarray(val)
+    pad = ndim - len(in_shape)
+    padded_shape = (1,) * pad + in_shape
+    return np.broadcast_to(arr.reshape(padded_shape), out_shape).ravel()
+
+
+def clear_where_zero(
+    eqn: JaxprEqn,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
+    invar_idx: int,
+) -> None:
+    """Clear output index sets at positions where an input is a known constant zero.
+
+    Used by ``mul``, ``div``, and ``integer_pow`` for zero-skipping:
+    ``d(0 * y)/dy = 0``, ``d(0 / y)/dy = 0``, ``d(0^n)/dx = 0`` for ``n > 1``.
+    """
+    val = atom_const_val(eqn.invars[invar_idx], state_consts)
+    if val is None:
+        return
+    out_shape = atom_shape(eqn.outvars[0])
+    in_shape = atom_shape(eqn.invars[invar_idx])
+    flat = broadcast_to_output(val, in_shape, out_shape)
+
+    out_indices = state_indices[eqn.outvars[0]]
+    for i in range(len(out_indices)):
+        if flat[i] == 0:
+            out_indices[i] = empty_index_set()
+
+
 # Index set operations
 
 

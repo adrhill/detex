@@ -11,8 +11,8 @@ from ._commons import (
     atom_numel,
     atom_shape,
     atom_value_bounds,
+    clear_where_zero,
     copy_index_sets,
-    empty_index_set,
     empty_index_sets,
     index_sets,
     numel,
@@ -269,22 +269,7 @@ def prop_integer_pow(
     # Zero-skipping: d(0^n)/dx = n * 0^(n-1) = 0 for n > 1.
     # For n = 1, d(x)/dx = 1 even at x = 0, so no skipping.
     if state_consts is not None and y > 1:
-        in_val = atom_const_val(eqn.invars[0], state_consts)
-        if in_val is not None:
-            out_shape = atom_shape(eqn.outvars[0])
-            in_shape = atom_shape(eqn.invars[0])
-            ndim = len(out_shape)
-            arr = (
-                np.asarray(in_val).reshape(in_shape) if in_shape else np.asarray(in_val)
-            )
-            pad = ndim - len(in_shape)
-            padded_shape = (1,) * pad + in_shape
-            in_broadcast = np.broadcast_to(arr.reshape(padded_shape), out_shape).ravel()
-
-            out_indices = state_indices[eqn.outvars[0]]
-            for i in range(len(out_indices)):
-                if in_broadcast[i] == 0:
-                    out_indices[i] = empty_index_set()
+        clear_where_zero(eqn, state_indices, state_consts, 0)
 
     # Bounds propagation for [a,b]^n.
     if state_bounds is not None:

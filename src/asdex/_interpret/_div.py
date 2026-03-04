@@ -7,11 +7,8 @@ from ._commons import (
     StateBounds,
     StateConsts,
     StateIndices,
-    atom_const_val,
-    atom_shape,
     atom_value_bounds,
-    empty_index_set,
-    numel,
+    clear_where_zero,
     propagate_const_binary,
 )
 from ._elementwise import _binary_elementwise
@@ -41,29 +38,7 @@ def prop_div(
     """
     _binary_elementwise(eqn, state_indices)
     propagate_const_binary(eqn, state_consts, np.divide)
-
-    # Zero-skipping: d(0/y)/dy = 0.
-    num_val = atom_const_val(eqn.invars[0], state_consts)
-    if num_val is not None:
-        out_shape = atom_shape(eqn.outvars[0])
-        out_size = numel(out_shape)
-        ndim = len(out_shape)
-
-        # Broadcast numerator to output shape.
-        num_shape = atom_shape(eqn.invars[0])
-        arr = (
-            np.asarray(num_val).reshape(num_shape) if num_shape else np.asarray(num_val)
-        )
-        pad = ndim - len(num_shape)
-        padded_shape = (1,) * pad + num_shape
-        num_broadcast = np.broadcast_to(arr.reshape(padded_shape), out_shape).ravel()
-
-        out_indices = state_indices[eqn.outvars[0]]
-        for i in range(out_size):
-            if num_broadcast[i] == 0:
-                out_indices[i] = empty_index_set()
-
-    # Bounds propagation via interval division.
+    clear_where_zero(eqn, state_indices, state_consts, 0)
     _propagate_bounds_div(eqn, state_consts, state_bounds)
 
 
