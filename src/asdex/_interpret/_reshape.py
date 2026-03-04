@@ -4,8 +4,8 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    ConstVals,
-    Deps,
+    StateConsts,
+    StateIndices,
     atom_shape,
     index_sets,
     numel,
@@ -14,7 +14,9 @@ from ._commons import (
 )
 
 
-def prop_reshape(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def prop_reshape(
+    eqn: JaxprEqn, state_indices: StateIndices, state_consts: StateConsts
+) -> None:
     """Reshape changes array shape without changing data or element count.
 
     Dependencies pass through unchanged in row-major (C) order.
@@ -25,13 +27,13 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     The permutation reorders which flat input each flat output reads from.
 
     Example: reshape([a,b,c,d], (2,2)) → [[a,b],[c,d]]
-        Input deps:  [{0}, {1}, {2}, {3}]
-        Output deps: [{0}, {1}, {2}, {3}]
+        Input state_indices:  [{0}, {1}, {2}, {3}]
+        Output state_indices: [{0}, {1}, {2}, {3}]
 
     Example: reshape([[a,b,c],[d,e,f]], (6,), dimensions=(1,0))
         Transpose first → [[a,d],[b,e],[c,f]], then flatten → [a,d,b,e,c,f]
-        Input deps:  [{0}, {1}, {2}, {3}, {4}, {5}]
-        Output deps: [{0}, {3}, {1}, {4}, {2}, {5}]
+        Input state_indices:  [{0}, {1}, {2}, {3}, {4}, {5}]
+        Output state_indices: [{0}, {3}, {1}, {4}, {2}, {5}]
 
     Jaxpr:
         invars[0]: operand — array to reshape
@@ -40,7 +42,7 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.reshape.html
     """
-    in_indices = index_sets(deps, eqn.invars[0])
+    in_indices = index_sets(state_indices, eqn.invars[0])
     out_size = numel(atom_shape(eqn.outvars[0]))
     if len(in_indices) != out_size:
         msg = (
@@ -57,11 +59,11 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
         # Build the flat index mapping: position map transposed then raveled
         # tells us which original flat index each output position reads.
         in_shape = atom_shape(eqn.invars[0])
-        deps[eqn.outvars[0]] = transform_indices(
+        state_indices[eqn.outvars[0]] = transform_indices(
             in_indices, in_shape, lambda p: p.transpose(dimensions)
         )
     else:
-        deps[eqn.outvars[0]] = in_indices
+        state_indices[eqn.outvars[0]] = in_indices
 
     new_sizes = eqn.params["new_sizes"]
 
@@ -70,4 +72,4 @@ def prop_reshape(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
             return v.transpose(dimensions).reshape(new_sizes)
         return v.reshape(new_sizes)
 
-    propagate_const_unary(eqn, const_vals, _reshape_val)
+    propagate_const_unary(eqn, state_consts, _reshape_val)

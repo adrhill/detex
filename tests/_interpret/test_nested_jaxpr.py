@@ -1,4 +1,4 @@
-"""Tests for const_vals propagation into nested jaxprs.
+"""Tests for state_consts propagation into nested jaxprs.
 
 Verifies that seed_const_vals and forward_const_vals correctly transfer
 concrete index values into jit-wrapped and custom_jvp functions,
@@ -20,7 +20,7 @@ def test_jit_closure_captured_index():
     """jit-wrapped function with closure-captured index resolves gather precisely.
 
     The index array becomes a constvar in the nested ClosedJaxpr.
-    seed_const_vals populates const_vals for it,
+    seed_const_vals populates state_consts for it,
     enabling the gather handler to track precise element dependencies.
     Without the fix, the result is dense.
     """

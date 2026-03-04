@@ -4,9 +4,9 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    ConstVals,
-    Deps,
-    ValueBounds,
+    StateBounds,
+    StateConsts,
+    StateIndices,
     atom_const_val,
     atom_shape,
     atom_value_bounds,
@@ -18,9 +18,9 @@ from ._commons import (
 
 def prop_broadcast_in_dim(
     eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds | None = None,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
+    state_bounds: StateBounds | None = None,
 ) -> None:
     """Broadcast replicates input elements across new or expanded dimensions.
 
@@ -35,8 +35,8 @@ def prop_broadcast_in_dim(
     the output value is also recorded for use in gather/scatter handlers.
 
     Example: x.shape = (3,), y = broadcast(x, shape=(2, 3), dims=(1,))
-        Input deps:  [{0}, {1}, {2}]
-        Output deps: [{0}, {1}, {2}, {0}, {1}, {2}]  (repeated per row)
+        Input state_indices:  [{0}, {1}, {2}]
+        Output state_indices: [{0}, {1}, {2}, {0}, {1}, {2}]  (repeated per row)
 
     Jaxpr:
         invars[0]: input array
@@ -46,7 +46,7 @@ def prop_broadcast_in_dim(
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.broadcast_in_dim.html
     """
     in_atom = eqn.invars[0]
-    in_indices = index_sets(deps, in_atom)
+    in_indices = index_sets(state_indices, in_atom)
     out_shape = eqn.params["shape"]
     broadcast_dims = eqn.params["broadcast_dimensions"]
     out_var = eqn.outvars[0]
@@ -55,25 +55,25 @@ def prop_broadcast_in_dim(
     # When the broadcast input is statically known (literal or traced from constants),
     # propagate its value so downstream handlers can use it
     # instead of falling back to conservative all-to-all dependencies.
-    in_val = atom_const_val(in_atom, const_vals)
+    in_val = atom_const_val(in_atom, state_consts)
     if in_val is not None:
         intermediate_shape = [1] * len(out_shape)
         for i, out_dim in enumerate(broadcast_dims):
             intermediate_shape[out_dim] = (in_val.shape or (1,))[i]
-        const_vals[out_var] = np.broadcast_to(
+        state_consts[out_var] = np.broadcast_to(
             np.reshape(in_val, intermediate_shape), out_shape
         )
 
     # Propagate value bounds by broadcasting to the output shape.
-    if value_bounds is not None:
-        _propagate_bounds_broadcast(eqn, const_vals, value_bounds)
+    if state_bounds is not None:
+        _propagate_bounds_broadcast(eqn, state_consts, state_bounds)
 
     # Scalars have a single dependency set shared by all output elements,
     # so we can skip the coordinate mapping below and just replicate it.
     # Early return avoids building the np.indices grid for this common case.
     out_size = numel(out_shape)
     if len(in_indices) == 1:
-        deps[out_var] = [in_indices[0]] * out_size
+        state_indices[out_var] = [in_indices[0]] * out_size
         return
 
     # General case: map each output element back to the input element it reads.
@@ -88,18 +88,18 @@ def prop_broadcast_in_dim(
     )
     flat_map = np.ravel_multi_index(in_coords, in_shape).ravel()
 
-    deps[out_var] = permute_indices(in_indices, flat_map)
+    state_indices[out_var] = permute_indices(in_indices, flat_map)
 
 
 def _propagate_bounds_broadcast(
-    eqn: JaxprEqn, const_vals: ConstVals, value_bounds: ValueBounds
+    eqn: JaxprEqn, state_consts: StateConsts, state_bounds: StateBounds
 ) -> None:
     """Propagate value bounds through broadcast_in_dim.
 
     Broadcasting replicates values without changing them,
     so bounds are broadcast to the output shape.
     """
-    bounds = atom_value_bounds(eqn.invars[0], const_vals, value_bounds)
+    bounds = atom_value_bounds(eqn.invars[0], state_consts, state_bounds)
     if bounds is None:
         return
     lo, hi = bounds
@@ -111,7 +111,7 @@ def _propagate_bounds_broadcast(
     for i, out_dim in enumerate(broadcast_dims):
         intermediate_shape[out_dim] = in_shape[i]
 
-    value_bounds[eqn.outvars[0]] = (
+    state_bounds[eqn.outvars[0]] = (
         np.broadcast_to(np.reshape(lo, intermediate_shape), out_shape),
         np.broadcast_to(np.reshape(hi, intermediate_shape), out_shape),
     )

@@ -3,10 +3,10 @@
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    ConstVals,
-    Deps,
     IndexSet,
     PropJaxprFn,
+    StateConsts,
+    StateIndices,
     copy_index_sets,
     forward_const_vals,
     index_sets,
@@ -16,14 +16,14 @@ from ._commons import (
 
 def prop_cond(
     eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
     prop_jaxpr: PropJaxprFn,
 ) -> None:
     """cond/switch selects one of several branches based on an integer index.
 
     Since we don't know which branch executes at trace time,
-    output deps are the union across all branches.
+    output state_indices are the union across all branches.
 
     Layout:
         invars: [index_scalar, operands...]
@@ -31,24 +31,26 @@ def prop_cond(
         params: branches (tuple of ClosedJaxpr)
 
     Example: cond(pred, true_fn, false_fn, x)
-        true_fn:  out = x[:2]  → deps [{0}, {1}]
-        false_fn: out = x[1:]  → deps [{1}, {2}]
+        true_fn:  out = x[:2]  → state_indices [{0}, {1}]
+        false_fn: out = x[1:]  → state_indices [{1}, {2}]
         union:    [{0, 1}, {1, 2}]
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.cond.html
     """
     branches = eqn.params["branches"]
     operands = eqn.invars[1:]
-    operand_indices: list[list[IndexSet]] = [index_sets(deps, v) for v in operands]
+    operand_indices: list[list[IndexSet]] = [
+        index_sets(state_indices, v) for v in operands
+    ]
 
     n_out = len(eqn.outvars)
 
-    # Propagate each branch and collect per-branch output deps
+    # Propagate each branch and collect per-branch output state_indices
     branch_outputs: list[list[list[IndexSet]]] = []
     for branch in branches:
-        seed_const_vals(const_vals, branch.jaxpr.constvars, branch.consts)
-        forward_const_vals(const_vals, operands, branch.jaxpr.invars)
-        out = prop_jaxpr(branch.jaxpr, operand_indices, const_vals)
+        seed_const_vals(state_consts, branch.jaxpr.constvars, branch.consts)
+        forward_const_vals(state_consts, operands, branch.jaxpr.invars)
+        out = prop_jaxpr(branch.jaxpr, operand_indices, state_consts)
         branch_outputs.append(out)
 
     # Union across branches for each output variable
@@ -59,4 +61,4 @@ def prop_cond(
         for branch_out in branch_outputs[1:]:
             for j in range(len(merged)):
                 merged[j] |= branch_out[i][j]
-        deps[outvar] = merged
+        state_indices[outvar] = merged

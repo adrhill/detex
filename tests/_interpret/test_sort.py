@@ -131,7 +131,7 @@ def test_sort_3d(dimension):
 # Multi-operand sort
 @pytest.mark.array_ops
 def test_sort_multi_operand():
-    """Multi-key sort: deps from all operands are unioned per slice.
+    """Multi-key sort: state_indices from all operands are unioned per slice.
 
     lax.sort((keys, values), num_keys=1) sorts values by keys.
     Both outputs depend on all inputs in the same batch slice.
@@ -182,7 +182,7 @@ def test_argsort():
 
     result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
     # Precise: zero matrix (piecewise constant function)
-    # Detected: dense (structural deps from sort permutation)
+    # Detected: dense (structural state_indices from sort permutation)
     expected = np.ones((4, 4), dtype=int)
     np.testing.assert_array_equal(result, expected)
 

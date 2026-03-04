@@ -62,7 +62,7 @@ def test_select_if_vmap_all_const_propagation():
     """All-const select_if_vmap propagates concrete values for downstream precision.
 
     When pred, on_true, and on_false are all statically known constants,
-    the handler propagates the result through const_vals,
+    the handler propagates the result through state_consts,
     enabling downstream gathers to use precise indices.
     """
 

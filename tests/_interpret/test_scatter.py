@@ -205,7 +205,7 @@ def test_scatter_set_middle_dim():
 
 @pytest.mark.array_ops
 def test_scatter_add_middle_dim():
-    """Scatter-add along a middle dimension unions operand and update deps.
+    """Scatter-add along a middle dimension unions operand and update state_indices.
 
     ``arr.at[:, idx, :].add(value)`` adds a 2D slice at one position
     along dim 1. Target positions depend on both operand and updates.
@@ -299,7 +299,7 @@ def test_scatter_multi_index_precision():
     """Multi-index scatter (Pattern 3): zeroes specific coordinates.
 
     ``mat.at[rows, cols].set(zeros)`` zeroes positions (0,1), (1,3), (2,0).
-    Those positions lose input deps; all others keep identity.
+    Those positions lose input state_indices; all others keep identity.
     """
 
     def f(x):
@@ -605,7 +605,7 @@ def test_scatter_multi_index_duplicate_set():
 
     result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
     # Position (0,1) = flat 1 gets x[1] (last write wins).
-    # All other positions keep their original identity deps.
+    # All other positions keep their original identity state_indices.
     expected = np.eye(6, dtype=int)
     expected[1, :] = 0
     expected[1, 1] = 1  # out[1] <- x[1]
@@ -616,7 +616,7 @@ def test_scatter_multi_index_duplicate_set():
 def test_scatter_multi_index_duplicate_add():
     """Multi-index scatter-add with duplicate coordinates: union of both.
 
-    Two updates target ``(0, 1)``; the output unions both deps.
+    Two updates target ``(0, 1)``; the output unions both state_indices.
     """
 
     def f(x):
@@ -665,7 +665,7 @@ def test_scatter_2d():
 
     TODO(scatter): ``mat.at[0, :2].set(updates)`` could track precise
     per-element dependencies, but the current handler unions operand
-    and update deps across all outputs.
+    and update state_indices across all outputs.
     """
 
     def f(x):

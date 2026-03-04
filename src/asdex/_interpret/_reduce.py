@@ -8,8 +8,8 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from ._commons import (
-    Deps,
     IndexSet,
+    StateIndices,
     atom_shape,
     empty_index_sets,
     index_sets,
@@ -18,7 +18,7 @@ from ._commons import (
 )
 
 
-def prop_reduce(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_reduce(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Reduction aggregates elements along specified axes.
 
     Each output depends on all input elements that reduce into it.
@@ -32,8 +32,8 @@ def prop_reduce(eqn: JaxprEqn, deps: Deps) -> None:
         out[i] = reduce_j x[i, j]  →  out[i] depends on all x[i, :]
 
     Example: y = sum(x, axis=1) where x.shape = (2, 3)
-        Input deps:  [{0}, {1}, {2}, {3}, {4}, {5}]
-        Output deps: [{0, 1, 2}, {3, 4, 5}]  (one set per row)
+        Input state_indices:  [{0}, {1}, {2}, {3}, {4}, {5}]
+        Output state_indices: [{0, 1, 2}, {3, 4, 5}]  (one set per row)
 
     Jaxpr:
         invars[0]: input array
@@ -44,18 +44,18 @@ def prop_reduce(eqn: JaxprEqn, deps: Deps) -> None:
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.reduce_min.html
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.reduce_prod.html
     """
-    in_indices = index_sets(deps, eqn.invars[0])
+    in_indices = index_sets(state_indices, eqn.invars[0])
     axes = eqn.params.get("axes", ())
     in_shape = atom_shape(eqn.invars[0])
 
     # Full reduction: single output depends on all inputs
     if not axes or len(axes) == len(in_shape):
-        deps[eqn.outvars[0]] = [union_all(in_indices)]
+        state_indices[eqn.outvars[0]] = [union_all(in_indices)]
         return
 
     # Partial reduction: group input elements by their non-reduced coordinates.
     # Build a flat map from each input element to its output group,
-    # then union input deps into the corresponding output set.
+    # then union input state_indices into the corresponding output set.
     kept_dims = [d for d in range(len(in_shape)) if d not in axes]
     out_shape = tuple(in_shape[d] for d in kept_dims)
     out_size = numel(out_shape)
@@ -69,4 +69,4 @@ def prop_reduce(eqn: JaxprEqn, deps: Deps) -> None:
     for in_flat, elem_deps in enumerate(in_indices):
         out_indices[group_map[in_flat]] |= elem_deps
 
-    deps[eqn.outvars[0]] = out_indices
+    state_indices[eqn.outvars[0]] = out_indices

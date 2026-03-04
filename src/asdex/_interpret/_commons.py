@@ -36,13 +36,13 @@ def identity_index_sets(n: int) -> list[IndexSet]:
     return [singleton_index_set(i) for i in range(n)]
 
 
-Deps = dict[Var, list[IndexSet]]
+StateIndices = dict[Var, list[IndexSet]]
 """Maps each variable to its per-element dependency index sets."""
 
-ConstVals = dict[Var, np.ndarray]
+StateConsts = dict[Var, np.ndarray]
 """Maps variables to their concrete numpy array values (for static index tracking)."""
 
-ValueBounds = dict[Var, tuple[np.ndarray, np.ndarray]]
+StateBounds = dict[Var, tuple[np.ndarray, np.ndarray]]
 """Maps variables to per-element inclusive (lo, hi) integer bounds.
 
 Used to track bounded-but-not-constant values
@@ -55,7 +55,7 @@ Atom = Var | Literal
 """Atomic elements in jaxpressions: named intermediates (Var) or constants (Literal)."""
 
 PropJaxprFn = Callable[
-    [Jaxpr, list[list[IndexSet]], ConstVals | None], list[list[IndexSet]]
+    [Jaxpr, list[list[IndexSet]], StateConsts | None], list[list[IndexSet]]
 ]
 """Signature of ``prop_jaxpr``, passed as callback to break circular imports."""
 
@@ -144,11 +144,11 @@ def atom_numel(atom: Atom) -> int:
 # Atom value access
 
 
-def index_sets(deps: Deps, atom: Atom) -> list[IndexSet]:
+def index_sets(state_indices: StateIndices, atom: Atom) -> list[IndexSet]:
     """Get the index sets for a variable or literal."""
     if isinstance(atom, Literal):
         return empty_index_sets(atom_numel(atom))
-    return deps.get(atom, [empty_index_set()])
+    return state_indices.get(atom, [empty_index_set()])
 
 
 def copy_index_sets(src: list[IndexSet]) -> list[IndexSet]:
@@ -156,27 +156,27 @@ def copy_index_sets(src: list[IndexSet]) -> list[IndexSet]:
     return [s.copy() for s in src]
 
 
-def atom_const_val(atom: Atom, const_vals: ConstVals) -> np.ndarray | None:
+def atom_const_val(atom: Atom, state_consts: StateConsts) -> np.ndarray | None:
     """Get the concrete value of an atom, if statically known.
 
     The value is known in two cases:
     - **Literals**: constants embedded directly in the jaxpr.
-    - **Tracked vars**: variables in ``const_vals``, whose values were
+    - **Tracked vars**: variables in ``state_consts``, whose values were
       computed from constants through earlier operations.
 
     Returns ``None`` when the value depends on runtime inputs.
     """
     if isinstance(atom, Literal):
         return np.asarray(atom.val)
-    if isinstance(atom, Var) and atom in const_vals:
-        return const_vals[atom]
+    if isinstance(atom, Var) and atom in state_consts:
+        return state_consts[atom]
     return None
 
 
 def atom_value_bounds(
     atom: Atom,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
+    state_consts: StateConsts,
+    state_bounds: StateBounds,
 ) -> tuple[np.ndarray, np.ndarray] | None:
     """Get per-element inclusive (lo, hi) bounds for an atom.
 
@@ -184,17 +184,17 @@ def atom_value_bounds(
     tracked bounds for bounded variables,
     or ``None`` when no information is available.
     """
-    val = atom_const_val(atom, const_vals)
+    val = atom_const_val(atom, state_consts)
     if val is not None:
         return (val, val)
-    if isinstance(atom, Var) and atom in value_bounds:
-        return value_bounds[atom]
+    if isinstance(atom, Var) and atom in state_bounds:
+        return state_bounds[atom]
     return None
 
 
 def propagate_const_unary(
     eqn: JaxprEqn,
-    const_vals: ConstVals,
+    state_consts: StateConsts,
     transform: Callable[[np.ndarray], np.ndarray],
 ) -> None:
     """Propagate a const value through a unary op.
@@ -204,14 +204,14 @@ def propagate_const_unary(
     Without this, downstream handlers (e.g. ``gather``, ``scatter``) cannot resolve
     static index arrays and fall back to conservative.
     """
-    in_val = atom_const_val(eqn.invars[0], const_vals)
+    in_val = atom_const_val(eqn.invars[0], state_consts)
     if in_val is not None:
-        const_vals[eqn.outvars[0]] = transform(in_val)
+        state_consts[eqn.outvars[0]] = transform(in_val)
 
 
 def propagate_const_binary(
     eqn: JaxprEqn,
-    const_vals: ConstVals,
+    state_consts: StateConsts,
     transform: Callable[[np.ndarray, np.ndarray], np.ndarray],
 ) -> None:
     """Propagate a const value through a binary op.
@@ -221,10 +221,10 @@ def propagate_const_binary(
     Without this, downstream handlers (e.g. ``gather``, ``scatter``) cannot resolve
     static index arrays and fall back to conservative.
     """
-    in1 = atom_const_val(eqn.invars[0], const_vals)
-    in2 = atom_const_val(eqn.invars[1], const_vals)
+    in1 = atom_const_val(eqn.invars[0], state_consts)
+    in2 = atom_const_val(eqn.invars[1], state_consts)
     if in1 is not None and in2 is not None:
-        const_vals[eqn.outvars[0]] = transform(in1, in2)
+        state_consts[eqn.outvars[0]] = transform(in1, in2)
 
 
 # Index set operations
@@ -240,7 +240,9 @@ def union_all(sets: Sequence[IndexSet]) -> IndexSet:
     return result
 
 
-def check_no_index_sets(deps: Deps, atom: Atom, primitive_name: str) -> None:
+def check_no_index_sets(
+    state_indices: StateIndices, atom: Atom, primitive_name: str
+) -> None:
     """Verify that an atom carries no input dependencies.
 
     Some handlers assume that auxiliary inputs
@@ -249,7 +251,7 @@ def check_no_index_sets(deps: Deps, atom: Atom, primitive_name: str) -> None:
     This function validates that assumption
     and raises an informative error when it is violated.
     """
-    if any(index_sets(deps, atom)):
+    if any(index_sets(state_indices, atom)):
         msg = (
             f"'{primitive_name}' handler assumes an auxiliary input "
             "has no dependency on the function's inputs, "
@@ -365,33 +367,33 @@ def flat_to_coords(flat: int, strides: tuple[int, ...]) -> list[int]:
 # Const value propagation
 
 
-def seed_const_vals(const_vals: ConstVals, constvars, consts) -> None:
-    """Populate const_vals for the captured constants of a ClosedJaxpr.
+def seed_const_vals(state_consts: StateConsts, constvars, consts) -> None:
+    """Populate state_consts for the captured constants of a ClosedJaxpr.
 
     Without this, gather/scatter inside nested jaxprs (cond branches,
     while bodies, jit-wrapped calls) cannot resolve closure-captured
     index arrays and fall back to conservative.
     """
     for var, val in zip(constvars, consts, strict=True):
-        const_vals[var] = np.asarray(val)
+        state_consts[var] = np.asarray(val)
 
 
 def forward_value_bounds(
-    value_bounds: ValueBounds, outer_atoms: Sequence[Atom], inner_vars
+    state_bounds: StateBounds, outer_atoms: Sequence[Atom], inner_vars
 ) -> None:
     """Transfer known value bounds from outer-scope atoms to inner jaxpr variables.
 
     Same idea as ``forward_const_vals`` but for value bounds.
     """
     for outer, inner in zip(outer_atoms, inner_vars, strict=False):
-        if isinstance(outer, Var) and outer in value_bounds:
-            value_bounds[inner] = value_bounds[outer]
+        if isinstance(outer, Var) and outer in state_bounds:
+            state_bounds[inner] = state_bounds[outer]
 
 
 def forward_const_vals(
-    const_vals: ConstVals, outer_atoms: Sequence[Atom], inner_vars
+    state_consts: StateConsts, outer_atoms: Sequence[Atom], inner_vars
 ) -> None:
-    """Transfer known const_vals from outer-scope atoms to inner jaxpr variables.
+    """Transfer known state_consts from outer-scope atoms to inner jaxpr variables.
 
     When entering a nested jaxpr (cond branch, while body, jit call),
     the outer equation's invars and the inner jaxpr's invars are different
@@ -401,9 +403,9 @@ def forward_const_vals(
     (gather, scatter, dynamic_slice) can resolve indices precisely.
     """
     for outer, inner in zip(outer_atoms, inner_vars, strict=False):
-        val = atom_const_val(outer, const_vals)
+        val = atom_const_val(outer, state_consts)
         if val is not None:
-            const_vals[inner] = val
+            state_consts[inner] = val
 
 
 # Fixed-point iteration

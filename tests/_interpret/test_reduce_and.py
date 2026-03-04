@@ -111,10 +111,10 @@ def test_jnp_any_with_axis():
 # Compositions
 @pytest.mark.reduction
 def test_reduce_and_after_reduce_sum():
-    """Threshold check after summation: reduce_and zeros out the sum deps."""
+    """Threshold check after summation: reduce_and zeros out the sum state_indices."""
 
     def f(x):
-        s = jnp.sum(x.reshape(2, 3), axis=1)  # (2,) with deps
+        s = jnp.sum(x.reshape(2, 3), axis=1)  # (2,) with state_indices
         mask = lax.reduce_and(s > 0, axes=(0,))  # scalar, zero deriv
         return mask * jnp.ones(1)
 

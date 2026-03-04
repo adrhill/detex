@@ -21,7 +21,7 @@ def test_scan_cumulative_sum():
     We overapproximate: every ys element depends on all xs elements.
 
     TODO(scan): the true pattern is lower-triangular (ys[t] depends on xs[0..t]).
-    The scan handler merges xs deps across all time steps.
+    The scan handler merges xs state_indices across all time steps.
     """
 
     def f(x):
@@ -47,7 +47,7 @@ def test_scan_2d_carry_and_xs():
 
     TODO(scan): the true pattern is a progressive block-diagonal
     where ys[t] depends only on xs[0..t] (per element).
-    The scan handler merges xs deps across all time steps,
+    The scan handler merges xs state_indices across all time steps,
     making every ys slice depend on all xs slices.
     """
 
@@ -171,7 +171,7 @@ def test_scan_reverse():
 
     TODO(scan): the true pattern is upper-triangular
     (ys[t] depends on xs[t..n-1] when scanning in reverse).
-    The scan handler merges xs deps across all time steps.
+    The scan handler merges xs state_indices across all time steps.
     """
 
     def f(x):
@@ -292,7 +292,7 @@ def test_scan_noncontiguous_input():
     [[0,1,0,0,0,0],      # ys[0] = x[1]
      [0,1,0,1,0,0],      # ys[1] = x[1] + x[3]
      [0,1,0,1,0,1]]      # ys[2] = x[1] + x[3] + x[5]
-    The scan handler merges xs deps across all time steps.
+    The scan handler merges xs state_indices across all time steps.
     """
 
     def f(x):
@@ -392,7 +392,7 @@ def test_scan_pytree_ys():
     and diagonal doubled:
     [[1,0,0], [1,1,0], [1,1,1],  # sums[t] depends on x[0..t]
      [1,0,0], [0,1,0], [0,0,1]]  # doubled[t] depends on x[t]
-    The scan handler merges xs deps across all time steps.
+    The scan handler merges xs state_indices across all time steps.
     """
 
     def f(x):
@@ -411,12 +411,12 @@ def test_scan_pytree_ys():
 @pytest.mark.fallback
 @pytest.mark.control_flow
 def test_scan_length_one():
-    """Single iteration: carry deps equal init deps, ys has one slice.
+    """Single iteration: carry state_indices equal init state_indices, ys has one slice.
 
     TODO(scan): the true pattern is:
     [[1,0], [0,1],  # carry_out = zeros + x (precise)
-     [0,0], [0,0]]  # ys[0] = carry_init = zeros, no x deps
-    The scan handler merges carry deps into ys across iterations.
+     [0,0], [0,0]]  # ys[0] = carry_init = zeros, no x state_indices
+    The scan handler merges carry state_indices into ys across iterations.
     """
 
     def f(x):
@@ -449,7 +449,7 @@ def test_scan_scalar_carry_scalar_xs():
      [0,0,0],      # ys[0] = carry_init = 0
      [1,0,0],      # ys[1] = x[0]
      [1,1,0]]      # ys[2] = x[0] + x[1]
-    The scan handler merges deps across all time steps.
+    The scan handler merges state_indices across all time steps.
     """
 
     def f(x):
@@ -500,7 +500,7 @@ def test_scan_ys_independent_of_carry():
 
     TODO(scan): the true pattern is diagonal per xs slice:
     [[0,1,0,0], [0,0,1,0], [0,0,0,1]]
-    The scan handler merges xs deps across all time steps.
+    The scan handler merges xs state_indices across all time steps.
     """
 
     def f(x):
@@ -558,7 +558,7 @@ def test_scan_carry_interaction_across_tuple():
     """Carry elements interact across iterations via tuple carry.
 
     One carry element feeds into another,
-    so deps spread through fixed-point iteration.
+    so state_indices spread through fixed-point iteration.
     """
 
     def f(x):
@@ -594,7 +594,7 @@ def test_scan_with_cond_inside():
 
     TODO(scan): the true pattern is lower-triangular
     (each ys[t] depends on xs[0..t]).
-    The scan handler merges xs deps across all time steps.
+    The scan handler merges xs state_indices across all time steps.
     """
 
     def f(x):

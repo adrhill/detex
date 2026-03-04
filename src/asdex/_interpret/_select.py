@@ -4,10 +4,10 @@ import numpy as np
 from jax._src.core import JaxprEqn, Var
 
 from ._commons import (
-    ConstVals,
-    Deps,
     IndexSet,
-    ValueBounds,
+    StateBounds,
+    StateConsts,
+    StateIndices,
     atom_const_val,
     atom_numel,
     empty_index_set,
@@ -17,16 +17,16 @@ from ._commons import (
 
 def prop_select_n(
     eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds | None = None,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
+    state_bounds: StateBounds | None = None,
 ) -> None:
     """select_n(which, *cases) picks case values element-wise.
 
     ``which`` is a boolean or integer selector (scalar or array).
     All cases must have identical shapes.
     The selector has zero derivative,
-    so only value-case deps contribute to the sparsity pattern.
+    so only value-case state_indices contribute to the sparsity pattern.
 
     Also propagates value bounds through the selected branch
     when the predicate is a known constant.
@@ -43,7 +43,7 @@ def prop_select_n(
 
     # Element-wise union across value cases.
     # The selector has zero derivative, so we skip it.
-    case_indices = [index_sets(deps, c) for c in cases]
+    case_indices = [index_sets(state_indices, c) for c in cases]
 
     out_indices: list[IndexSet] = []
     for i in range(out_size):
@@ -52,21 +52,21 @@ def prop_select_n(
             merged |= c_idx[i]
         out_indices.append(merged)
 
-    deps[out_var] = out_indices
+    state_indices[out_var] = out_indices
 
     # When all inputs are statically known, compute the concrete result
-    # so const_vals tracking isn't broken by this op.
-    which_val = atom_const_val(eqn.invars[0], const_vals)
-    case_vals = [atom_const_val(c, const_vals) for c in cases]
+    # so state_consts tracking isn't broken by this op.
+    which_val = atom_const_val(eqn.invars[0], state_consts)
+    case_vals = [atom_const_val(c, state_consts) for c in cases]
     if which_val is not None and all(v is not None for v in case_vals):
-        const_vals[out_var] = np.choose(
+        state_consts[out_var] = np.choose(
             which_val, [v for v in case_vals if v is not None]
         )
 
     # Propagate value bounds from the selected branch
     # when the predicate is a known constant.
     if (
-        value_bounds is not None
+        state_bounds is not None
         and which_val is not None
         and len(cases) == 2
         and which_val.dtype == bool
@@ -77,5 +77,5 @@ def prop_select_n(
             selected = eqn.invars[2]
         else:
             return
-        if isinstance(selected, Var) and selected in value_bounds:
-            value_bounds[out_var] = value_bounds[selected]
+        if isinstance(selected, Var) and selected in state_bounds:
+            state_bounds[out_var] = state_bounds[selected]

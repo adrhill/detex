@@ -2,10 +2,10 @@
 
 from jax._src.core import JaxprEqn
 
-from ._commons import Deps, atom_shape, index_sets, transform_indices
+from ._commons import StateIndices, atom_shape, index_sets, transform_indices
 
 
-def prop_split(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_split(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Split partitions an array into multiple sub-arrays along an axis.
 
     Each output element maps to exactly one input element,
@@ -16,9 +16,9 @@ def prop_split(eqn: JaxprEqn, deps: Deps) -> None:
     The Jacobian is a permutation of rows of the identity matrix.
 
     Example: x = [a, b, c, d], split(x, sizes=(2, 2))
-        Input deps:  [{0}, {1}, {2}, {3}]
-        Output 0 deps: [{0}, {1}]
-        Output 1 deps: [{2}, {3}]
+        Input state_indices:  [{0}, {1}, {2}, {3}]
+        Output 0 state_indices: [{0}, {1}]
+        Output 1 state_indices: [{2}, {3}]
 
     Jaxpr:
         invars[0]: input array
@@ -27,7 +27,7 @@ def prop_split(eqn: JaxprEqn, deps: Deps) -> None:
 
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.split.html
     """
-    in_indices = index_sets(deps, eqn.invars[0])
+    in_indices = index_sets(state_indices, eqn.invars[0])
     in_shape = atom_shape(eqn.invars[0])
     axis = eqn.params["axis"]
     sizes = eqn.params["sizes"]
@@ -38,7 +38,7 @@ def prop_split(eqn: JaxprEqn, deps: Deps) -> None:
         size_k = sizes[k]
         slices = [slice(None)] * ndim
         slices[axis] = slice(offset, offset + size_k)
-        deps[out_var] = transform_indices(
+        state_indices[out_var] = transform_indices(
             in_indices, in_shape, lambda p, s=tuple(slices): p[s]
         )
         offset += size_k

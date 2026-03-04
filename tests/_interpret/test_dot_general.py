@@ -110,7 +110,7 @@ def test_matmul_2x3_3x2():
 def test_matmul_self():
     """X @ X.T where X is a 2x3 matrix.
 
-    Both operands share the same input, so deps are unioned.
+    Both operands share the same input, so state_indices are unioned.
     """
 
     def f(x):
@@ -283,7 +283,7 @@ def test_tensordot_axes_2():
     np.testing.assert_array_equal(result, expected)
 
 
-# Non-contiguous input deps
+# Non-contiguous input state_indices
 @pytest.mark.array_ops
 def test_matmul_after_broadcast():
     """Matmul where inputs have non-trivial dep sets from a prior broadcast.
@@ -297,8 +297,8 @@ def test_matmul_after_broadcast():
         return (mat @ mat.T).flatten()
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # After broadcast, mat deps: each row is [{0},{1},{2}].
-    # mat.T deps: each col is [{0},{1},{2}].
+    # After broadcast, mat state_indices: each row is [{0},{1},{2}].
+    # mat.T state_indices: each col is [{0},{1},{2}].
     # mat @ mat.T: all outputs depend on all inputs.
     expected = np.ones((4, 3), dtype=int)
     np.testing.assert_array_equal(result, expected)

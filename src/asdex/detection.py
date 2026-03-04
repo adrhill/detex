@@ -40,14 +40,14 @@ def jacobian_sparsity(
     # Initialize: input element i depends on input index i
     input_indices = [identity_index_sets(n)]
 
-    # Build const_vals from closed jaxpr consts for static index tracking
-    const_vals = {
+    # Build state_consts from closed jaxpr consts for static index tracking
+    state_consts = {
         var: np.asarray(val)
         for var, val in zip(jaxpr.constvars, closed_jaxpr.consts, strict=False)
     }
 
     # Propagate through the jaxpr
-    output_indices_list = prop_jaxpr(jaxpr, input_indices, const_vals)
+    output_indices_list = prop_jaxpr(jaxpr, input_indices, state_consts)
 
     # Extract output dependencies (first output variable)
     out_indices = output_indices_list[0] if output_indices_list else []

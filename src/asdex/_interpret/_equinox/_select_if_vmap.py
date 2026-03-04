@@ -4,8 +4,8 @@ import numpy as np
 from jax._src.core import JaxprEqn
 
 from .._commons import (
-    ConstVals,
-    Deps,
+    StateConsts,
+    StateIndices,
     atom_const_val,
     atom_numel,
     check_no_index_sets,
@@ -13,7 +13,9 @@ from .._commons import (
 )
 
 
-def prop_select_if_vmap(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def prop_select_if_vmap(
+    eqn: JaxprEqn, state_indices: StateIndices, state_consts: StateConsts
+) -> None:
     """select_if_vmap(pred, on_true, on_false) picks values element-wise.
 
     Equinox emits this when vmapping ``lax.cond``.
@@ -29,19 +31,21 @@ def prop_select_if_vmap(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> Non
 
     https://github.com/patrick-kidger/equinox/blob/main/equinox/internal/_loop/common.py
     """
-    check_no_index_sets(deps, eqn.invars[0], eqn.primitive.name)
+    check_no_index_sets(state_indices, eqn.invars[0], eqn.primitive.name)
 
     out_var = eqn.outvars[0]
     out_size = atom_numel(out_var)
     on_true, on_false = eqn.invars[1], eqn.invars[2]
-    true_indices = index_sets(deps, on_true)
-    false_indices = index_sets(deps, on_false)
+    true_indices = index_sets(state_indices, on_true)
+    false_indices = index_sets(state_indices, on_false)
 
-    deps[out_var] = [true_indices[i] | false_indices[i] for i in range(out_size)]
+    state_indices[out_var] = [
+        true_indices[i] | false_indices[i] for i in range(out_size)
+    ]
 
     # Propagate concrete values when both branches are statically known.
-    pred_val = atom_const_val(eqn.invars[0], const_vals)
-    true_val = atom_const_val(on_true, const_vals)
-    false_val = atom_const_val(on_false, const_vals)
+    pred_val = atom_const_val(eqn.invars[0], state_consts)
+    true_val = atom_const_val(on_true, state_consts)
+    false_val = atom_const_val(on_false, state_consts)
     if pred_val is not None and true_val is not None and false_val is not None:
-        const_vals[out_var] = np.where(pred_val, true_val, false_val)
+        state_consts[out_var] = np.where(pred_val, true_val, false_val)

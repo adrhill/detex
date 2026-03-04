@@ -14,10 +14,10 @@ from jax._src.core import Jaxpr, JaxprEqn, Var
 from ._argmax import prop_argmax
 from ._broadcast import prop_broadcast_in_dim
 from ._commons import (
-    ConstVals,
-    Deps,
     IndexSet,
-    ValueBounds,
+    StateBounds,
+    StateConsts,
+    StateIndices,
     atom_numel,
     conservative_indices,
     empty_index_sets,
@@ -67,49 +67,49 @@ from ._while import prop_while
 def prop_jaxpr(
     jaxpr: Jaxpr,
     input_indices: list[list[IndexSet]],
-    const_vals: ConstVals | None = None,
-    value_bounds: ValueBounds | None = None,
+    state_consts: StateConsts | None = None,
+    state_bounds: StateBounds | None = None,
 ) -> list[list[IndexSet]]:
     """Propagate index sets through a jaxpr.
 
     Args:
         jaxpr: The jaxpr to analyze
         input_indices: List of per-element index set lists, one per input variable
-        const_vals: Optional mapping of constant variables to their values.
+        state_consts: Optional mapping of constant variables to their values.
             Used for precise tracking of static indices in gather/scatter.
-        value_bounds: Optional pre-seeded value bounds from an outer scope.
+        state_bounds: Optional pre-seeded value bounds from an outer scope.
             Used to forward bounded-but-not-constant values into nested jaxprs.
 
     Returns:
         List of per-element index set lists, one per output variable
     """
-    deps: Deps = {}
-    if const_vals is None:
-        const_vals = {}
-    if value_bounds is None:
-        value_bounds = {}
+    state_indices: StateIndices = {}
+    if state_consts is None:
+        state_consts = {}
+    if state_bounds is None:
+        state_bounds = {}
 
     # Initialize input variables
     for var, indices in zip(jaxpr.invars, input_indices, strict=False):
-        deps[var] = indices
+        state_indices[var] = indices
 
     # Initialize constant variables (no input dependencies)
     for var in jaxpr.constvars:
-        deps[var] = empty_index_sets(atom_numel(var))
+        state_indices[var] = empty_index_sets(atom_numel(var))
 
     # Process each equation
     for eqn in jaxpr.eqns:
-        prop_dispatch(eqn, deps, const_vals, value_bounds)
+        prop_dispatch(eqn, state_indices, state_consts, state_bounds)
 
     # Return output dependencies
-    return [index_sets(deps, outvar) for outvar in jaxpr.outvars]
+    return [index_sets(state_indices, outvar) for outvar in jaxpr.outvars]
 
 
 def prop_closed_jaxpr(
     eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
+    state_bounds: StateBounds,
     param_key: str,
 ) -> None:
     """Recursively trace a closed jaxpr stored in ``eqn.params[param_key]``.
@@ -126,15 +126,15 @@ def prop_closed_jaxpr(
         )
         raise ValueError(msg)
 
-    # Unwrap ClosedJaxpr, seeding const_vals for captured constants
+    # Unwrap ClosedJaxpr, seeding state_consts for captured constants
     if hasattr(closed, "jaxpr"):
-        seed_const_vals(const_vals, closed.jaxpr.constvars, closed.consts)
+        seed_const_vals(state_consts, closed.jaxpr.constvars, closed.consts)
         closed = closed.jaxpr
 
-    forward_const_vals(const_vals, eqn.invars, closed.invars)
-    forward_value_bounds(value_bounds, eqn.invars, closed.invars)
-    input_indices = [index_sets(deps, invar) for invar in eqn.invars]
-    output_indices = prop_jaxpr(closed, input_indices, const_vals, value_bounds)
+    forward_const_vals(state_consts, eqn.invars, closed.invars)
+    forward_value_bounds(state_bounds, eqn.invars, closed.invars)
+    input_indices = [index_sets(state_indices, invar) for invar in eqn.invars]
+    output_indices = prop_jaxpr(closed, input_indices, state_consts, state_bounds)
 
     for outvar, indices, inner_outvar in zip(
         eqn.outvars,
@@ -142,21 +142,21 @@ def prop_closed_jaxpr(
         closed.outvars,
         strict=False,
     ):
-        deps[outvar] = indices
-        if isinstance(inner_outvar, Var) and inner_outvar in value_bounds:
-            value_bounds[outvar] = value_bounds[inner_outvar]
+        state_indices[outvar] = indices
+        if isinstance(inner_outvar, Var) and inner_outvar in state_bounds:
+            state_bounds[outvar] = state_bounds[inner_outvar]
 
 
 def prop_dispatch(
     eqn: JaxprEqn,
-    deps: Deps,
-    const_vals: ConstVals,
-    value_bounds: ValueBounds,
+    state_indices: StateIndices,
+    state_consts: StateConsts,
+    state_bounds: StateBounds,
 ) -> None:
     """Propagate dependencies through a single equation."""
     match eqn.primitive.name:
         case "argmax" | "argmin":
-            prop_argmax(eqn, deps, value_bounds)
+            prop_argmax(eqn, state_indices, state_bounds)
         case (
             "floor"
             | "ceil"
@@ -171,47 +171,47 @@ def prop_dispatch(
             | "reduce_xor"
             | "not"
         ):
-            prop_zero_derivative(eqn, deps)
+            prop_zero_derivative(eqn, state_indices)
         case "eq" | "ne" | "lt_to" | "le_to":
-            prop_zero_derivative_const(eqn, deps, const_vals)
+            prop_zero_derivative_const(eqn, state_indices, state_consts)
         case "lt":
-            prop_lt(eqn, deps, const_vals, value_bounds)
+            prop_lt(eqn, state_indices, state_consts, state_bounds)
         case "le":
-            prop_le(eqn, deps, const_vals, value_bounds)
+            prop_le(eqn, state_indices, state_consts, state_bounds)
         case "gt":
-            prop_gt(eqn, deps, const_vals, value_bounds)
+            prop_gt(eqn, state_indices, state_consts, state_bounds)
         case "ge":
-            prop_ge(eqn, deps, const_vals, value_bounds)
+            prop_ge(eqn, state_indices, state_consts, state_bounds)
         case "and" | "or" | "xor":
-            prop_zero_derivative_const(eqn, deps, const_vals)
+            prop_zero_derivative_const(eqn, state_indices, state_consts)
         case "jit" | "pjit" | "xla_call" | "named_call":
-            prop_closed_jaxpr(eqn, deps, const_vals, value_bounds, "jaxpr")
+            prop_closed_jaxpr(eqn, state_indices, state_consts, state_bounds, "jaxpr")
         case "slice":
-            prop_slice(eqn, deps, const_vals)
+            prop_slice(eqn, state_indices, state_consts)
         case "pad":
-            prop_pad(eqn, deps)
+            prop_pad(eqn, state_indices)
         case "squeeze":
-            prop_squeeze(eqn, deps)
+            prop_squeeze(eqn, state_indices)
         case "broadcast_in_dim":
-            prop_broadcast_in_dim(eqn, deps, const_vals, value_bounds)
+            prop_broadcast_in_dim(eqn, state_indices, state_consts, state_bounds)
         case "concatenate":
-            prop_concatenate(eqn, deps, const_vals)
+            prop_concatenate(eqn, state_indices, state_consts)
         case "reshape":
-            prop_reshape(eqn, deps, const_vals)
+            prop_reshape(eqn, state_indices, state_consts)
         case "transpose":
-            prop_transpose(eqn, deps, const_vals)
+            prop_transpose(eqn, state_indices, state_consts)
         case "rev":
-            prop_rev(eqn, deps)
+            prop_rev(eqn, state_indices)
         case "integer_pow":
-            prop_integer_pow(eqn, deps)
+            prop_integer_pow(eqn, state_indices)
         case "mul":
-            prop_mul(eqn, deps, const_vals)
+            prop_mul(eqn, state_indices, state_consts)
         case "add" | "add_any":
-            prop_add(eqn, deps, const_vals, value_bounds)
+            prop_add(eqn, state_indices, state_consts, state_bounds)
         case "sub":
-            prop_sub(eqn, deps, const_vals, value_bounds)
+            prop_sub(eqn, state_indices, state_consts, state_bounds)
         case "div" | "pow" | "max" | "min" | "atan2" | "rem" | "nextafter" | "complex":
-            prop_binary_const(eqn, deps, const_vals)
+            prop_binary_const(eqn, state_indices, state_consts)
         case (
             "neg"
             | "exp"
@@ -243,56 +243,58 @@ def prop_dispatch(
             | "erf"
             | "square"
         ):
-            prop_unary_elementwise(eqn, deps)
+            prop_unary_elementwise(eqn, state_indices)
         case "reduce_sum" | "reduce_max" | "reduce_min" | "reduce_prod":
-            prop_reduce(eqn, deps)
+            prop_reduce(eqn, state_indices)
         case (
             "convert_element_type"
             | "bitcast_convert_type"
             | "reduce_precision"
             | "stop_gradient"
         ):
-            prop_convert_element_type(eqn, deps, const_vals, value_bounds)
+            prop_convert_element_type(eqn, state_indices, state_consts, state_bounds)
         case "conv_general_dilated":
-            prop_conv_general_dilated(eqn, deps)
+            prop_conv_general_dilated(eqn, state_indices)
         case "custom_jvp_call" | "custom_vjp_call":
-            prop_closed_jaxpr(eqn, deps, const_vals, value_bounds, "call_jaxpr")
+            prop_closed_jaxpr(
+                eqn, state_indices, state_consts, state_bounds, "call_jaxpr"
+            )
         case "gather":
-            prop_gather(eqn, deps, const_vals, value_bounds)
+            prop_gather(eqn, state_indices, state_consts, state_bounds)
         case "scatter" | "scatter-add" | "scatter-mul" | "scatter-min" | "scatter-max":
-            prop_scatter(eqn, deps, const_vals, value_bounds)
+            prop_scatter(eqn, state_indices, state_consts, state_bounds)
         case "select_n":
-            prop_select_n(eqn, deps, const_vals, value_bounds)
+            prop_select_n(eqn, state_indices, state_consts, state_bounds)
         case "select_if_vmap":
-            prop_select_if_vmap(eqn, deps, const_vals)
+            prop_select_if_vmap(eqn, state_indices, state_consts)
         case "iota":
-            _prop_iota(eqn, deps, const_vals)
+            _prop_iota(eqn, state_indices, state_consts)
         case "while":
-            prop_while(eqn, deps, const_vals, prop_jaxpr)
+            prop_while(eqn, state_indices, state_consts, prop_jaxpr)
         case "cond":
-            prop_cond(eqn, deps, const_vals, prop_jaxpr)
+            prop_cond(eqn, state_indices, state_consts, prop_jaxpr)
         case "platform_index":
-            prop_platform_index(eqn, deps)
+            prop_platform_index(eqn, state_indices)
         case "dynamic_slice":
-            prop_dynamic_slice(eqn, deps, const_vals, value_bounds)
+            prop_dynamic_slice(eqn, state_indices, state_consts, state_bounds)
         case "dynamic_update_slice":
-            prop_dynamic_update_slice(eqn, deps, const_vals, value_bounds)
+            prop_dynamic_update_slice(eqn, state_indices, state_consts, state_bounds)
         case "top_k":
-            prop_top_k(eqn, deps)
+            prop_top_k(eqn, state_indices)
         # TODO: add precise handlers for remaining control flow operators.
         # https://docs.jax.dev/en/latest/jax.lax.html#control-flow-operators
         case "scan":
-            prop_scan(eqn, deps, const_vals, prop_jaxpr)
+            prop_scan(eqn, state_indices, state_consts, prop_jaxpr)
         case "dot_general":
-            prop_dot_general(eqn, deps, const_vals)
+            prop_dot_general(eqn, state_indices, state_consts)
         case "split":
-            prop_split(eqn, deps)
+            prop_split(eqn, state_indices)
         case "tile":
-            prop_tile(eqn, deps, const_vals)
+            prop_tile(eqn, state_indices, state_consts)
         case "sort":
-            prop_sort(eqn, deps)
+            prop_sort(eqn, state_indices)
         case "cumsum":
-            prop_cumsum(eqn, deps)
+            prop_cumsum(eqn, state_indices)
         # Conservative fallback: all outputs depend on all inputs.
         case (
             "nonbatchable"
@@ -300,12 +302,14 @@ def prop_dispatch(
             | "unvmap_max"  # from Equinox
             | "pure_callback"
         ):
-            prop_conservative_fallback(eqn, deps)
+            prop_conservative_fallback(eqn, state_indices)
         case _:
-            prop_throw_error(eqn, deps)
+            prop_throw_error(eqn, state_indices)
 
 
-def _prop_iota(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
+def _prop_iota(
+    eqn: JaxprEqn, state_indices: StateIndices, state_consts: StateConsts
+) -> None:
     """Iota generates a constant index array with no input dependencies.
 
     The output is fully determined by the parameters (shape, dtype, dimension),
@@ -320,11 +324,11 @@ def _prop_iota(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     """
     shape = eqn.params["shape"]
     numel = int(np.prod(shape))
-    deps[eqn.outvars[0]] = empty_index_sets(numel)
+    state_indices[eqn.outvars[0]] = empty_index_sets(numel)
 
     dtype = eqn.params["dtype"]
     dim = eqn.params["dimension"]
-    const_vals[eqn.outvars[0]] = np.broadcast_to(
+    state_consts[eqn.outvars[0]] = np.broadcast_to(
         np.arange(shape[dim], dtype=dtype).reshape(
             [shape[dim] if i == dim else 1 for i in range(len(shape))]
         ),
@@ -332,7 +336,7 @@ def _prop_iota(eqn: JaxprEqn, deps: Deps, const_vals: ConstVals) -> None:
     )
 
 
-def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_conservative_fallback(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Conservative fallback for primitives without precise handlers.
 
     Assumes worst-case: every output element may depend on every input element.
@@ -342,12 +346,12 @@ def prop_conservative_fallback(eqn: JaxprEqn, deps: Deps) -> None:
     """
     all_inputs: list[IndexSet] = []
     for invar in eqn.invars:
-        all_inputs.extend(index_sets(deps, invar))
+        all_inputs.extend(index_sets(state_indices, invar))
     for outvar in eqn.outvars:
-        deps[outvar] = conservative_indices(all_inputs, atom_numel(outvar))
+        state_indices[outvar] = conservative_indices(all_inputs, atom_numel(outvar))
 
 
-def prop_throw_error(eqn: JaxprEqn, deps: Deps) -> None:
+def prop_throw_error(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     """Raise an error for unknown primitives.
 
     This ensures we don't silently produce incorrect sparsity patterns.

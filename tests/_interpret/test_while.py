@@ -152,7 +152,7 @@ def test_while_body_closure_captured_index():
     """While body uses a closure-captured index array for gather.
 
     The gather projects all carry elements onto carry[0].
-    Without forwarding const_vals into the body jaxpr,
+    Without forwarding state_consts into the body jaxpr,
     the gather falls back to conservative and the result is dense.
     With the fix, the fixed point is sparse.
     """

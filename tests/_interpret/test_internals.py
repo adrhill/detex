@@ -48,73 +48,73 @@ def test_nested_jaxpr_missing_param_raises():
     """Error is raised when nested jaxpr primitive has no 'jaxpr' parameter."""
     eqn = FakeEqn("pjit", params={})
     env = {}
-    const_vals = {}
+    state_consts = {}
 
     with pytest.raises(ValueError, match="has no 'jaxpr' parameter"):
-        prop_closed_jaxpr(eqn, env, const_vals, {}, "jaxpr")  # type: ignore[arg-type]
+        prop_closed_jaxpr(eqn, env, state_consts, {}, "jaxpr")  # type: ignore[arg-type]
 
 
 def test_nested_jaxpr_missing_param_error_message():
     """Error message includes primitive name and issue tracker URL."""
     eqn = FakeEqn("xla_call", params={})
     env = {}
-    const_vals = {}
+    state_consts = {}
 
     with pytest.raises(ValueError, match="xla_call"):
-        prop_closed_jaxpr(eqn, env, const_vals, {}, "jaxpr")  # type: ignore[arg-type]
+        prop_closed_jaxpr(eqn, env, state_consts, {}, "jaxpr")  # type: ignore[arg-type]
 
 
 def test_custom_call_missing_param_raises():
     """Error is raised when custom call primitive has no 'call_jaxpr' parameter."""
     eqn = FakeEqn("custom_jvp_call", params={})
     env = {}
-    const_vals = {}
+    state_consts = {}
 
     with pytest.raises(ValueError, match="has no 'call_jaxpr' parameter"):
-        prop_closed_jaxpr(eqn, env, const_vals, {}, "call_jaxpr")  # type: ignore[arg-type]
+        prop_closed_jaxpr(eqn, env, state_consts, {}, "call_jaxpr")  # type: ignore[arg-type]
 
 
 def test_custom_call_missing_param_error_message():
     """Error message includes primitive name and issue tracker URL."""
     eqn = FakeEqn("custom_vjp_call", params={})
     env = {}
-    const_vals = {}
+    state_consts = {}
 
     with pytest.raises(ValueError, match="custom_vjp_call"):
-        prop_closed_jaxpr(eqn, env, const_vals, {}, "call_jaxpr")  # type: ignore[arg-type]
+        prop_closed_jaxpr(eqn, env, state_consts, {}, "call_jaxpr")  # type: ignore[arg-type]
 
 
 def test_unknown_primitive_raises():
     """Unknown primitives raise NotImplementedError."""
     eqn = FakeEqn("nonexistent_op", params={})
-    deps = {}
-    const_vals = {}
+    state_indices = {}
+    state_consts = {}
 
     with pytest.raises(NotImplementedError, match="No handler for primitive"):
-        prop_dispatch(eqn, deps, const_vals, {})  # type: ignore[arg-type]
+        prop_dispatch(eqn, state_indices, state_consts, {})  # type: ignore[arg-type]
 
 
 def test_unknown_primitive_error_message():
     """Error message includes primitive name and issue tracker URL."""
     eqn = FakeEqn("fake_primitive", params={})
-    deps = {}
-    const_vals = {}
+    state_indices = {}
+    state_consts = {}
 
     with pytest.raises(NotImplementedError) as exc_info:
-        prop_dispatch(eqn, deps, const_vals, {})  # type: ignore[arg-type]
+        prop_dispatch(eqn, state_indices, state_consts, {})  # type: ignore[arg-type]
 
     assert "fake_primitive" in str(exc_info.value)
     assert "https://github.com/adrhill/asdex/issues" in str(exc_info.value)
 
 
 def test_prop_jaxpr_default_const_vals():
-    """prop_jaxpr works when const_vals is not provided (defaults to {})."""
+    """prop_jaxpr works when state_consts is not provided (defaults to {})."""
     dummy = jnp.zeros(2)
     closed_jaxpr = jax.make_jaxpr(lambda x: x + 1)(dummy)
     jaxpr = closed_jaxpr.jaxpr
 
     input_indices = [[singleton_index_set(0), singleton_index_set(1)]]
-    # Call without const_vals — should default to empty dict
+    # Call without state_consts — should default to empty dict
     result = prop_jaxpr(jaxpr, input_indices)
     assert len(result) == 1
     assert result[0] == [singleton_index_set(0), singleton_index_set(1)]
@@ -154,11 +154,11 @@ def test_reshape_size_mismatch_raises():
     eqn.invars = [in_var]
     eqn.outvars = [out_var]
 
-    deps = {
+    state_indices = {
         in_var: [singleton_index_set(0), singleton_index_set(1), singleton_index_set(2)]
     }
     with pytest.raises(ValueError, match="Reshape size mismatch"):
-        prop_reshape(eqn, deps, {})  # type: ignore[arg-type]
+        prop_reshape(eqn, state_indices, {})  # type: ignore[arg-type]
 
 
 # Integration tests for precise handlers
@@ -242,7 +242,7 @@ def test_matmul():
 
     For f(x) = X @ X.T where X is (2, 3),
     output[i,j] depends on rows i and j of input.
-    Diagonal blocks share deps, off-diagonal blocks union both rows.
+    Diagonal blocks share state_indices, off-diagonal blocks union both rows.
     """
 
     def f(x):
