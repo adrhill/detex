@@ -1,7 +1,7 @@
 """Propagation rule for select_n operations."""
 
 import numpy as np
-from jax._src.core import JaxprEqn, Var
+from jax._src.core import JaxprEqn
 
 from ._commons import (
     IndexSet,
@@ -10,6 +10,7 @@ from ._commons import (
     StateIndices,
     atom_const_val,
     atom_numel,
+    atom_value_bounds,
     empty_index_set,
     index_sets,
 )
@@ -63,19 +64,25 @@ def prop_select_n(
             which_val, [v for v in case_vals if v is not None]
         )
 
-    # Propagate value bounds from the selected branch
-    # when the predicate is a known constant.
-    if (
-        state_bounds is not None
-        and which_val is not None
-        and len(cases) == 2
-        and which_val.dtype == bool
-    ):
-        if not np.any(which_val):
-            selected = eqn.invars[1]
-        elif np.all(which_val):
-            selected = eqn.invars[2]
-        else:
-            return
-        if isinstance(selected, Var) and selected in state_bounds:
-            state_bounds[out_var] = state_bounds[selected]
+    # Propagate value bounds.
+    if state_bounds is not None:
+        case_bounds = [atom_value_bounds(c, state_consts, state_bounds) for c in cases]
+
+        # Const predicate uniformly selects one branch → use its bounds exactly.
+        if which_val is not None and len(cases) == 2 and which_val.dtype == bool:
+            if not np.any(which_val) and case_bounds[0] is not None:
+                state_bounds[out_var] = case_bounds[0]
+                return
+            if np.all(which_val) and case_bounds[1] is not None:
+                state_bounds[out_var] = case_bounds[1]
+                return
+
+        # Dynamic or mixed predicate → merge bounds across all branches.
+        if all(b is not None for b in case_bounds):
+            los, his = zip(*(b for b in case_bounds if b is not None), strict=True)
+            lo = los[0]
+            hi = his[0]
+            for lo_i, hi_i in zip(los[1:], his[1:], strict=True):
+                lo = np.minimum(lo, lo_i)
+                hi = np.maximum(hi, hi_i)
+            state_bounds[out_var] = (lo, hi)

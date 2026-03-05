@@ -1,9 +1,49 @@
-# TODO
+# Plan
 
-Remaining handler issues found during the post-hardening audit (PR #51)
-and the conservative-pattern audit.
+Delete items when completed.
 
-## 1. `scan` merges deps across all time steps
+Effort and priority in brackets after each heading:
+- Effort: `S` (< 1 session), `M` (1-2 sessions), `L` (3+ sessions)
+- Priority: `!` high, `!!` urgent (e.g. `[M!]`, `[S!!]`)
+
+---
+
+## Now
+
+### Handle VJP `scatter-add` dimension configuration [M!]
+
+VJP rules for `slice` produce `scatter-add` with
+`ScatterDimensionNumbers(update_window_dims=(1,), inserted_window_dims=(), ...)`,
+a 2D index array `(n, 1)`, and 2D updates `(n, 1)`.
+The indices are const (propagated through the `iota → lt → select_n` chain),
+but the scatter handler doesn't recognize this configuration.
+
+Extend the scatter handler to support this dimension configuration with const indices.
+Each row of the index array selects one output position;
+this is essentially a batched single-element scatter.
+
+Resolves GENROSE, COATING, ERRINROS, LUKSAN17LS, LUKSAN21LS (Hessian),
+OET2/4/6/7 (inequality Jacobian), and partially MSS1, VANDANMSLS, HAIFAM.
+~12–15 CUTEst problems affected.
+This is the single highest-impact improvement.
+
+Note: the `select_n` bounds merge (done in `ah/dynamic-select-n`) ensures
+the `iota → lt → select_n` const propagation chain now also forwards bounds
+when the predicate is dynamic.
+This means the scatter-add handler can rely on bounds being available
+for indices derived from `iota`-based chains even when `select_n`
+sits in the middle with a non-const predicate.
+
+Also note: `//` (floor division) bounds are slightly conservative
+because the floor-div correction branch (`q - 1`) widens the merged range.
+For `argmax(x[:n]) // k`, the merged bounds are `[-1, (n-1)//k]`
+instead of the true `[0, (n-1)//k]`.
+`dynamic_slice` clamping absorbs the negative lower bound,
+but the upper bound adds one extra position.
+This is a known limitation of branch-merging
+and doesn't affect correctness (just precision).
+
+### `scan` per-timestep dependency tracking [L]
 
 The scan handler unions xs dependencies across all iterations,
 so `ys[t]` appears to depend on all xs slices even when only `xs[t]` matters.
@@ -20,9 +60,9 @@ so `ys[t]` appears to depend on all xs slices even when only `xs[t]` matters.
 | `test_scan_ys_independent_of_carry` | ys[t] depends only on xs[t], not all xs |
 | `test_scan_with_cond_inside` | Lower-triangular, not all-xs |
 
-All nine tests now carry `@pytest.mark.fallback` and `TODO(scan)` comments.
+All nine tests carry `@pytest.mark.fallback` and `TODO(scan)` comments.
 
-## 2. `diag` via `dynamic_update_slice` is conservative
+### `diag` via `dynamic_update_slice` is conservative [M]
 
 `jnp.diag(x)` lowers to `dynamic_update_slice` with loop indices.
 The true pattern is sparse (out[i*n+i] depends on x[i] only),
@@ -30,10 +70,20 @@ but the handler reports `tile(eye(n), (n, 1))`.
 
 Tracked in `test_diag_1d` in `test_platform_index.py`.
 
-## 3. Scatter Pattern 4 (partial-row scatter)
+### Scatter Pattern 4 (partial-row scatter) [S]
 
 `mat.at[0, :2].set(updates)` still falls back to conservative.
 Already tracked with `@pytest.mark.fallback` in `test_scatter_2d`.
+
+## Ideas
+
+- Second-order analysis for `reduce_sum` Hessian precision
+  (tracking which *pairs* of inputs interact — beyond the current first-order index-set framework)
+- Symbolic index tracking for gather/scatter composition
+  (knowing that `gather` at `[2,3]` then `scatter-add` at `[5]`
+  only creates `output[5] ← input[2,3]`, not `output[*] ← input[*]`)
+- Algebraic cancellation detection
+  (e.g. `f(x) - f(x) = 0` — requires symbolic simplification beyond index-set propagation)
 
 # CUTEst
 
@@ -65,11 +115,6 @@ However, `scatter-add` falls back to conservative because its
 `ScatterDimensionNumbers(update_window_dims=(1,), inserted_window_dims=(), ...)`
 configuration is not recognized by the scatter handler,
 even though the indices are available as consts.
-
-**Handler improvement**: Extend the scatter handler to recognize
-the VJP scatter-add configuration
-(`update_window_dims=(1,)` with a 2D update and 2D index array).
-This would make the VJP scatter-add as precise as the primal `slice` operations.
 
 ### Severely conservative (detected 100% dense, true density <15%)
 
@@ -134,7 +179,7 @@ but `sum` in the jaxpr unions all residual dependencies,
 making every variable appear coupled to every other.
 The true Hessian is sparser because not all residual pairs share variables.
 
-**Handler improvement**: This is a fundamental limitation of the index-set lattice.
+This is a fundamental limitation of the index-set lattice.
 The union over `reduce_sum` is exact for the sum itself,
 but in the Hessian context, `J^T J` only has nonzeros where `J` columns overlap.
 Resolving this would require second-order analysis
@@ -184,7 +229,7 @@ the gather selects a subset of variables,
 then scatter-add writes them into a shared accumulator,
 making downstream reads appear to depend on all gathered variables.
 
-**Handler improvement**: This is a precision-of-composition issue.
+This is a precision-of-composition issue.
 Each gather and scatter is individually correct,
 but composing them through a shared accumulator
 (gather from design → compute → scatter-add into global)
@@ -297,7 +342,7 @@ makes each output appear to depend on the full sliced range.
 S365/S365MOD, HAIFAS: similar structural-zero issues
 from polynomial and product constraint expressions.
 
-**Handler improvement**: These are mostly structural zeros
+These are mostly structural zeros
 that would require algebraic simplification to eliminate.
 Zero-skipping in `integer_pow` (when the base is a tracked zero)
 has been implemented but doesn't help here —
@@ -334,50 +379,4 @@ These are inherent to index-set propagation and can't be improved
 without value-dependent analysis.
 
 OET1/OET3, SIPOW1/SIPOW2 would be resolved by
-handling the VJP scatter-add dimension configuration (see Summary §1).
-
-## Summary of handler improvements
-
-Ordered by estimated impact (number of CUTEst problems resolved):
-
-### 1. Handle VJP `scatter-add` dimension configuration
-
-VJP rules for `slice` produce `scatter-add` with
-`ScatterDimensionNumbers(update_window_dims=(1,), inserted_window_dims=(), ...)`,
-a 2D index array `(n, 1)`, and 2D updates `(n, 1)`.
-The indices are const (propagated through the `iota → lt → select_n` chain),
-but the scatter handler doesn't recognize this configuration.
-
-**Handler improvement**: Extend the scatter handler to support
-this dimension configuration with const indices.
-Each row of the index array selects one output position;
-this is essentially a batched single-element scatter.
-
-**Impact**: Resolves GENROSE, COATING, ERRINROS, LUKSAN17LS, LUKSAN21LS (Hessian),
-OET2/4/6/7 (inequality Jacobian), and partially MSS1, VANDANMSLS, HAIFAM.
-~12–15 problems affected across Hessian and Jacobian tests.
-This is the single highest-impact improvement.
-
-### 2. ~~Zero-skipping in `div` and `integer_pow`~~ ✓ Done
-
-Implemented in `_div.py` and `_elementwise.py`:
-- `div(0, x)` now clears deps (like `mul(0, x)` already did).
-- `integer_pow(0, n)` for `n > 1` now clears deps.
-- All three (`mul`, `div`, `integer_pow`) now propagate value bounds
-  via interval arithmetic for downstream gather/scatter precision.
-
-**CUTEst impact**: None of the flagged problems (TENBARS, FLETCHER, S316-322)
-actually benefit — their spurious nonzeros come from algebraic cancellations
-(e.g. `f(x) - f(x) = 0`), not from `div(0, x)` or `integer_pow(0, n)` patterns.
-The bounds propagation will help when `mul`/`div`/`integer_pow`
-appear in index computation chains feeding into gather/scatter.
-
-### 3. Merge value bounds in `select_n` for dynamic predicates
-
-Currently `select_n` only propagates bounds when the predicate is a known constant.
-When the predicate is dynamic, bounds from both branches could be merged
-as `(min(lo_a, lo_b), max(hi_a, hi_b))`.
-
-**Impact**: Would allow Python `//` (floor division) to propagate bounds end-to-end.
-`//` lowers to a nested jaxpr containing `div`, `rem`, `sign`, and `select_n` —
-the `select_n` with a dynamic predicate currently blocks bounds flow.
+handling the VJP scatter-add dimension configuration.
