@@ -10,39 +10,6 @@ Effort and priority in brackets after each heading:
 
 ## Now
 
-### Handle VJP `scatter-add` dimension configuration [M!]
-
-VJP rules for `slice` produce `scatter-add` with
-`ScatterDimensionNumbers(update_window_dims=(1,), inserted_window_dims=(), ...)`,
-a 2D index array `(n, 1)`, and 2D updates `(n, 1)`.
-The indices are const (propagated through the `iota → lt → select_n` chain),
-but the scatter handler doesn't recognize this configuration.
-
-Extend the scatter handler to support this dimension configuration with const indices.
-Each row of the index array selects one output position;
-this is essentially a batched single-element scatter.
-
-Resolves GENROSE, COATING, ERRINROS, LUKSAN17LS, LUKSAN21LS (Hessian),
-OET2/4/6/7 (inequality Jacobian), and partially MSS1, VANDANMSLS, HAIFAM.
-~12–15 CUTEst problems affected.
-This is the single highest-impact improvement.
-
-Note: the `select_n` bounds merge (done in `ah/dynamic-select-n`) ensures
-the `iota → lt → select_n` const propagation chain now also forwards bounds
-when the predicate is dynamic.
-This means the scatter-add handler can rely on bounds being available
-for indices derived from `iota`-based chains even when `select_n`
-sits in the middle with a non-const predicate.
-
-Also note: `//` (floor division) bounds are slightly conservative
-because the floor-div correction branch (`q - 1`) widens the merged range.
-For `argmax(x[:n]) // k`, the merged bounds are `[-1, (n-1)//k]`
-instead of the true `[0, (n-1)//k]`.
-`dynamic_slice` clamping absorbs the negative lower bound,
-but the upper bound adds one extra position.
-This is a known limitation of branch-merging
-and doesn't affect correctness (just precision).
-
 ### `scan` per-timestep dependency tracking [L]
 
 The scan handler unions xs dependencies across all iterations,
@@ -90,50 +57,16 @@ Already tracked with `@pytest.mark.fallback` in `test_scatter_2d`.
 Conservative patterns found via CUTEst integration tests (`tests/test_cutest.py`).
 354 passed. Of those, ~60 emit conservativeness warnings.
 
-## Conservative Hessians (27 problems)
+## Conservative Hessians (22 problems)
 
 Hessian sparsity is detected as `jacobian_sparsity(grad(f))`.
-The gradient jaxpr contains `gather`, `scatter-add`, and `pad` primitives
-from VJP rules that don't appear in the primal.
-The VJP scatter-add uses a `ScatterDimensionNumbers` configuration
-that the scatter handler doesn't recognize,
-causing it to fall back to conservative
-even when the indices are const.
-
-### Root cause: unhandled `scatter-add` dimension configuration
-
-The primal jaxpr of problems like GENROSE uses simple `slice` operations
-(e.g., `x[1:]`, `x[:-1]`).
-But `grad(f)` replaces these with scatter-add to accumulate cotangents:
-`iota` generates position arrays, `lt`/`select_n` build masks,
-and `scatter-add` or `gather` uses these as indices.
-
-The const propagation chain works correctly:
-`iota → add → lt → select_n → broadcast_in_dim` all propagate through `const_vals`,
-and `gather` receives const indices and produces precise patterns.
-However, `scatter-add` falls back to conservative because its
-`ScatterDimensionNumbers(update_window_dims=(1,), inserted_window_dims=(), ...)`
-configuration is not recognized by the scatter handler,
-even though the indices are available as consts.
 
 ### Severely conservative (detected 100% dense, true density <15%)
 
 | Problem | Extra nnz | True density | Gradient primitives |
 |---------|-----------|--------------|---------------------|
-| GENROSE | 248,502 | 0.6% | `gather`, `scatter-add`, `iota`, `lt`, `select_n`, `pad` |
 | ARGLINA | 39,800 | 0.5% | `reduce_sum`, `split`, `concatenate` |
-| COATING | 15,656 | 12.8% | `gather`, `scatter-add`, `iota`, `lt`, `select_n`, `split` |
-| LUKSAN17LS | 9,408 | 5.9% | `gather`, `scatter-add`, `iota`, `lt`, `select_n`, `pad` |
-| LUKSAN21LS | 9,506 | 4.9% | `gather`, `scatter-add`, `iota`, `lt`, `select_n`, `pad` |
-| ERRINROS | 2,352 | 5.9% | `gather`, `scatter-add`, `iota`, `lt`, `select_n`, `pad` |
 | VANDANMSLS | 468 | 3.3% | `ge`, `le`, `or`, `select_n`, nested `jit` |
-
-GENROSE, COATING, LUKSAN17LS, LUKSAN21LS, ERRINROS all share the same pattern:
-the primal uses `slice` for shifting operations (`x[1:] - x[:-1]`),
-whose VJP introduces `gather`/`scatter-add` with `iota`-derived indices.
-The `gather` half is already precise (const propagation through the
-`iota → lt → select_n` chain works).
-The conservativeness comes entirely from the `scatter-add` half.
 
 ARGLINA uses `reduce_sum` and `split`/`concatenate`.
 The VJP of `reduce_sum` broadcasts cotangents back,
@@ -146,7 +79,8 @@ the true Hessian is sparser than what the graph structure implies.
 VANDANMSLS uses `ge`, `le`, `or`, `select_n` to build conditional masks.
 The nested `jit` is inlined by `prop_nested_jaxpr`.
 The comparison+select chains propagate consts correctly,
-but the downstream scatter/gather uses an unhandled dimension configuration.
+but the conservativeness comes from `reduce_sum` coupling
+in the gradient jaxpr.
 
 ### Moderately conservative (detected 100% dense, true density 15–80%)
 
@@ -201,7 +135,7 @@ The extras are likely structural zeros:
 positions where `∂²f/∂x_i∂x_j` is structurally present in the jaxpr
 but evaluates to zero for all inputs (e.g., `x_i * 0 * x_j`).
 
-## Conservative Jacobians — equality constraints (14 problems)
+## Conservative Jacobians — equality constraints (13 problems)
 
 ### Severely conservative (detected 100% dense, true density <20%)
 
@@ -209,7 +143,6 @@ but evaluates to zero for all inputs (e.g., `x_i * 0 * x_j`).
 |---------|-----------|--------------|----------------|
 | HADAMARD | 76,000 | 5.0% | `scan`, `gather`, `select_n`, `cumsum` |
 | TRO11X3 | 8,554 | 5.0% | `gather`, `scatter`, `scatter-add` |
-| MSS1 | 6,192 | 5.8% | `gather`, `iota`, `lt`, `select_n` |
 | TRO5X5 | 4,022 | 6.9% | `gather`, `scatter`, `scatter-add` |
 | TRO4X4 | 1,334 | 11.8% | `gather`, `scatter`, `scatter-add` |
 | TRO6X2 | 786 | 12.7% | `gather`, `scatter`, `scatter-add` |
@@ -239,10 +172,6 @@ knowing that `gather` at index `[2,3]` followed by `scatter-add` at index `[5]`
 only creates a dependency `output[5] ← input[2,3]`, not `output[*] ← input[*]`.
 This is architecturally difficult because the current framework
 evaluates each primitive independently.
-
-MSS1 is a network flow problem with similar gather-based indexing.
-The `iota + lt + select_n` chain propagates consts correctly,
-but the downstream scatter uses an unhandled dimension configuration.
 
 ### Fully spurious (ground truth has 0 nnz)
 
@@ -313,11 +242,13 @@ causes the same precision-of-composition issue as the TRO problems.
 
 OET2/4/6/7 are semi-infinite programming problems
 whose constraints are parameterized by a discretization grid.
-Each constraint row depends on a small subset of the 3 decision variables.
-The nested `jit` bodies contain `iota`-based index arithmetic
-and comparison+select chains that build index arrays.
-Const propagation through these chains works,
-but the downstream gather/scatter uses unhandled dimension configurations.
+The asdex detection is correct: each constraint structurally depends on all 3 variables
+(through `t * exp(v * b)` terms).
+The CUTEst fixture shows fewer nonzeros because
+the original SIF formulation has a different structure than the sif2jax translation.
+At the starting point `y0 = [0, 0, 0]`, `t = 0` makes the `v`-partial numerically zero,
+but the structural dependency is real.
+This is a **fixture mismatch**, not an asdex conservativeness issue.
 
 ### Moderately conservative
 
@@ -378,5 +309,5 @@ structurally involves `x_k` but the partial `∂g/∂x_k` is always zero.
 These are inherent to index-set propagation and can't be improved
 without value-dependent analysis.
 
-OET1/OET3, SIPOW1/SIPOW2 would be resolved by
-handling the VJP scatter-add dimension configuration.
+OET1/OET3, SIPOW1/SIPOW2 have small extras (2–4 nnz)
+from structural zeros in `iota`-based indexing inside nested `jit`.

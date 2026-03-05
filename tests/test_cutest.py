@@ -238,7 +238,7 @@ EXPECTED_JACOBIAN_EQ_NNZ: dict[str, tuple[int, int]] = {
     "HS87": (15, 15),
     "LSNNODOC": (10, 10),
     "MARATOS": (2, 2),
-    "MSS1": (6570, 378),
+    "MSS1": (378, 378),
     "NASH": (157, 157),
     "ODFITS": (15, 15),
     "OPTCNTRL": (70, 70),
