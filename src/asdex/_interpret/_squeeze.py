@@ -1,11 +1,14 @@
 """Propagation rule for squeeze operations."""
 
+import numpy as np
 from jax._src.core import JaxprEqn
 
-from ._commons import StateIndices, index_sets
+from ._commons import StateConsts, StateIndices, index_sets, propagate_const_unary
 
 
-def prop_squeeze(eqn: JaxprEqn, state_indices: StateIndices) -> None:
+def prop_squeeze(
+    eqn: JaxprEqn, state_indices: StateIndices, state_consts: StateConsts
+) -> None:
     """Squeeze removes dimensions of size 1 without changing the data.
 
     Since it's a reshape with the same number of elements,
@@ -26,3 +29,5 @@ def prop_squeeze(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     https://docs.jax.dev/en/latest/_autosummary/jax.lax.squeeze.html
     """
     state_indices[eqn.outvars[0]] = index_sets(state_indices, eqn.invars[0])
+    dims = eqn.params["dimensions"]
+    propagate_const_unary(eqn, state_consts, lambda v: np.squeeze(v, axis=dims))

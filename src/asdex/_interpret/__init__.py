@@ -192,7 +192,7 @@ def prop_dispatch(
         case "pad":
             prop_pad(eqn, state_indices)
         case "squeeze":
-            prop_squeeze(eqn, state_indices)
+            prop_squeeze(eqn, state_indices, state_consts)
         case "broadcast_in_dim":
             prop_broadcast_in_dim(eqn, state_indices, state_consts, state_bounds)
         case "concatenate":
