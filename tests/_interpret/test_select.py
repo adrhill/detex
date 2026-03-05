@@ -3,6 +3,7 @@
 https://docs.jax.dev/en/latest/_autosummary/jax.lax.select_n.html
 """
 
+import jax.lax as lax
 import jax.numpy as jnp
 import numpy as np
 import pytest
@@ -141,3 +142,37 @@ def test_hessian_where_one_constant_false():
         ]
     )
     np.testing.assert_array_equal(H, expected)
+
+
+@pytest.mark.control_flow
+def test_select_n_bounds_merge_floor_div():
+    """Bounds merge through select_n enables floor division (``//``) bounds propagation.
+
+    ``//`` lowers to a nested jaxpr with ``div``, ``rem``, ``sign``, ``select_n``.
+    The ``select_n`` has a dynamic predicate (sign of remainder),
+    but both branches have known bounds, so merging produces valid output bounds.
+    Without the merge, bounds are lost and the result is fully dense (all 1s).
+
+    argmax(x[:4]) ∈ {0,1,2,3}, so div gives [0,1].
+    The floor-div correction branch (q-1) has bounds [-1,0],
+    so the merged result is [-1,1], which dynamic_slice clamps to [0,2].
+    This is slightly conservative (true range is [0,1])
+    but much better than the fully-dense fallback.
+    """
+
+    def f(x):
+        idx = jnp.argmax(x[:4])  # bounds: [0, 3]
+        start = idx // 2  # bounds: [-1, 1] via merged select_n
+        return lax.dynamic_slice(x, (start,), (3,))
+
+    result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
+    # Slightly conservative: start ∈ {0,1,2} instead of true {0,1}.
+    expected = np.array(
+        [
+            [1, 1, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1],
+        ],
+        dtype=int,
+    )
+    np.testing.assert_array_equal(result, expected)
