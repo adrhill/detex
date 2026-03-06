@@ -40,35 +40,28 @@ def test_platform_dependent_scalar():
 
 
 # High-level ops that use platform_dependent
-@pytest.mark.fallback
 @pytest.mark.control_flow
 def test_diag_1d():
     """jnp.diag on a 1D input uses platform_dependent internally.
 
-    The sparsity is conservative because diag lowers to dynamic_update_slice,
-    so each diagonal element depends on all inputs in the same column mod n.
-
-    TODO(scatter): the true pattern is a 9x3 matrix with identity on the diagonal:
-    out[0]<-{0}, out[4]<-{1}, out[8]<-{2}, all others zero.
-    Resolving the dynamic_update_slice indices as constants would make this precise.
+    Precise: out[i*n+i] depends only on x[i], all other positions are zero.
     """
 
     def f(x):
         return jnp.diag(x)
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    expected = np.tile(np.eye(3, dtype=int), (3, 1))
+    expected = np.zeros((9, 3), dtype=int)
+    for i in range(3):
+        expected[i * 3 + i, i] = 1
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.control_flow
 def test_diag_2d():
     """jnp.diag on a 2D input extracts the diagonal via platform_dependent.
 
-    The gather resolves the row index precisely but the column index
-    exploits known iota values and zero-clearing in mul
-    to produce the precise diagonal pattern.
+    Precise: out[i] depends only on x[i*n+i] (the diagonal element).
     """
 
     def f(x):

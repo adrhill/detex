@@ -10,6 +10,7 @@ from ._commons import (
     StateIndices,
     atom_const_val,
     atom_numel,
+    atom_shape,
     atom_value_bounds,
     empty_index_set,
     index_sets,
@@ -42,22 +43,29 @@ def prop_select_n(
     out_size = atom_numel(out_var)
     cases = eqn.invars[1:]  # value cases (which is invars[0])
 
-    # Element-wise union across value cases.
-    # The selector has zero derivative, so we skip it.
     case_indices = [index_sets(state_indices, c) for c in cases]
 
-    out_indices: list[IndexSet] = []
-    for i in range(out_size):
-        merged: IndexSet = empty_index_set()
-        for c_idx in case_indices:
-            merged |= c_idx[i]
-        out_indices.append(merged)
+    # When the selector is a known constant,
+    # each output element takes index sets from exactly one branch.
+    which_atom = eqn.invars[0]
+    which_val = atom_const_val(which_atom, state_consts)
+
+    if which_val is not None:
+        flat_which = np.broadcast_to(which_val, atom_shape(out_var)).ravel().astype(int)
+        out_indices = [case_indices[flat_which[i]][i] for i in range(out_size)]
+    else:
+        # Dynamic selector: union across all value cases.
+        out_indices = []
+        for i in range(out_size):
+            merged: IndexSet = empty_index_set()
+            for c_idx in case_indices:
+                merged |= c_idx[i]
+            out_indices.append(merged)
 
     state_indices[out_var] = out_indices
 
     # When all inputs are statically known, compute the concrete result
     # so state_consts tracking isn't broken by this op.
-    which_val = atom_const_val(eqn.invars[0], state_consts)
     case_vals = [atom_const_val(c, state_consts) for c in cases]
     if which_val is not None and all(v is not None for v in case_vals):
         state_consts[out_var] = np.choose(
