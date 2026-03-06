@@ -29,19 +29,6 @@ so `ys[t]` appears to depend on all xs slices even when only `xs[t]` matters.
 
 All nine tests carry `@pytest.mark.fallback` and `TODO(scan)` comments.
 
-### `diag` via `dynamic_update_slice` is conservative [M]
-
-`jnp.diag(x)` lowers to `dynamic_update_slice` with loop indices.
-The true pattern is sparse (out[i*n+i] depends on x[i] only),
-but the handler reports `tile(eye(n), (n, 1))`.
-
-Tracked in `test_diag_1d` in `test_platform_index.py`.
-
-### Scatter Pattern 4 (partial-row scatter) [S]
-
-`mat.at[0, :2].set(updates)` still falls back to conservative.
-Already tracked with `@pytest.mark.fallback` in `test_scatter_2d`.
-
 ## Ideas
 
 - Second-order analysis for `reduce_sum` Hessian precision
@@ -55,9 +42,9 @@ Already tracked with `@pytest.mark.fallback` in `test_scatter_2d`.
 # CUTEst
 
 Conservative patterns found via CUTEst integration tests (`tests/test_cutest.py`).
-354 passed. Of those, ~60 emit conservativeness warnings.
+354 passed. Of those, 64 emit conservativeness warnings.
 
-## Conservative Hessians (22 problems)
+## Conservative Hessians (21 problems)
 
 Hessian sparsity is detected as `jacobian_sparsity(grad(f))`.
 
@@ -135,7 +122,7 @@ The extras are likely structural zeros:
 positions where `∂²f/∂x_i∂x_j` is structurally present in the jaxpr
 but evaluates to zero for all inputs (e.g., `x_i * 0 * x_j`).
 
-## Conservative Jacobians — equality constraints (13 problems)
+## Conservative Jacobians — equality constraints (16 problems)
 
 ### Severely conservative (detected 100% dense, true density <20%)
 
@@ -218,7 +205,7 @@ the jaxpr has a path from input to output,
 but the derivative is algebraically zero for all inputs
 (e.g., `x * y` where `y` is always zero along certain constraint rows).
 
-## Conservative Jacobians — inequality constraints (24 problems)
+## Conservative Jacobians — inequality constraints (25 problems)
 
 ### Severely conservative
 
@@ -291,6 +278,7 @@ but the derivative evaluates to zero for all inputs.
 | CB3 | 2 | `exp` product terms |
 | CHACONN2 | 2 | `integer_pow` product terms |
 | DIPIGRI | 2 | polynomial cross-terms |
+| ELATTAR | 2 | structural zeros |
 | GIGOMEZ2 | 2 | `integer_pow` product terms |
 | GIGOMEZ3 | 2 | `integer_pow` product terms |
 | HS100 | 2 | polynomial cross-terms |
