@@ -64,7 +64,7 @@ def _scatter_flat_map(
     for batch_idx in np.ndindex(*batching_shape) if batching_shape else [()]:
         for si_batch_idx in np.ndindex(*si_batch_shape) if si_batch_shape else [()]:
             # Look up index vector from scatter_indices.
-            si_idx: list[int | slice] = [0] * len(si_shape)
+            si_idx: list[int | slice] = [0 for _ in range(len(si_shape))]
             for i, d in enumerate(si_batching_dims):
                 si_idx[d] = batch_idx[i]
             for i, d in enumerate(si_batch_axes):
