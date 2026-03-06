@@ -59,8 +59,6 @@ PropJaxprFn = Callable[
 ]
 """Signature of ``prop_jaxpr``, passed as callback to break circular imports."""
 
-_MAX_FIXED_POINT_ITERS = 500
-"""Safety bound for fixed-point iteration in while_loop and scan."""
 
 _MAX_ENUM_COMBINATIONS = 64
 """Maximum number of index combinations to enumerate for bounded dynamic indices.
@@ -447,52 +445,3 @@ def forward_const_vals(
         val = atom_const_val(outer, state_consts)
         if val is not None:
             state_consts[inner] = val
-
-
-# Fixed-point iteration
-
-
-def fixed_point_loop(
-    iterate_fn: Callable[[list[list[IndexSet]]], list[list[IndexSet]]],
-    carry: list[list[IndexSet]],
-    n_carry: int,
-) -> list[list[IndexSet]]:
-    """Run ``iterate_fn`` on carry index sets until they stabilize.
-
-    Used by ``while_loop`` to propagate index sets
-    through loops via fixed-point iteration.
-    Since index sets only grow and are bounded in size
-    (i.e., monotone on a finite lattice),
-    this always converges.
-
-    Mutates ``carry`` in place and returns the final body output.
-    """
-    # Carry sets may alias (shared objects from upstream handlers),
-    # so copy them before in-place mutation via |=.
-    for i in range(n_carry):
-        carry[i] = [s.copy() for s in carry[i]]
-
-    body_output: list[list[IndexSet]] = []
-    for _iteration in range(_MAX_FIXED_POINT_ITERS):
-        body_output = iterate_fn(carry)
-
-        changed = False
-        for i in range(n_carry):
-            for j in range(len(carry[i])):
-                before = len(carry[i][j])
-                carry[i][j] |= body_output[i][j]
-                if len(carry[i][j]) > before:
-                    changed = True
-
-        if not changed:
-            break
-    else:  # pragma: no cover
-        msg = (
-            f"Fixed-point iteration did not converge after "
-            f"{_MAX_FIXED_POINT_ITERS} iterations. "
-            "Please help out asdex's development by reporting this at "
-            "https://github.com/adrhill/asdex/issues"
-        )
-        raise RuntimeError(msg)
-
-    return body_output

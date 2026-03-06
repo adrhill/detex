@@ -1,5 +1,7 @@
 """Propagation rule for while_loop."""
 
+from collections.abc import Callable
+
 from jax._src.core import JaxprEqn
 
 from ._commons import (
@@ -7,11 +9,13 @@ from ._commons import (
     PropJaxprFn,
     StateConsts,
     StateIndices,
-    fixed_point_loop,
     forward_const_vals,
     index_sets,
     seed_const_vals,
 )
+
+_MAX_FIXED_POINT_ITERS = 500
+"""Safety bound for fixed-point iteration."""
 
 
 def prop_while(
@@ -66,8 +70,49 @@ def prop_while(
     def iterate(carry: list[list[IndexSet]]) -> list[list[IndexSet]]:
         return prop_jaxpr(body_jaxpr, const_inputs + carry, state_consts)
 
-    fixed_point_loop(iterate, carry_indices, n_carry)
+    _fixed_point_loop(iterate, carry_indices, n_carry)
 
     # Write final carry state_indices to outvars
     for outvar, out_indices in zip(eqn.outvars, carry_indices, strict=True):
         state_indices[outvar] = out_indices
+
+
+def _fixed_point_loop(
+    iterate_fn: Callable[[list[list[IndexSet]]], list[list[IndexSet]]],
+    carry: list[list[IndexSet]],
+    n_carry: int,
+) -> None:
+    """Run ``iterate_fn`` on carry index sets until they stabilize.
+
+    Since index sets only grow and are bounded in size
+    (i.e., monotone on a finite lattice),
+    this always converges.
+
+    Mutates ``carry`` in place.
+    """
+    # Carry sets may alias (shared objects from upstream handlers),
+    # so copy them before in-place mutation via |=.
+    for i in range(n_carry):
+        carry[i] = [s.copy() for s in carry[i]]
+
+    for _iteration in range(_MAX_FIXED_POINT_ITERS):
+        body_output = iterate_fn(carry)
+
+        changed = False
+        for i in range(n_carry):
+            for j in range(len(carry[i])):
+                before = len(carry[i][j])
+                carry[i][j] |= body_output[i][j]
+                if len(carry[i][j]) > before:
+                    changed = True
+
+        if not changed:
+            return
+    else:  # pragma: no cover
+        msg = (
+            f"Fixed-point iteration did not converge after "
+            f"{_MAX_FIXED_POINT_ITERS} iterations. "
+            "Please help out asdex's development by reporting this at "
+            "https://github.com/adrhill/asdex/issues"
+        )
+        raise RuntimeError(msg)

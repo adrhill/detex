@@ -67,9 +67,6 @@ not every handler.
   the result is raveled and passed to ``permute_indices``.
   Used by handlers where each output reads exactly one input element
   (transpose, rev, slice, reshape, split, dynamic_slice).
-- **`fixed_point_loop(iterate_fn, carry, n_carry)`** —
-  runs a body function on carry index sets until they stabilize.
-  Used by `while_loop`.
 - **`propagate_const_unary(eqn, state_consts, transform)`** —
   propagates a const value through a unary op by applying `transform`.
   Mirrors `propagate_const_binary` for the single-input case.
@@ -94,7 +91,7 @@ and output sets may alias input sets.
 Handlers must therefore **never mutate** a set obtained from `state_indices` or `index_sets()`.
 Always build new sets (via `union_all`, `|`, or the factory helpers) instead of mutating in place.
 
-The one exception is `fixed_point_loop`,
+The one exception is `_fixed_point_loop` in `_while.py`,
 which explicitly copies carry sets before mutating them via `|=`.
 
 ## Const Value Tracking
