@@ -7,6 +7,7 @@ from ._commons import (
     PropJaxprFn,
     StateConsts,
     StateIndices,
+    atom_shape,
     forward_const_vals,
     index_sets,
     seed_const_vals,
@@ -70,22 +71,17 @@ def prop_scan(
     xs_all_indices: list[list[IndexSet]] = [index_sets(state_indices, v) for v in xs]
     xs_slice_numels: list[int] = []
     for i, x_var in enumerate(xs):
-        x_shape = tuple(getattr(x_var.aval, "shape", ()))
+        x_shape = atom_shape(x_var)
         if len(x_shape) == 0:
             raise AssertionError("scan xs must have a leading length dim")
         xs_slice_numels.append(len(xs_all_indices[i]) // x_shape[0])
 
     # Determine iteration length from xs or params
-    if xs:
-        x0_shape = tuple(getattr(xs[0].aval, "shape", ()))
-        iter_length: int = x0_shape[0]
-    else:
-        iter_length = length
+    iter_length: int = atom_shape(xs[0])[0] if xs else length
 
     # Validate ys shapes
     for y_var in ys:
-        y_shape = tuple(getattr(y_var.aval, "shape", ()))
-        if len(y_shape) == 0:
+        if len(atom_shape(y_var)) == 0:
             raise AssertionError("scan ys must have a leading length dim")
 
     # Forward simulation: one prop_jaxpr call per timestep,

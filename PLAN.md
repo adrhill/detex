@@ -10,6 +10,35 @@ Effort and priority in brackets after each heading:
 
 ## Now
 
+### Add inline comments to expected matrices in test files [S]
+
+Annotate expected sparsity matrices with inline comments
+that explain what each row computes, directly on the array literal.
+This makes test expectations self-documenting
+without requiring the reader to cross-reference the docstring.
+
+Move explanations out of docstrings and into the matrix itself.
+Keep docstrings short (one-line summary + setup context).
+
+**Style:**
+
+```python
+expected = np.array(
+    [
+        [1, 1, 1],  # carry_out = x[0] + x[1] + x[2]
+        [0, 0, 0],  # ys[0] = carry_init = 0
+        [1, 0, 0],  # ys[1] = x[0]
+        [1, 1, 0],  # ys[2] = x[0] + x[1]
+    ],
+    dtype=int,
+)
+```
+
+When consecutive rows share the same pattern (e.g. elementwise over a 2-element array),
+annotate only the first row of each group.
+
+Apply to all `tests/_interpret/test_*.py` files, not just `test_scan.py`.
+
 ## Later
 
 ### Symbolic index tracking for gather/scatter composition [L]

@@ -65,6 +65,20 @@ Handler test files (`_interpret/test_*.py`) should cover:
 - **Real-world usage patterns**: `jnp` functions that lower to the primitive under test.
 - **Jacobian verification**: for at least one test per dimensionality, verify precision by comparing the detected pattern against `(np.abs(jax.jacobian(f)(x)) > 1e-10)` using `assert_array_equal`.
   Choose test functions that avoid local sparsity (e.g. multiply by zero) so the numerical Jacobian matches the structural pattern.
+- **Inline matrix comments**: annotate expected sparsity matrices with inline comments
+  explaining what each row computes. When consecutive rows share the same pattern
+  (e.g. elementwise over a 2-element array), annotate only the first row of each group.
+  ```python
+  expected = np.array(
+      [
+          [1, 1, 1],  # carry_out = x[0] + x[1] + x[2]
+          [0, 0, 0],  # ys[0] = carry_init = 0
+          [1, 0, 0],  # ys[1] = x[0]
+          [1, 1, 0],  # ys[2] = x[0] + x[1]
+      ],
+      dtype=int,
+  )
+  ```
 
 ## CUTEst Integration Tests
 
