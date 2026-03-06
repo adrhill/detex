@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772759136152,
+  "lastUpdate": 1772815398261,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -9546,6 +9546,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0005925826138263449",
             "extra": "mean: 31.72434069999592 msec\nrounds: 30"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "768a0b13883fcf32902e3ebfe1e3b755f37bf7ba",
+          "message": "feat(interpret): per-timestep forward simulation in `scan` handler (#87)\n\n* feat(interpret): per-timestep forward simulation in `scan` handler\n\nReplace the 3-stage approach (merge xs → fixed-point → tile ys)\nwith forward simulation: one `prop_jaxpr` call per timestep,\nthreading carry deps forward and collecting per-timestep ys.\n\nProduces exact per-timestep sparsity patterns instead of\noverapproximate all-to-all dependencies (e.g. cumulative sum\nyields lower-triangular instead of dense).\n\nRemoves 9 `@pytest.mark.fallback` markers and `TODO(scan)` comments.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* claude: remove completed `scan` task from `PLAN.md`\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): address review feedback on `scan` handler\n\nUse `atom_shape` helper instead of raw `getattr(…, \"shape\", ())`.\nMove pattern explanations from docstrings to inline comments\non expected matrices.\nDocument inline matrix comment style in `tests/CLAUDE.md`\nand add a task in `PLAN.md` to apply it across all test files.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* refactor(interpret): move `fixed_point_loop` into `_while.py`\n\nOnly used by the while handler, so inline it as `_fixed_point_loop`\nrather than keeping it in the shared `_commons.py`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* claude: add transfer matrix design notes and cross-task insights to `PLAN.md`\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix(interpret): satisfy `ty` type checker for `list[int | slice]` in gather/scatter\n\n`[0] * n` is inferred as `list[int]` by `ty`, which rejects\nassignment to `list[int | slice]`. Using a list comprehension\nlets `ty` infer the wider type from the annotation.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-06T17:42:44+01:00",
+          "tree_id": "b99e9d3a246f519492bd96bb4d7a6abf9a0bebba",
+          "url": "https://github.com/adrhill/asdex/commit/768a0b13883fcf32902e3ebfe1e3b755f37bf7ba"
+        },
+        "date": 1772815397837,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 715.0155089098738,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0036665043367069927",
+            "extra": "mean: 1.3985710624999153 msec\nrounds: 144"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3397.6512797386663,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000007882447354981062",
+            "extra": "mean: 294.3209640033794 usec\nrounds: 1139"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 67.81424647114865,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003320302360454696",
+            "extra": "mean: 14.746164000000306 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 115.9020887897807,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000293924833873424",
+            "extra": "mean: 8.627972199998624 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 22.07534254924843,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012182930216457286",
+            "extra": "mean: 45.299410315789 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 251.41777516690647,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007613842621186065",
+            "extra": "mean: 3.977443517412955 msec\nrounds: 201"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 32.83421345005038,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007907011506887326",
+            "extra": "mean: 30.456036399996833 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 32.4357170309374,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007942772022579432",
+            "extra": "mean: 30.83021099999712 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 90.93400666794481,
+            "unit": "iter/sec",
+            "range": "stddev: 0.014866590342788496",
+            "extra": "mean: 10.996986019230475 msec\nrounds: 52"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3356.0540253392664,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000008560552084323042",
+            "extra": "mean: 297.9689815627772 usec\nrounds: 2278"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 26.4101904755231,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005499693488272188",
+            "extra": "mean: 37.86417219999976 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 26.490142173470062,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004859145717695317",
+            "extra": "mean: 37.74989176922962 msec\nrounds: 26"
           }
         ]
       }
