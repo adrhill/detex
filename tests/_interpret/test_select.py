@@ -67,7 +67,10 @@ def test_ifelse_one_branch_constant_false():
 
 @pytest.mark.control_flow
 def test_select_n_mixed_deps():
-    """select_n where branches have different per-element dependencies."""
+    """select_n with a const predicate picks only the selected branch per element.
+
+    pred=[True, False, True] selects a[0], b[1], a[2].
+    """
 
     def f(x):
         a = x[:3]
@@ -76,8 +79,8 @@ def test_select_n_mixed_deps():
         return jnp.where(pred, a, b)
 
     result = jacobian_sparsity(f, input_shape=5).todense().astype(int)
-    # out[0] ← {0} ∪ {3}, out[1] ← {1} ∪ {4}, out[2] ← {2} ∪ {3}
-    expected = np.array([[1, 0, 0, 1, 0], [0, 1, 0, 0, 1], [0, 0, 1, 1, 0]], dtype=int)
+    # out[0] ← a[0] = {0}, out[1] ← b[1] = {4}, out[2] ← a[2] = {2}
+    expected = np.array([[1, 0, 0, 0, 0], [0, 0, 0, 0, 1], [0, 0, 1, 0, 0]], dtype=int)
     np.testing.assert_array_equal(result, expected)
 
 
