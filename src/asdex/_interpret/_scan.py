@@ -7,8 +7,6 @@ from ._commons import (
     PropJaxprFn,
     StateConsts,
     StateIndices,
-    empty_index_sets,
-    fixed_point_loop,
     forward_const_vals,
     index_sets,
     seed_const_vals,
@@ -23,10 +21,10 @@ def prop_scan(
 ) -> None:
     """Scan applies a body jaxpr iteratively, threading carry across iterations.
 
-    Dependencies are propagated via fixed-point iteration on the carry,
-    same as ``while_loop``.
-    The body is identical every iteration,
-    so state_indices grow monotonically on a finite lattice and converge fast.
+    Unlike ``while_loop`` (unknown iteration count, same inputs each iteration),
+    scan has a known ``length`` and different ``xs[t]`` per timestep.
+    Dependencies are propagated via forward simulation:
+    one ``prop_jaxpr`` call per timestep, threading carry deps forward.
 
     Layout:
         invars:  [consts..., carry_init..., xs...]
@@ -45,6 +43,8 @@ def prop_scan(
     body_jaxpr = body_closed.jaxpr
     num_consts = eqn.params["num_consts"]
     num_carry = eqn.params["num_carry"]
+    length = eqn.params["length"]
+    reverse = eqn.params["reverse"]
 
     # Split invars: [consts | carry_init | xs]
     consts = eqn.invars[:num_consts]
@@ -58,57 +58,73 @@ def prop_scan(
     seed_const_vals(state_consts, body_jaxpr.constvars, body_closed.consts)
     forward_const_vals(state_consts, consts, body_jaxpr.invars[:num_consts])
 
-    # Prepare const state_indices for the body
+    # Prepare const index sets for the body
     const_inputs: list[list[IndexSet]] = [index_sets(state_indices, v) for v in consts]
 
-    # Initialize carry state_indices from initial values
+    # Initialize carry from carry_init
     carry_indices: list[list[IndexSet]] = [
         index_sets(state_indices, v) for v in carry_init
     ]
 
-    # Prepare x_slice state_indices by unioning across the leading (length) dimension.
-    # Each xs[i] has shape (length, *rest), and the body sees x_slice with shape rest.
-    # We overapproximate by unioning all slices.
-    x_slice_indices: list[list[IndexSet]] = []
-    for x_var in xs:
-        x_indices = index_sets(state_indices, x_var)
+    # Pre-compute xs index sets and per-slice sizes
+    xs_all_indices: list[list[IndexSet]] = [index_sets(state_indices, v) for v in xs]
+    xs_slice_numels: list[int] = []
+    for i, x_var in enumerate(xs):
         x_shape = tuple(getattr(x_var.aval, "shape", ()))
         if len(x_shape) == 0:
-            # JAX rejects scalar scan inputs at trace time
-            # (0-d arrays fail with IndexError on shape[0] access):
-            # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/control_flow/loops.py#L334
             raise AssertionError("scan xs must have a leading length dim")
-        length = x_shape[0]
-        slice_numel = len(x_indices) // length
-        # Union state_indices across all length slices for each element position
-        merged: list[IndexSet] = empty_index_sets(slice_numel)
-        for t in range(length):
-            for j in range(slice_numel):
-                merged[j] |= x_indices[t * slice_numel + j]
-        x_slice_indices.append(merged)
+        xs_slice_numels.append(len(xs_all_indices[i]) // x_shape[0])
 
-    # Fixed-point iteration on carry state_indices
-    def iterate(carry: list[list[IndexSet]]) -> list[list[IndexSet]]:
-        return prop_jaxpr(
-            body_jaxpr, const_inputs + carry + x_slice_indices, state_consts
+    # Determine iteration length from xs or params
+    if xs:
+        x0_shape = tuple(getattr(xs[0].aval, "shape", ()))
+        iter_length: int = x0_shape[0]
+    else:
+        iter_length = length
+
+    # Validate ys shapes
+    for y_var in ys:
+        y_shape = tuple(getattr(y_var.aval, "shape", ()))
+        if len(y_shape) == 0:
+            raise AssertionError("scan ys must have a leading length dim")
+
+    # Forward simulation: one prop_jaxpr call per timestep,
+    # threading carry forward and collecting per-timestep ys.
+    num_ys = len(ys)
+    ys_per_step: list[list[list[IndexSet]]] = [[] for _ in range(num_ys)]
+
+    time_range = range(iter_length - 1, -1, -1) if reverse else range(iter_length)
+    for t in time_range:
+        # Extract xs slice for this timestep
+        xs_slice_inputs: list[list[IndexSet]] = []
+        for i in range(len(xs)):
+            sn = xs_slice_numels[i]
+            xs_slice_inputs.append(xs_all_indices[i][t * sn : (t + 1) * sn])
+
+        body_output = prop_jaxpr(
+            body_jaxpr, const_inputs + carry_indices + xs_slice_inputs, state_consts
         )
 
-    body_output = fixed_point_loop(iterate, carry_indices, num_carry)
+        # Thread carry forward
+        carry_indices = body_output[:num_carry]
 
-    # Write carry_final state_indices
+        # Collect per-timestep ys slices (in iteration order, not time order)
+        y_slice_outputs = body_output[num_carry:]
+        for i in range(num_ys):
+            ys_per_step[i].append(y_slice_outputs[i])
+
+    # Write carry_final
     for outvar, out_indices in zip(carry_final, carry_indices, strict=True):
         state_indices[outvar] = out_indices
 
-    # Write ys state_indices by tiling each y_slice across the length dimension.
-    # Every iteration slice gets the same (overapproximate) state_indices.
-    y_slice_outputs = body_output[num_carry:]
-    for outvar, slice_indices in zip(ys, y_slice_outputs, strict=True):
-        y_shape = tuple(getattr(outvar.aval, "shape", ()))
-        if len(y_shape) == 0:
-            # JAX rejects scalar scan inputs at trace time
-            # (0-d arrays fail with IndexError on shape[0] access):
-            # https://github.com/jax-ml/jax/blob/jax-v0.9.0.1/jax/_src/lax/control_flow/loops.py#L334
-            raise AssertionError("scan ys must have a leading length dim")
-        length = y_shape[0]
-        # Tile: repeat the slice state_indices for each time step
-        state_indices[outvar] = slice_indices * length
+    # Write ys by concatenating per-timestep slices in time order.
+    # When reverse=True, iteration order is [n-1, n-2, ..., 0],
+    # so we reverse to get time order [0, 1, ..., n-1].
+    for i, outvar in enumerate(ys):
+        slices = ys_per_step[i]
+        if reverse:
+            slices = slices[::-1]
+        full_indices: list[IndexSet] = []
+        for s in slices:
+            full_indices.extend(s)
+        state_indices[outvar] = full_indices

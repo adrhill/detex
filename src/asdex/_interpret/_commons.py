@@ -459,14 +459,13 @@ def fixed_point_loop(
 ) -> list[list[IndexSet]]:
     """Run ``iterate_fn`` on carry index sets until they stabilize.
 
-    Used by ``while_loop`` and ``scan`` to propagate index sets
+    Used by ``while_loop`` to propagate index sets
     through loops via fixed-point iteration.
     Since index sets only grow and are bounded in size
     (i.e., monotone on a finite lattice),
     this always converges.
 
-    Mutates ``carry`` in place and returns the final body output
-    (needed by ``scan`` for ``y_slice`` extraction; ignored by ``while_loop``).
+    Mutates ``carry`` in place and returns the final body output.
     """
     # Carry sets may alias (shared objects from upstream handlers),
     # so copy them before in-place mutation via |=.

@@ -69,7 +69,7 @@ not every handler.
   (transpose, rev, slice, reshape, split, dynamic_slice).
 - **`fixed_point_loop(iterate_fn, carry, n_carry)`** —
   runs a body function on carry index sets until they stabilize.
-  Used by `while_loop` and `scan`.
+  Used by `while_loop`.
 - **`propagate_const_unary(eqn, state_consts, transform)`** —
   propagates a const value through a unary op by applying `transform`.
   Mirrors `propagate_const_binary` for the single-input case.

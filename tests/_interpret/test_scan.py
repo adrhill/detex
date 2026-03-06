@@ -11,17 +11,13 @@ import pytest
 from asdex import jacobian, jacobian_sparsity
 
 
-@pytest.mark.fallback
 @pytest.mark.control_flow
 def test_scan_cumulative_sum():
     """Cumulative sum: scalar carry accumulates over 1D xs.
 
     carry[t] = carry[t-1] + xs[t], so the final carry depends on all xs elements.
     ys[t] = carry[t], so ys[t] depends on xs[0..t].
-    We overapproximate: every ys element depends on all xs elements.
-
-    TODO(scan): the true pattern is lower-triangular (ys[t] depends on xs[0..t]).
-    The scan handler merges xs state_indices across all time steps.
+    The pattern is lower-triangular.
     """
 
     def f(x):
@@ -33,22 +29,25 @@ def test_scan_cumulative_sum():
         return ys
 
     result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
-    expected = np.ones((4, 4), dtype=int)
+    expected = np.array(
+        [
+            [1, 0, 0, 0],
+            [1, 1, 0, 0],
+            [1, 1, 1, 0],
+            [1, 1, 1, 1],
+        ],
+        dtype=int,
+    )
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.control_flow
 def test_scan_2d_carry_and_xs():
     """2D carry and xs: elementwise accumulation preserves structure.
 
     Each carry element accumulates only from the corresponding xs element,
-    so the pattern is block-diagonal.
-
-    TODO(scan): the true pattern is a progressive block-diagonal
+    so the pattern is a progressive block-diagonal
     where ys[t] depends only on xs[0..t] (per element).
-    The scan handler merges xs state_indices across all time steps,
-    making every ys slice depend on all xs slices.
     """
 
     def f(x):
@@ -62,14 +61,12 @@ def test_scan_2d_carry_and_xs():
         return ys.ravel()
 
     result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
-    # Overapproximate: all ys depend on all xs slices,
-    # but within each slice, element 0 depends on column 0 and element 1 on column 1.
     expected = np.array(
         [
-            [1, 0, 1, 0, 1, 0],
-            [0, 1, 0, 1, 0, 1],
-            [1, 0, 1, 0, 1, 0],
-            [0, 1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0],
+            [1, 0, 1, 0, 0, 0],
+            [0, 1, 0, 1, 0, 0],
             [1, 0, 1, 0, 1, 0],
             [0, 1, 0, 1, 0, 1],
         ],
@@ -161,17 +158,12 @@ def test_scan_with_closure_const():
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.control_flow
 def test_scan_reverse():
     """reverse=True scans xs in reverse order.
 
-    Sparsity pattern is the same as forward since we overapproximate
-    across all time steps.
-
-    TODO(scan): the true pattern is upper-triangular
-    (ys[t] depends on xs[t..n-1] when scanning in reverse).
-    The scan handler merges xs state_indices across all time steps.
+    ys[t] depends on xs[t..n-1] when scanning in reverse,
+    giving an upper-triangular pattern.
     """
 
     def f(x):
@@ -182,7 +174,14 @@ def test_scan_reverse():
         return ys
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    expected = np.ones((3, 3), dtype=int)
+    expected = np.array(
+        [
+            [1, 1, 1],
+            [0, 1, 1],
+            [0, 0, 1],
+        ],
+        dtype=int,
+    )
     np.testing.assert_array_equal(result, expected)
 
 
@@ -252,6 +251,7 @@ def test_scan_composition():
 
     Inner scan accumulates elementwise,
     outer scan accumulates the inner result.
+    ys[t] depends on xs[0..t] progressively.
     """
 
     def f(x):
@@ -268,11 +268,10 @@ def test_scan_composition():
         return ys.ravel()
 
     result = jacobian_sparsity(f, input_shape=8).todense().astype(int)
-    # All outputs depend on all inputs with matching element index (mod 2)
     expected = np.array(
         [
-            [1, 0, 1, 0, 1, 0, 1, 0],
-            [0, 1, 0, 1, 0, 1, 0, 1],
+            [1, 0, 1, 0, 0, 0, 0, 0],
+            [0, 1, 0, 1, 0, 0, 0, 0],
             [1, 0, 1, 0, 1, 0, 1, 0],
             [0, 1, 0, 1, 0, 1, 0, 1],
         ],
@@ -281,18 +280,13 @@ def test_scan_composition():
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.control_flow
 def test_scan_noncontiguous_input():
     """Scan with non-contiguous input dependencies.
 
     Only odd-indexed inputs are used via slicing before scan.
-
-    TODO(scan): the true pattern is progressive:
-    [[0,1,0,0,0,0],      # ys[0] = x[1]
-     [0,1,0,1,0,0],      # ys[1] = x[1] + x[3]
-     [0,1,0,1,0,1]]      # ys[2] = x[1] + x[3] + x[5]
-    The scan handler merges xs state_indices across all time steps.
+    The pattern is progressive:
+    ys[0] = x[1], ys[1] = x[1] + x[3], ys[2] = x[1] + x[3] + x[5].
     """
 
     def f(x):
@@ -307,8 +301,8 @@ def test_scan_noncontiguous_input():
     result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
     expected = np.array(
         [
-            [0, 1, 0, 1, 0, 1],
-            [0, 1, 0, 1, 0, 1],
+            [0, 1, 0, 0, 0, 0],
+            [0, 1, 0, 1, 0, 0],
             [0, 1, 0, 1, 0, 1],
         ],
         dtype=int,
@@ -381,18 +375,12 @@ def test_scan_pytree_xs():
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.control_flow
 def test_scan_pytree_ys():
     """Pytree ys: body returns a tuple as the y output.
 
-    Exercises multiple ys outvars in the body jaxpr.
-
-    TODO(scan): the true pattern has lower-triangular sums
-    and diagonal doubled:
-    [[1,0,0], [1,1,0], [1,1,1],  # sums[t] depends on x[0..t]
-     [1,0,0], [0,1,0], [0,0,1]]  # doubled[t] depends on x[t]
-    The scan handler merges xs state_indices across all time steps.
+    sums[t] = carry[t] depends on x[0..t] (lower-triangular).
+    doubled[t] = x[t] * 2.0 depends only on x[t] (diagonal).
     """
 
     def f(x):
@@ -404,19 +392,26 @@ def test_scan_pytree_ys():
         return jnp.concatenate([sums, doubled])
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    expected = np.ones((6, 3), dtype=int)
+    expected = np.array(
+        [
+            [1, 0, 0],
+            [1, 1, 0],
+            [1, 1, 1],
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+        ],
+        dtype=int,
+    )
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.control_flow
 def test_scan_length_one():
-    """Single iteration: carry state_indices equal init state_indices, ys has one slice.
+    """Single iteration: carry_out = carry_init + x, ys[0] = carry_init.
 
-    TODO(scan): the true pattern is:
-    [[1,0], [0,1],  # carry_out = zeros + x (precise)
-     [0,0], [0,0]]  # ys[0] = carry_init = zeros, no x state_indices
-    The scan handler merges carry state_indices into ys across iterations.
+    carry_init = zeros has no input deps,
+    so ys[0] = carry_init has no deps.
     """
 
     def f(x):
@@ -431,25 +426,20 @@ def test_scan_length_one():
         [
             [1, 0],
             [0, 1],
-            [1, 0],
-            [0, 1],
+            [0, 0],
+            [0, 0],
         ],
         dtype=int,
     )
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.control_flow
 def test_scan_scalar_carry_scalar_xs():
     """Simplest possible scan: scalar carry, scalar xs slices.
 
-    TODO(scan): the true pattern is:
-    [[1,1,1],      # carry_out = sum(x)
-     [0,0,0],      # ys[0] = carry_init = 0
-     [1,0,0],      # ys[1] = x[0]
-     [1,1,0]]      # ys[2] = x[0] + x[1]
-    The scan handler merges state_indices across all time steps.
+    carry_out = sum(x).
+    ys[t] = carry before adding xs[t], so ys[t] depends on xs[0..t-1].
     """
 
     def f(x):
@@ -460,7 +450,15 @@ def test_scan_scalar_carry_scalar_xs():
         return jnp.concatenate([jnp.array([carry_out]), ys])
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    expected = np.ones((4, 3), dtype=int)
+    expected = np.array(
+        [
+            [1, 1, 1],
+            [0, 0, 0],
+            [1, 0, 0],
+            [1, 1, 0],
+        ],
+        dtype=int,
+    )
     np.testing.assert_array_equal(result, expected)
 
 
@@ -490,17 +488,12 @@ def test_scan_unroll():
     np.testing.assert_array_equal(sp_unrolled, sp_default)
 
 
-@pytest.mark.fallback
 @pytest.mark.control_flow
 def test_scan_ys_independent_of_carry():
     """Ys depend only on xs, not on carry.
 
     Body: y = f(xi) only, carry is a counter.
-    ys should not depend on carry_init.
-
-    TODO(scan): the true pattern is diagonal per xs slice:
-    [[0,1,0,0], [0,0,1,0], [0,0,0,1]]
-    The scan handler merges xs state_indices across all time steps.
+    Each ys[t] depends only on xs[t].
     """
 
     def f(x):
@@ -516,9 +509,9 @@ def test_scan_ys_independent_of_carry():
     result = jacobian_sparsity(f, input_shape=4).todense().astype(int)
     expected = np.array(
         [
-            [0, 1, 1, 1],
-            [0, 1, 1, 1],
-            [0, 1, 1, 1],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1],
         ],
         dtype=int,
     )
@@ -558,7 +551,7 @@ def test_scan_carry_interaction_across_tuple():
     """Carry elements interact across iterations via tuple carry.
 
     One carry element feeds into another,
-    so state_indices spread through fixed-point iteration.
+    so index sets spread through forward propagation.
     """
 
     def f(x):
@@ -585,16 +578,13 @@ def test_scan_carry_interaction_across_tuple():
     np.testing.assert_array_equal(result, expected)
 
 
-@pytest.mark.fallback
 @pytest.mark.control_flow
 def test_scan_with_cond_inside():
     """Scan body contains a conditional branch.
 
     Exercises scan + cond interaction.
-
-    TODO(scan): the true pattern is lower-triangular
+    The pattern is lower-triangular
     (each ys[t] depends on xs[0..t]).
-    The scan handler merges xs state_indices across all time steps.
     """
 
     def f(x):
@@ -612,8 +602,14 @@ def test_scan_with_cond_inside():
         return ys
 
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
-    # All ys depend on all xs (carry accumulates across iterations)
-    expected = np.ones((3, 3), dtype=int)
+    expected = np.array(
+        [
+            [1, 0, 0],
+            [1, 1, 0],
+            [1, 1, 1],
+        ],
+        dtype=int,
+    )
     np.testing.assert_array_equal(result, expected)
 
 
