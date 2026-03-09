@@ -148,3 +148,18 @@ def test_cond_closure_captured_index():
         dtype=int,
     )
     np.testing.assert_array_equal(result, expected)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.control_flow
+def test_cond_zero_size_output():
+    """Cond returning a zero-sized array produces an empty Jacobian."""
+
+    def f(x):
+        return jax.lax.cond(True, lambda y: y[:0], lambda y: y[:0], x)
+
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0

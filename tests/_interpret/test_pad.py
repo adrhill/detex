@@ -403,3 +403,19 @@ def test_pad_in_hessian():
         ]
     )
     np.testing.assert_array_equal(H, expected)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.array_ops
+def test_pad_zero_size_input():
+    """Padding a zero-sized array produces output from padding value only."""
+
+    def f(x):
+        return jnp.pad(x[:0], (1, 1))
+
+    result = jacobian_sparsity(f, input_shape=3)
+    # Output has 2 elements (low pad + high pad), none depend on input.
+    assert result.shape == (2, 3)
+    assert result.nnz == 0

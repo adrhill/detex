@@ -172,3 +172,18 @@ def test_dynamic_update_slice_2d():
     expected[6, 4] = 1  # (1,2) ← x[4]
     expected[7, 5] = 1  # (1,3) ← x[5]
     np.testing.assert_array_equal(result, expected)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.array_ops
+def test_dynamic_slice_zero_size():
+    """Dynamic-slicing to a zero-sized output produces an empty Jacobian."""
+
+    def f(x):
+        return lax.dynamic_slice(x[:0], (0,), (0,))
+
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0

@@ -272,3 +272,18 @@ def test_rev_then_rev_different_dims():
     result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
     expected = _rev_jacobian(shape, (0, 1))
     np.testing.assert_array_equal(result, expected)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.array_ops
+def test_rev_zero_size():
+    """Reversing a zero-sized array produces an empty Jacobian."""
+
+    def f(x):
+        return lax.rev(x[:0], dimensions=(0,))
+
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0

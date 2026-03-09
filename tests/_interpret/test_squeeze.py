@@ -78,3 +78,18 @@ def test_squeeze_const_chain_with_select_n():
         dtype=int,
     )
     np.testing.assert_array_equal(result, expected)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.array_ops
+def test_squeeze_zero_size():
+    """Squeezing a zero-sized array with a size-1 dimension."""
+
+    def f(x):
+        return jnp.squeeze(x[:0].reshape(0, 1), axis=1)
+
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0

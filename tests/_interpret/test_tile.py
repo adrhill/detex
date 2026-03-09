@@ -171,3 +171,18 @@ def test_tile_matches_jax_jacobian():
 
     result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
     np.testing.assert_array_equal(result, dense_pattern)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.array_ops
+def test_tile_zero_size():
+    """Tiling a zero-sized array produces an empty Jacobian."""
+
+    def f(x):
+        return jnp.tile(x[:0], 2)
+
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0

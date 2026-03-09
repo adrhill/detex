@@ -85,3 +85,18 @@ def test_slice_mixed_with_constant():
         dtype=int,
     )
     np.testing.assert_array_equal(result, expected)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.array_ops
+def test_slice_to_zero_size():
+    """Slicing to an empty range produces a zero-row Jacobian."""
+
+    def f(x):
+        return x[:0]
+
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0

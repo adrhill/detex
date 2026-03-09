@@ -699,3 +699,22 @@ def test_scalar_dot_zero_skipping():
     result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
     expected = np.array([[1, 0, 1]], dtype=int)
     np.testing.assert_array_equal(result, expected)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.array_ops
+def test_dot_zero_contraction():
+    """Dot product over a zero-length contraction dimension.
+
+    Contracting over size 0 produces zero-valued output
+    with no dependencies on the inputs.
+    """
+
+    def f(x):
+        return jnp.dot(x[:0], jnp.zeros((0, 2)))
+
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (2, 3)
+    assert result.nnz == 0

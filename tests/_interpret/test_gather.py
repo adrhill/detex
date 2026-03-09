@@ -824,3 +824,20 @@ def test_gather_batching_dims():
     # out[0] = arr[0, 1] = x[1], out[1] = arr[1, 0] = x[3].
     expected = _perm_matrix(2, 6, [1, 3])
     np.testing.assert_array_equal(result, expected)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.bug
+def test_gather_zero_size_indices():
+    """Gathering with empty indices from a zero-sized array crashes.
+
+    ``np.ravel_multi_index`` raises when the shape has zero entries.
+    """
+
+    def f(x):
+        return x[:0][jnp.array([], dtype=int)]
+
+    with pytest.raises(ValueError, match="zero"):
+        jacobian_sparsity(f, input_shape=3)

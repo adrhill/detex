@@ -410,3 +410,18 @@ def test_reshape_with_dimensions_const_propagation():
         dtype=int,
     )
     np.testing.assert_array_equal(result, expected)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.array_ops
+def test_reshape_zero_size():
+    """Reshaping a zero-sized array preserves the empty dependency list."""
+
+    def f(x):
+        return lax.reshape(x[:0], (0,))
+
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0

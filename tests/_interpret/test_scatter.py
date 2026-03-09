@@ -786,3 +786,21 @@ def test_scatter_dynamic_too_many_combinations():
     n_out, n_in = result.shape
     # Conservative: every output depends on every input.
     assert result.sum() == n_out * n_in
+
+
+# Size-0 dimension
+
+
+@pytest.mark.array_ops
+def test_scatter_zero_size_update():
+    """Scatter with a zero-length update leaves the operand unchanged.
+
+    The output depends only on the original array, not the empty update.
+    """
+
+    def f(x):
+        return x.at[:0].set(jnp.zeros(0))
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)

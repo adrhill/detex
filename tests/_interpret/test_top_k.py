@@ -161,3 +161,19 @@ def test_top_k_values_used_in_arithmetic():
     result = jacobian_sparsity(f, input_shape=6).todense().astype(int)
     expected = _top_k_values_jacobian((2, 3), 2)
     np.testing.assert_array_equal(result, expected)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.array_ops
+def test_top_k_zero_size():
+    """top_k with k=0 on a zero-sized array produces an empty Jacobian."""
+
+    def f(x):
+        vals, _ = lax.top_k(x[:0], 0)
+        return vals
+
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0

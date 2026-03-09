@@ -118,3 +118,22 @@ def test_all_constants_no_input_dependency():
     # Output has no dependency on input at all
     expected = np.zeros((3, 2), dtype=int)
     np.testing.assert_array_equal(result, expected)
+
+
+# Size-0 dimension
+
+
+@pytest.mark.array_ops
+def test_concatenate_with_zero_sized():
+    """Concatenating a zero-sized slice with a normal array.
+
+    The zero-sized part contributes no elements;
+    the result matches the non-empty input.
+    """
+
+    def f(x):
+        return jnp.concatenate([x, x[:0]])
+
+    result = jacobian_sparsity(f, input_shape=3).todense().astype(int)
+    expected = np.eye(3, dtype=int)
+    np.testing.assert_array_equal(result, expected)
