@@ -1,5 +1,8 @@
 # asdex
 
+## Version `v0.1.4`
+* ![Bugfix][badge-bugfix] Handle zero-sized arrays in `broadcast_in_dim`, `sort`, and `gather` ([#88])
+
 ## Version `v0.1.3`
 * ![Feature][badge-feature] Per-timestep forward simulation in `scan` handler ([#87])
 * ![Feature][badge-feature] Per-element branch selection in `select_n` for const predicates ([#85])
@@ -27,6 +30,7 @@
 * ![Feature][badge-feature] Initial release ([#70])
 
 
+[#88]: https://github.com/adrhill/asdex/pull/88
 [#83]: https://github.com/adrhill/asdex/pull/83
 [#84]: https://github.com/adrhill/asdex/pull/84
 [#85]: https://github.com/adrhill/asdex/pull/85
