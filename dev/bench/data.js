@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772815896183,
+  "lastUpdate": 1773054138561,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -9870,6 +9870,114 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00057220553722714",
             "extra": "mean: 32.093332533333786 msec\nrounds: 30"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "141c3197fff2cff4f55f9e364cd0a2419288e1c4",
+          "message": "fix(interpret): handle zero-sized arrays (#88)\n\n* test(interpret): add size-0 dimension tests across all handlers\n\nDocument zero-sized array behavior for 16 handler test files.\nThree handlers crash on zero-sized inputs (`broadcast_in_dim`,\n`sort`, `gather`) — these are marked `@pytest.mark.bug`.\nThe remaining 13 handlers already handle them correctly.\n\nCovers issue #86.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix(interpret): handle zero-sized arrays in `broadcast_in_dim`, `sort`, and `gather` (#86)\n\nAdd early returns when the output has zero elements,\navoiding `np.ravel_multi_index` and `np.reshape` crashes\non zero-sized shapes.\nUpdate the corresponding tests from `@pytest.mark.bug`\nwith `pytest.raises` to `@pytest.mark.array_ops`\nasserting correct behavior.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* claude: document zero-sized array handling in `CLAUDE.md` files and `add-handler` skill\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-09T12:01:42+01:00",
+          "tree_id": "4fc5148634ecb5dbe47b155cf0868144e7a2c9d7",
+          "url": "https://github.com/adrhill/asdex/commit/141c3197fff2cff4f55f9e364cd0a2419288e1c4"
+        },
+        "date": 1773054137942,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 728.9306331409772,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0050770624839236965",
+            "extra": "mean: 1.3718726508872037 msec\nrounds: 169"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3332.3513708310184,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000011254150979272422",
+            "extra": "mean: 300.08840266763974 usec\nrounds: 2024"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 62.596373376453116,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00041681992317460384",
+            "extra": "mean: 15.975366399999302 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 115.32695988885986,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002819503038887047",
+            "extra": "mean: 8.670999399998891 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 20.889705654717226,
+            "unit": "iter/sec",
+            "range": "stddev: 0.017559439281053288",
+            "extra": "mean: 47.87046866666521 msec\nrounds: 18"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 249.18423649807866,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000037619985067428445",
+            "extra": "mean: 4.013094945545284 msec\nrounds: 202"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 31.673864203898614,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005541460009474547",
+            "extra": "mean: 31.571771399995896 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 30.798537710068917,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014841332418883454",
+            "extra": "mean: 32.46907399999941 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 84.9212614309976,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0164122404387954",
+            "extra": "mean: 11.775614058824898 msec\nrounds: 51"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3323.9181838132763,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000009859822209120436",
+            "extra": "mean: 300.8497636523582 usec\nrounds: 2234"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 26.51040711629109,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005322470268303999",
+            "extra": "mean: 37.72103520000201 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 26.532121661912132,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005651366917499184",
+            "extra": "mean: 37.69016337036996 msec\nrounds: 27"
           }
         ]
       }
