@@ -34,6 +34,9 @@ What is the Jacobian structure (permutation, selection, block-diagonal, etc.)?
 - Follow the handler docstring style from `_interpret/CLAUDE.md`.
 - If the primitive preserves or predictably transforms input values,
   propagate `const_vals` so downstream handlers can stay precise.
+- Handle zero-sized arrays: if the output has zero elements,
+  return `[]` early before any coordinate-mapping logic
+  that would crash on zero-sized shapes.
 
 ### 3. Wire up dispatch
 
@@ -77,7 +80,7 @@ Try to break the implementation by testing inputs the handler might not expect:
 
 - **Dimensionality**: 1D, 2D, 3D, and higher — if any are missing, add them.
 - **Asymmetric shapes**: always use non-square shapes (e.g. `(3,4)` not `(4,4)`) so that dimension transposition bugs are caught.
-- **Degenerate shapes**: size-0 dimensions, size-1 dimensions, scalar inputs (where the primitive supports them).
+- **Degenerate shapes**: size-0 dimensions (must not crash, should return empty index sets), size-1 dimensions, scalar inputs (where the primitive supports them).
 - **Boundary parameters**: empty parameter lists, all-dimensions, single-dimension, negative indices (if applicable).
 - **Compositions**: the primitive chained with itself (e.g. double-reverse, transpose-of-transpose) or with related ops.
 - **Non-contiguous patterns**: inputs where dependencies are not simply `{i}` per element (e.g. from a prior broadcast or reduction) to verify `.copy()` and set merging behave correctly.

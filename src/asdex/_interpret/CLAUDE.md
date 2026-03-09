@@ -120,6 +120,14 @@ and **consumers** use them to tighten sparsity
 **Invariant**: if bounds are unavailable (`atom_value_bounds` returns `None`),
 the handler must assume the worst and return a conservative pattern.
 
+## Zero-Sized Arrays
+
+Handlers must handle zero-sized arrays (shapes containing a 0 dimension) gracefully.
+If the output has zero elements, the handler should return an empty index set list `[]`.
+Add an early return before any coordinate-mapping logic
+(`np.ravel_multi_index`, `np.indices`, `np.reshape` into the array shape)
+that would crash on zero-sized shapes.
+
 ## Adding a New Handler
 
 1. Write `prop_<name>(eqn, state_indices, ...)` in the appropriate module.

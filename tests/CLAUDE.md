@@ -60,7 +60,9 @@ Handler test files (`_interpret/test_*.py`) should cover:
 - **Non-square shapes**: always use asymmetric shapes (e.g. `(3,4)` not `(4,4)`) so that dimension transposition bugs are caught.
 - **Multiple dimensionalities**: 1D, 2D, 3D, 4D where applicable.
 - **Broadcasting shapes**: size-1 dimensions that broadcast (e.g. `(3,4)` op `(3,1)`).
-- **Degenerate shapes**: size-0 dimensions, size-1 dimensions, scalar inputs (where the primitive supports them).
+- **Degenerate shapes**: size-0 dimensions (zero-element arrays), size-1 dimensions, scalar inputs (where the primitive supports them).
+  Size-0 tests verify the handler doesn't crash on empty arrays
+  and returns an empty index set list.
 - **Edge cases**: identity/trivial parameters, boundary parameter values.
 - **Real-world usage patterns**: `jnp` functions that lower to the primitive under test.
 - **Jacobian verification**: for at least one test per dimensionality, verify precision by comparing the detected pattern against `(np.abs(jax.jacobian(f)(x)) > 1e-10)` using `assert_array_equal`.
