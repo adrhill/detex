@@ -96,9 +96,9 @@ def test_broadcast_input_add_constant():
 # Size-0 dimension
 
 
-@pytest.mark.bug
+@pytest.mark.array_ops
 def test_broadcast_size_zero_dim():
-    """Broadcasting a zero-sized array crashes in np.ravel_multi_index.
+    """Broadcasting a zero-sized array produces an empty Jacobian.
 
     Zero-sized inputs have no elements, so output index sets should be empty.
     """
@@ -106,19 +106,21 @@ def test_broadcast_size_zero_dim():
     def f(x):
         return jnp.broadcast_to(x[:0].reshape(0, 1), (0, 3)).flatten()
 
-    with pytest.raises(ValueError, match="zero"):
-        jacobian_sparsity(f, input_shape=3)
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0
 
 
-@pytest.mark.bug
+@pytest.mark.array_ops
 def test_broadcast_expand_dims_zero():
-    """expand_dims on a zero-sized array lowers to broadcast_in_dim and crashes.
+    """expand_dims on a zero-sized array produces an empty Jacobian.
 
-    This is the minimal reproducer from GitHub issue #86.
+    Reproducer from GitHub issue #86.
     """
 
     def f(x):
         return jnp.expand_dims(x[:0], axis=1).flatten()
 
-    with pytest.raises(ValueError, match="zero"):
-        jacobian_sparsity(f, input_shape=3)
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0

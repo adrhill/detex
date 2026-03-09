@@ -829,15 +829,13 @@ def test_gather_batching_dims():
 # Size-0 dimension
 
 
-@pytest.mark.bug
+@pytest.mark.array_ops
 def test_gather_zero_size_indices():
-    """Gathering with empty indices from a zero-sized array crashes.
-
-    ``np.ravel_multi_index`` raises when the shape has zero entries.
-    """
+    """Gathering from a zero-sized array produces an empty Jacobian."""
 
     def f(x):
         return x[:0][jnp.array([], dtype=int)]
 
-    with pytest.raises(ValueError, match="zero"):
-        jacobian_sparsity(f, input_shape=3)
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0

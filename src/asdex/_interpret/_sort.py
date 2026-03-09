@@ -49,6 +49,11 @@ def prop_sort(eqn: JaxprEqn, state_indices: StateIndices) -> None:
     in_shape = atom_shape(eqn.invars[0])
     total = atom_numel(eqn.invars[0])
 
+    if total == 0:
+        for outvar in eqn.outvars:
+            state_indices[outvar] = []
+        return
+
     # groups[b] holds the flat indices for batch slice b.
     groups = np.moveaxis(np.arange(total).reshape(in_shape), dim, -1).reshape(
         -1, in_shape[dim]

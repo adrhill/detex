@@ -68,10 +68,14 @@ def prop_broadcast_in_dim(
     if state_bounds is not None:
         _propagate_bounds_broadcast(eqn, state_consts, state_bounds)
 
+    out_size = numel(out_shape)
+    if out_size == 0:
+        state_indices[out_var] = []
+        return
+
     # Scalars have a single dependency set shared by all output elements,
     # so we can skip the coordinate mapping below and just replicate it.
     # Early return avoids building the np.indices grid for this common case.
-    out_size = numel(out_shape)
     if len(in_indices) == 1:
         state_indices[out_var] = [in_indices[0]] * out_size
         return

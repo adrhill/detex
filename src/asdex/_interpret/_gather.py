@@ -154,6 +154,10 @@ def prop_gather(
     operand_shape = atom_shape(eqn.invars[0])
     out_size = atom_numel(eqn.outvars[0])
 
+    if out_size == 0:
+        state_indices[eqn.outvars[0]] = []
+        return
+
     concrete_indices = atom_const_val(eqn.invars[1], state_consts)
     if concrete_indices is not None:
         flat_map = _gather_flat_map(concrete_indices, eqn, operand_shape)

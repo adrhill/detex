@@ -223,16 +223,13 @@ def test_sort_non_contiguous_input():
 # Size-0 dimension
 
 
-@pytest.mark.bug
+@pytest.mark.array_ops
 def test_sort_zero_size():
-    """Sorting a zero-sized array crashes in the sort handler.
-
-    Zero-sized arrays have no elements to sort,
-    so the result should be an empty Jacobian.
-    """
+    """Sorting a zero-sized array produces an empty Jacobian."""
 
     def f(x):
         return jnp.sort(x[:0])
 
-    with pytest.raises(ValueError, match="reshape"):
-        jacobian_sparsity(f, input_shape=3)
+    result = jacobian_sparsity(f, input_shape=3)
+    assert result.shape == (0, 3)
+    assert result.nnz == 0
