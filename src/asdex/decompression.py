@@ -569,6 +569,10 @@ def _value_and_compute_hvps(
                 ).ravel()
 
         case "rev_over_rev":
+            # TODO: f(x) is redundant with the forward pass inside grad(f).
+            # Using value_and_grad + vjp would avoid it, but inflates every
+            # VJP application with dead zero-cotangents for the value path.
+            # Revisit if XLA reliably DCEs the zero branch.
             value = jnp.asarray(f(x))
             _, vjp_fn = jax.vjp(jax.grad(f), x)
 

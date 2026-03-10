@@ -15,6 +15,8 @@ from asdex import (
     jacobian_coloring_from_sparsity,
     jacobian_from_coloring,
     jacobian_sparsity,
+    value_and_hessian_from_coloring,
+    value_and_jacobian_from_coloring,
 )
 from asdex.coloring import color_rows
 
@@ -100,6 +102,18 @@ def test_heat_materialization(benchmark):
 
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="heat_equation")
+def test_heat_value_and_materialization(benchmark):
+    """Heat equation: value_and VJP computation (with known sparsity/colors)."""
+    x = np.ones(N)
+    coloring = jacobian_coloring_from_sparsity(
+        jacobian_sparsity(heat_equation_rhs, N), mode="rev"
+    )
+    val_jac_fn = value_and_jacobian_from_coloring(heat_equation_rhs, coloring)
+    benchmark(val_jac_fn, x)
+
+
+@pytest.mark.dashboard
+@pytest.mark.benchmark(group="heat_equation")
 def test_heat_end_to_end(benchmark):
     """Heat equation: full pipeline."""
     x = np.ones(N)
@@ -139,6 +153,18 @@ def test_convnet_materialization(benchmark):
 
 @pytest.mark.dashboard
 @pytest.mark.benchmark(group="convnet")
+def test_convnet_value_and_materialization(benchmark):
+    """ConvNet: value_and VJP computation (with known sparsity/colors)."""
+    x = np.ones(N)
+    coloring = jacobian_coloring_from_sparsity(
+        jacobian_sparsity(convnet, N), mode="rev"
+    )
+    val_jac_fn = value_and_jacobian_from_coloring(convnet, coloring)
+    benchmark(val_jac_fn, x)
+
+
+@pytest.mark.dashboard
+@pytest.mark.benchmark(group="convnet")
 def test_convnet_end_to_end(benchmark):
     """ConvNet: full pipeline."""
     x = np.ones(N)
@@ -173,6 +199,17 @@ def test_rosenbrock_materialization(benchmark):
     coloring = hessian_coloring_from_sparsity(sparsity)
     hess_fn = hessian_from_coloring(rosenbrock, coloring)
     benchmark(hess_fn, x)
+
+
+@pytest.mark.dashboard
+@pytest.mark.benchmark(group="rosenbrock")
+def test_rosenbrock_value_and_materialization(benchmark):
+    """Rosenbrock: value_and HVP computation (with known sparsity/colors)."""
+    x = np.ones(N)
+    sparsity = hessian_sparsity(rosenbrock, N)
+    coloring = hessian_coloring_from_sparsity(sparsity)
+    val_hess_fn = value_and_hessian_from_coloring(rosenbrock, coloring)
+    benchmark(val_hess_fn, x)
 
 
 @pytest.mark.dashboard
