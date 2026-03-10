@@ -16,6 +16,10 @@ from asdex.decompression import (
     hessian_from_coloring,
     jacobian,
     jacobian_from_coloring,
+    value_and_hessian,
+    value_and_hessian_from_coloring,
+    value_and_jacobian,
+    value_and_jacobian_from_coloring,
 )
 from asdex.detection import hessian_sparsity, jacobian_sparsity
 from asdex.modes import HessianMode, JacobianMode
@@ -45,4 +49,8 @@ __all__ = [
     "jacobian_coloring_from_sparsity",
     "jacobian_from_coloring",
     "jacobian_sparsity",
+    "value_and_hessian",
+    "value_and_hessian_from_coloring",
+    "value_and_jacobian",
+    "value_and_jacobian_from_coloring",
 ]

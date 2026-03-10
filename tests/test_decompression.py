@@ -18,6 +18,10 @@ from asdex import (
     jacobian_coloring_from_sparsity,
     jacobian_from_coloring,
     jacobian_sparsity,
+    value_and_hessian,
+    value_and_hessian_from_coloring,
+    value_and_jacobian,
+    value_and_jacobian_from_coloring,
 )
 
 # Reference tests against jax.jacobian (row coloring, default)
@@ -763,3 +767,166 @@ def test_hessian_from_coloring_rejects_jacobian_coloring():
     coloring = jacobian_coloring(jax.grad(f), input_shape=x.shape)
     with pytest.raises(ValueError, match="Expected 'fwd_over_rev'"):
         hessian_from_coloring(f, coloring)(x)
+
+
+# value_and_jacobian tests
+
+
+@pytest.mark.jacobian
+@pytest.mark.parametrize("mode", ["fwd", "rev"])
+def test_value_and_jacobian_diagonal(mode):
+    """value_and_jacobian returns correct value and Jacobian."""
+
+    def f(x):
+        return x**2
+
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    value, jac = value_and_jacobian(f, input_shape=x.shape, mode=mode)(x)
+
+    assert_allclose(value, f(x), rtol=1e-5)
+    assert_allclose(jac.todense(), jax.jacobian(f)(x), rtol=1e-5)
+
+
+@pytest.mark.jacobian
+@pytest.mark.parametrize("mode", ["fwd", "rev"])
+def test_value_and_jacobian_mixed(mode):
+    """value_and_jacobian works on mixed sparsity pattern."""
+
+    def f(x):
+        return jnp.array([x[0] ** 2, 2 * x[0] * x[1] ** 2, jnp.sin(x[2])])
+
+    x = np.array([1.0, 2.0, 0.5])
+    value, jac = value_and_jacobian(f, input_shape=x.shape, mode=mode)(x)
+
+    assert_allclose(value, f(x), rtol=1e-5)
+    assert_allclose(jac.todense(), jax.jacobian(f)(x), rtol=1e-5)
+
+
+@pytest.mark.jacobian
+@pytest.mark.parametrize("mode", ["fwd", "rev"])
+def test_value_and_jacobian_from_coloring(mode):
+    """value_and_jacobian_from_coloring works with pre-computed coloring."""
+
+    def f(x):
+        return (x[1:] - x[:-1]) ** 2
+
+    x = np.array([1.0, 2.0, 4.0, 3.0, 5.0])
+    coloring = jacobian_coloring_from_sparsity(
+        jacobian_sparsity(f, input_shape=5), mode=mode
+    )
+    value, jac = value_and_jacobian_from_coloring(f, coloring)(x)
+
+    assert_allclose(value, f(x), rtol=1e-5)
+    assert_allclose(jac.todense(), jax.jacobian(f)(x), rtol=1e-5)
+
+
+@pytest.mark.jacobian
+@pytest.mark.parametrize("mode", ["fwd", "rev"])
+def test_value_and_jacobian_zero(mode):
+    """value_and_jacobian handles constant functions (zero Jacobian)."""
+
+    def f(x):
+        return jnp.array([1.0, 2.0, 3.0])
+
+    x = np.array([1.0, 2.0])
+    value, jac = value_and_jacobian(f, input_shape=x.shape, mode=mode)(x)
+
+    assert_allclose(value, f(x), rtol=1e-5)
+    assert jac.shape == (3, 2)
+
+
+@pytest.mark.jacobian
+@pytest.mark.parametrize("mode", ["fwd", "rev"])
+def test_value_and_jacobian_empty_output(mode):
+    """value_and_jacobian handles functions with no outputs."""
+
+    def f(x):
+        return jnp.array([])
+
+    x = np.array([1.0, 2.0, 3.0])
+    value, jac = value_and_jacobian(f, input_shape=x.shape, mode=mode)(x)
+
+    assert_allclose(value, f(x), rtol=1e-5)
+    assert jac.shape == (0, 3)
+
+
+# value_and_hessian tests
+
+
+@pytest.mark.hessian
+@pytest.mark.parametrize("mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_value_and_hessian_quadratic(mode):
+    """value_and_hessian returns correct value and Hessian."""
+
+    def f(x):
+        return jnp.sum(x**2)
+
+    x = np.array([1.0, 2.0, 3.0])
+    value, hess = value_and_hessian(f, input_shape=x.shape, mode=mode)(x)
+
+    assert_allclose(value, f(x), rtol=1e-5)
+    assert_allclose(hess.todense(), jax.hessian(f)(x), rtol=1e-5)
+
+
+@pytest.mark.hessian
+@pytest.mark.parametrize("mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_value_and_hessian_rosenbrock(mode):
+    """value_and_hessian works on Rosenbrock function."""
+
+    def f(x):
+        return jnp.sum((1 - x[:-1]) ** 2 + 100 * (x[1:] - x[:-1] ** 2) ** 2)
+
+    x = np.array([1.0, 2.0, 0.5, -1.0])
+    value, hess = value_and_hessian(f, input_shape=x.shape, mode=mode)(x)
+
+    assert_allclose(value, f(x), rtol=1e-5)
+    assert_allclose(hess.todense(), jax.hessian(f)(x), rtol=1e-5)
+
+
+@pytest.mark.hessian
+@pytest.mark.parametrize("mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_value_and_hessian_from_coloring(mode):
+    """value_and_hessian_from_coloring works with pre-computed coloring."""
+
+    def f(x):
+        return x[0] ** 2 * x[1] + jnp.sin(x[1]) * x[2] + x[2] ** 3
+
+    x = np.array([1.0, 2.0, 0.5])
+    coloring = hessian_coloring_from_sparsity(
+        hessian_sparsity(f, input_shape=3), mode=mode
+    )
+    value, hess = value_and_hessian_from_coloring(f, coloring)(x)
+
+    assert_allclose(value, f(x), rtol=1e-5)
+    assert_allclose(hess.todense(), jax.hessian(f)(x), rtol=1e-5)
+
+
+@pytest.mark.hessian
+@pytest.mark.parametrize("mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_value_and_hessian_zero(mode):
+    """value_and_hessian handles linear functions (zero Hessian)."""
+
+    def f(x):
+        return jnp.sum(x)
+
+    x = np.array([1.0, 2.0, 3.0])
+    value, hess = value_and_hessian(f, input_shape=x.shape, mode=mode)(x)
+
+    assert_allclose(value, f(x), rtol=1e-5)
+    assert hess.shape == (3, 3)
+    assert hess.nse == 0
+
+
+@pytest.mark.hessian
+@pytest.mark.parametrize("mode", ["fwd_over_rev", "rev_over_fwd", "rev_over_rev"])
+def test_value_and_hessian_squeeze(mode):
+    """value_and_hessian auto-squeezes functions returning shape (1,)."""
+
+    def f(x):
+        return jnp.sum(x**2, keepdims=True)
+
+    x = np.array([1.0, 2.0, 3.0])
+    value, hess = value_and_hessian(f, input_shape=x.shape, mode=mode)(x)
+
+    assert_allclose(value, jnp.sum(x**2), rtol=1e-5)
+    assert_allclose(hess.todense(), jax.hessian(lambda x: jnp.sum(x**2))(x), rtol=1e-5)
