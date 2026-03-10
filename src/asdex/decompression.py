@@ -65,7 +65,7 @@ def value_and_jacobian(
     """Detect sparsity, color, and return a function computing value and sparse Jacobian.
 
     Like [`jacobian`][asdex.jacobian],
-    but also returns the function value ``f(x)``
+    but also returns the primal value ``f(x)``
     without an extra forward pass.
 
     Args:
@@ -135,7 +135,7 @@ def value_and_hessian(
     """Detect sparsity, color, and return a function computing value and sparse Hessian.
 
     Like [`hessian`][asdex.hessian],
-    but also returns the function value ``f(x)``
+    but also returns the primal value ``f(x)``
     without an extra forward pass.
 
     If ``f`` returns a squeezable shape like ``(1,)`` or ``(1, 1)``,
@@ -225,7 +225,7 @@ def value_and_jacobian_from_coloring(
     """Build a function computing value and sparse Jacobian from a pre-computed coloring.
 
     Like [`jacobian_from_coloring`][asdex.jacobian_from_coloring],
-    but also returns ``f(x)`` without an extra forward pass.
+    but also returns the primal value ``f(x)`` without an extra forward pass.
 
     Args:
         f: Function taking an array and returning an array.
@@ -252,7 +252,7 @@ def value_and_hessian_from_coloring(
     """Build a function computing value and sparse Hessian from a pre-computed coloring.
 
     Like [`hessian_from_coloring`][asdex.hessian_from_coloring],
-    but also returns ``f(x)`` without an extra forward pass.
+    but also returns the primal value ``f(x)`` without an extra forward pass.
 
     If ``f`` returns a squeezable shape like ``(1,)`` or ``(1, 1)``,
     it is automatically squeezed to scalar.

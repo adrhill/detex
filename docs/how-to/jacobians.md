@@ -38,6 +38,12 @@ The Jacobian is always returned as a 2D matrix
 of shape \((m, n)\) where \(n\) is the total number of input elements
 and \(m\) is the total number of output elements
 
+## Getting the Primal Value Too
+
+Use [`value_and_jacobian`](../reference/index.md#asdex.value_and_jacobian)
+or [`value_and_jacobian_from_coloring`](../reference/index.md#asdex.value_and_jacobian_from_coloring)
+to get `(f(x), J)` without a redundant forward pass.
+
 ## Precomputing the Colored Pattern
 
 For more control,
