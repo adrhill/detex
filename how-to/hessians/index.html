@@ -595,6 +595,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#getting-the-primal-value-too" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting the Primal Value Too
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#precomputing-the-colored-pattern" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1178,6 +1189,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#getting-the-primal-value-too" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting the Primal Value Too
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#precomputing-the-colored-pattern" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1302,6 +1324,10 @@ The result is a JAX <a href="https://docs.jax.dev/en/latest/jax.experimental.spa
 <p><code>asdex</code> supports multi-dimensional input arrays.
 The Hessian is always returned as a 2D matrix
 of shape <span class="arithmatex">\((n, n)\)</span> where <span class="arithmatex">\(n\)</span> is the total number of input elements.</p>
+<h2 id="getting-the-primal-value-too">Getting the Primal Value Too<a class="headerlink" href="#getting-the-primal-value-too" title="Permanent link">&para;</a></h2>
+<p>Use <a href="../../reference/#asdex.value_and_hessian"><code>value_and_hessian</code></a>
+or <a href="../../reference/#asdex.value_and_hessian_from_coloring"><code>value_and_hessian_from_coloring</code></a>
+to get <code>(f(x), H)</code> without a redundant forward pass.</p>
 <h2 id="precomputing-the-colored-pattern">Precomputing the Colored Pattern<a class="headerlink" href="#precomputing-the-colored-pattern" title="Permanent link">&para;</a></h2>
 <p>For more control,
 precompute the coloring explicitly:</p>

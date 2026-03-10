@@ -909,10 +909,32 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#asdex.value_and_jacobian" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        value_and_jacobian
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#asdex.jacobian_from_coloring" class="md-nav__link">
     <span class="md-ellipsis">
       
         jacobian_from_coloring
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asdex.value_and_jacobian_from_coloring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        value_and_jacobian_from_coloring
       
     </span>
   </a>
@@ -1178,10 +1200,32 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#asdex.value_and_jacobian" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        value_and_jacobian
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#asdex.jacobian_from_coloring" class="md-nav__link">
     <span class="md-ellipsis">
       
         jacobian_from_coloring
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#asdex.value_and_jacobian_from_coloring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        value_and_jacobian_from_coloring
       
     </span>
   </a>
@@ -1414,6 +1458,140 @@ where <code>n = x.size</code> and <code>m = prod(output_shape)</code>.</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="asdex.value_and_jacobian" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">value_and_jacobian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">input_shape</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+<a href="#asdex.value_and_jacobian" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+        <p>Detect sparsity, color, and return a function computing value and sparse Jacobian.</p>
+<p>Like <a class="autorefs autorefs-internal" title="asdex.jacobian(f, input_shape, *, mode=None, symmetric=False)" href="#asdex.jacobian"><code>jacobian</code></a>,
+but also returns the primal value <code>f(x)</code>
+without an extra forward pass.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>f</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="numpy.typing.ArrayLike">ArrayLike</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Function taking an array and returning an array.
+Input and output may be multi-dimensional.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>input_shape</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | <span title="tuple">tuple</span>[<span title="int">int</span>, ...]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Shape of the input array.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>mode</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.JacobianMode = Literal['fwd', 'rev']
+
+  
+      module-attribute
+   (asdex.modes.JacobianMode)" href="#asdex.JacobianMode">JacobianMode</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>AD mode.
+<code>"fwd"</code> uses JVPs (forward-mode AD),
+<code>"rev"</code> uses VJPs (reverse-mode AD).
+<code>None</code> picks whichever of fwd/rev needs fewer colors.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>symmetric</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to use symmetric (star) coloring.
+Requires a square Jacobian.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="tuple">tuple</span>[<span title="jax.Array">Array</span>, <span title="jax.experimental.sparse.BCOO">BCOO</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A function that takes an input array and returns
+<code>(f(x), J)</code> where <code>J</code> is the sparse Jacobian as BCOO
+of shape <code>(m, n)</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="asdex.jacobian_from_coloring" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">jacobian_from_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">coloring</span><span class="p">)</span></code>
 
@@ -1504,6 +1682,110 @@ from <a class="autorefs autorefs-internal" title="asdex.jacobian_coloring(f, inp
                 <p>A function that takes an input array and returns
 the sparse Jacobian as BCOO of shape <code>(m, n)</code>
 where <code>n = x.size</code> and <code>m = prod(output_shape)</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="asdex.value_and_jacobian_from_coloring" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">asdex</span><span class="o">.</span><span class="n">value_and_jacobian_from_coloring</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">coloring</span><span class="p">)</span></code>
+
+<a href="#asdex.value_and_jacobian_from_coloring" class="headerlink" title="Permanent link">&para;</a></h2>
+
+
+    <div class="doc doc-contents first">
+
+        <p>Build a function computing value and sparse Jacobian from a pre-computed coloring.</p>
+<p>Like <a class="autorefs autorefs-internal" title="asdex.jacobian_from_coloring(f, coloring)" href="#asdex.jacobian_from_coloring"><code>jacobian_from_coloring</code></a>,
+but also returns the primal value <code>f(x)</code> without an extra forward pass.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>f</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="numpy.typing.ArrayLike">ArrayLike</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Function taking an array and returning an array.
+Input and output may be multi-dimensional.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>coloring</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="asdex.ColoredPattern
+
+
+  
+      dataclass
+   (asdex.pattern.ColoredPattern)" href="../#asdex.ColoredPattern">ColoredPattern</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Pre-computed <a class="autorefs autorefs-internal" title="asdex.ColoredPattern
+
+
+  
+      dataclass
+  " href="../#asdex.ColoredPattern"><code>ColoredPattern</code></a>
+from <a class="autorefs autorefs-internal" title="asdex.jacobian_coloring(f, input_shape, *, mode=None, symmetric=False)" href="#asdex.jacobian_coloring"><code>jacobian_coloring</code></a>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="numpy.typing.ArrayLike">ArrayLike</span>], <span title="tuple">tuple</span>[<span title="jax.Array">Array</span>, <span title="jax.experimental.sparse.BCOO">BCOO</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A function that takes an input array and returns
+<code>(f(x), J)</code> where <code>J</code> is the sparse Jacobian as BCOO
+of shape <code>(m, n)</code>.</p>
               </div>
             </td>
           </tr>
