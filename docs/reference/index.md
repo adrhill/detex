@@ -1,12 +1,16 @@
 # Full API
 
 ::: asdex.jacobian
+::: asdex.value_and_jacobian
 ::: asdex.hessian
+::: asdex.value_and_hessian
 
 ---
 
 ::: asdex.jacobian_from_coloring
+::: asdex.value_and_jacobian_from_coloring
 ::: asdex.hessian_from_coloring
+::: asdex.value_and_hessian_from_coloring
 
 ---
 

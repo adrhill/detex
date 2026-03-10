@@ -37,6 +37,12 @@ for x in inputs:
 The Hessian is always returned as a 2D matrix
 of shape \((n, n)\) where \(n\) is the total number of input elements.
 
+## Getting the Primal Value Too
+
+Use [`value_and_hessian`](../reference/index.md#asdex.value_and_hessian)
+or [`value_and_hessian_from_coloring`](../reference/index.md#asdex.value_and_hessian_from_coloring)
+to get `(f(x), H)` without a redundant forward pass.
+
 ## Precomputing the Colored Pattern
 
 For more control,
