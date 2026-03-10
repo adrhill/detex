@@ -488,6 +488,20 @@ def test_jacobian_shape_mismatch_raises():
         jacobian_from_coloring(f, colored)(np.ones(6))
 
 
+@pytest.mark.jacobian
+def test_value_and_jacobian_shape_mismatch_raises():
+    """Passing an input with wrong shape raises ValueError."""
+
+    def f(x):
+        return x**2
+
+    coloring = jacobian_sparsity(f, (2, 3))
+    colored = jacobian_coloring_from_sparsity(coloring)
+
+    with pytest.raises(ValueError, match=r"Input shape .* does not match"):
+        value_and_jacobian_from_coloring(f, colored)(np.ones(6))
+
+
 @pytest.mark.hessian
 def test_hessian_shape_mismatch_raises():
     """Passing an input with wrong shape raises ValueError."""
@@ -500,6 +514,20 @@ def test_hessian_shape_mismatch_raises():
 
     with pytest.raises(ValueError, match=r"Input shape .* does not match"):
         hessian_from_coloring(f, colored)(np.ones(6))
+
+
+@pytest.mark.hessian
+def test_value_and_hessian_shape_mismatch_raises():
+    """Passing an input with wrong shape raises ValueError."""
+
+    def f(x):
+        return jnp.sum(x**2)
+
+    coloring = hessian_sparsity(f, (2, 3))
+    colored = hessian_coloring_from_sparsity(coloring)
+
+    with pytest.raises(ValueError, match=r"Input shape .* does not match"):
+        value_and_hessian_from_coloring(f, colored)(np.ones(6))
 
 
 # Hessian tests
