@@ -135,7 +135,7 @@ def value_and_hessian(
     """Detect sparsity, color, and return a function computing value and sparse Hessian.
 
     Like [`hessian`][asdex.hessian],
-    but also returns the primal value ``f(x)``
+    but can also return the primal value ``f(x)``
     without an extra forward pass.
 
     If ``f`` returns a squeezable shape like ``(1,)`` or ``(1, 1)``,
@@ -252,7 +252,7 @@ def value_and_hessian_from_coloring(
     """Build a function computing value and sparse Hessian from a pre-computed coloring.
 
     Like [`hessian_from_coloring`][asdex.hessian_from_coloring],
-    but also returns the primal value ``f(x)`` without an extra forward pass.
+    but can also return the primal value ``f(x)`` without an extra forward pass.
 
     If ``f`` returns a squeezable shape like ``(1,)`` or ``(1, 1)``,
     it is automatically squeezed to scalar.
@@ -527,10 +527,11 @@ def _compute_hvps(
                 ).ravel()
 
         case "rev_over_rev":
-            _, vjp_fn = jax.vjp(jax.grad(f), x)
+            _, hvp_fn = jax.vjp(jax.grad(f), x)
 
             def single_hvp(v: jax.Array) -> jax.Array:
-                return vjp_fn(v.reshape(x.shape))[0].ravel()
+                (hvp,) = hvp_fn(v.reshape(x.shape))
+                return hvp.ravel()
 
         case _ as unreachable:
             assert_never(unreachable)  # type: ignore[type-assertion-failure]
@@ -574,10 +575,11 @@ def _value_and_compute_hvps(
             # VJP application with dead zero-cotangents for the value path.
             # Revisit if XLA reliably DCEs the zero branch.
             value = jnp.asarray(f(x))
-            _, vjp_fn = jax.vjp(jax.grad(f), x)
+            _, hvp_fn = jax.vjp(jax.grad(f), x)
 
             def single_hvp(v: jax.Array) -> jax.Array:
-                return vjp_fn(v.reshape(x.shape))[0].ravel()
+                (hvp,) = hvp_fn(v.reshape(x.shape))
+                return hvp.ravel()
 
         case _ as unreachable:
             assert_never(unreachable)  # type: ignore[type-assertion-failure]
