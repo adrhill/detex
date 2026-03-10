@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773054228781,
+  "lastUpdate": 1773150221626,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -10086,6 +10086,135 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0004909305537812776",
             "extra": "mean: 37.28402269230786 msec\nrounds: 26"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ee114cce53a30051f750eec3ae362167821c72d9",
+          "message": "feat: add `value_and_jacobian` / `value_and_hessian` API (#89)\n\n* feat: add `value_and_jacobian` / `value_and_hessian` API\n\nReturn `f(x)` alongside the sparse derivative without an extra\nforward pass. The primal is extracted for free from VJP, JVP,\nand HVP computations already performed internally.\n\nNew public functions:\n- `value_and_jacobian`, `value_and_jacobian_from_coloring`\n- `value_and_hessian`, `value_and_hessian_from_coloring`\n\nRefactored `_jacobian_rows`, `_jacobian_cols`, and `_compute_hvps`\nto return `(value, result)` tuples.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* docs: add `value_and_jacobian` / `value_and_hessian` to docs\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* perf: split inner-loop helpers into lean and `value_and_` variants\n\nThe `value_and_jacobian` / `value_and_hessian` PR modified\n`_jacobian_rows`, `_jacobian_cols`, and `_compute_hvps` to always\nextract the primal, penalizing the non-`value_and_` paths:\n\n- `_jacobian_cols`: primals materialized num_colors times under vmap\n- `_compute_hvps`: `value_and_grad` adds tuple cotangents and extra\n  residuals; `rev_over_fwd` gained a gratuitous `f(x)` call\n\nRestore the original lean implementations for the Jacobian-only and\nHessian-only paths, and add `_value_and_` variants that pay for\nprimal extraction only when the caller needs it.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* perf: avoid redundant primal computation in fwd-mode Jacobian and `rev_over_rev` value path\n\nUse `jax.linearize` in `_jacobian_cols` and `_value_and_jacobian_cols`\nso the nonlinear forward pass runs once instead of once per color.\n\nIn `_value_and_compute_hvps` `rev_over_rev`, replace\n`jax.vjp(jax.value_and_grad(f), x)` with a separate `f(x)` call and\n`jax.vjp(jax.grad(f), x)`, eliminating the zero-cotangent overhead.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: add `value_and_*` materialization benchmarks\n\nAdd `value_and_jacobian_from_coloring` and `value_and_hessian_from_coloring`\nbenchmarks for heat equation, convnet, and rosenbrock groups.\n\nAlso document the redundant `f(x)` in the `rev_over_rev` value path\nwith a TODO explaining the tradeoff.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* fix: rename `vjp_fn` to `hvp_fn` in `rev_over_rev` and fix Hessian docstrings\n\nThe VJP of `grad(f)` is semantically an HVP — rename accordingly\nand use tuple unpacking for clarity.\n\nAlso fix `value_and_hessian` docstrings: \"but also returns\" →\n\"but can also return\", since `rev_over_fwd` needs an extra `f(x)`.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n* test: cover shape mismatch guards for `value_and_*` variants\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 <noreply@anthropic.com>",
+          "timestamp": "2026-03-10T14:43:05+01:00",
+          "tree_id": "c3607ce3e6014db072a9407265b5bd2104471fb4",
+          "url": "https://github.com/adrhill/asdex/commit/ee114cce53a30051f750eec3ae362167821c72d9"
+        },
+        "date": 1773150221136,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 811.0052367212508,
+            "unit": "iter/sec",
+            "range": "stddev: 0.003384858726693907",
+            "extra": "mean: 1.2330376608205653 msec\nrounds: 171"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3401.8616036488083,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000011370102946859441",
+            "extra": "mean: 293.95669680606886 usec\nrounds: 2223"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 69.61478990163215,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003737617794659263",
+            "extra": "mean: 14.364763599991193 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_value_and_materialization",
+            "value": 70.95491937920117,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00012537219251824977",
+            "extra": "mean: 14.093455517238278 msec\nrounds: 58"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 85.37917051848515,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002966741754448619",
+            "extra": "mean: 11.712458599998854 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 21.097165162945434,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01603751233119335",
+            "extra": "mean: 47.39973320000246 msec\nrounds: 20"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 252.1677697659222,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000031150310848366224",
+            "extra": "mean: 3.965613848781159 msec\nrounds: 205"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 25.10342094810654,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025494969338535366",
+            "extra": "mean: 39.835208199997396 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_value_and_materialization",
+            "value": 35.01695096185056,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000302762479476824",
+            "extra": "mean: 28.557597749999886 msec\nrounds: 32"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 39.93096224130816,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008338495185974314",
+            "extra": "mean: 25.043223200003695 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 101.0586747197221,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010884020859773018",
+            "extra": "mean: 9.895241578948244 msec\nrounds: 57"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3274.609184417725,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000010599783458140878",
+            "extra": "mean: 305.37995335703397 usec\nrounds: 2294"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 27.5623914696367,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010943633884018928",
+            "extra": "mean: 36.28132200000209 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_value_and_materialization",
+            "value": 28.48126191433271,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00033885528748281874",
+            "extra": "mean: 35.110803833336014 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 28.478253074308448,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00032141788620501844",
+            "extra": "mean: 35.11451342856934 msec\nrounds: 28"
           }
         ]
       }
