@@ -308,11 +308,9 @@ def _eval_jacobian(
     _assert_jacobian_mode(coloring.mode)
     match coloring.mode:
         case "rev":
-            _, jac = _jacobian_rows(f, x, coloring, out_shape)
-            return jac
+            return _jacobian_rows(f, x, coloring, out_shape)
         case "fwd":
-            _, jac = _jacobian_cols(f, x, coloring)
-            return jac
+            return _jacobian_cols(f, x, coloring)
         case _ as unreachable:
             assert_never(unreachable)  # type: ignore[type-assertion-failure]
 
@@ -343,7 +341,7 @@ def _eval_hessian(
     if sparsity.nnz == 0:
         return BCOO((jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n))
 
-    _value, grads = _compute_hvps(f, x, coloring)
+    grads = _compute_hvps(f, x, coloring)
     return _decompress(coloring, grads)
 
 
@@ -383,9 +381,9 @@ def _eval_value_and_jacobian(
     _assert_jacobian_mode(coloring.mode)
     match coloring.mode:
         case "rev":
-            return _jacobian_rows(f, x, coloring, out_shape)
+            return _value_and_jacobian_rows(f, x, coloring, out_shape)
         case "fwd":
-            return _jacobian_cols(f, x, coloring)
+            return _value_and_jacobian_cols(f, x, coloring)
         case _ as unreachable:
             assert_never(unreachable)  # type: ignore[type-assertion-failure]
 
@@ -419,7 +417,7 @@ def _eval_value_and_hessian(
             (jnp.array([]), jnp.zeros((0, 2), dtype=jnp.int32)), shape=(n, n)
         )
 
-    value, grads = _compute_hvps(f, x, coloring)
+    value, grads = _value_and_compute_hvps(f, x, coloring)
     return value, _decompress(coloring, grads)
 
 
@@ -431,10 +429,27 @@ def _jacobian_rows(
     x: jax.Array,
     coloring: ColoredPattern,
     out_shape: tuple[int, ...],
-) -> tuple[jax.Array, BCOO]:
-    """Compute sparse Jacobian via row coloring + VJPs.
+) -> BCOO:
+    """Compute sparse Jacobian via row coloring + VJPs."""
+    seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
+    _, vjp_fn = jax.vjp(f, x)
 
-    Returns ``(f(x), J)`` — the primal is free from the VJP forward pass.
+    def single_vjp(seed: jax.Array) -> jax.Array:
+        (grad,) = vjp_fn(seed.reshape(out_shape))
+        return grad.ravel()
+
+    return _decompress(coloring, jax.vmap(single_vjp)(seeds))
+
+
+def _value_and_jacobian_rows(
+    f: Callable[[ArrayLike], ArrayLike],
+    x: jax.Array,
+    coloring: ColoredPattern,
+    out_shape: tuple[int, ...],
+) -> tuple[jax.Array, BCOO]:
+    """Compute value and sparse Jacobian via row coloring + VJPs.
+
+    The primal is free from the VJP forward pass.
     """
     seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
     y, vjp_fn = jax.vjp(f, x)
@@ -450,10 +465,25 @@ def _jacobian_cols(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
     coloring: ColoredPattern,
-) -> tuple[jax.Array, BCOO]:
-    """Compute sparse Jacobian via column coloring + JVPs.
+) -> BCOO:
+    """Compute sparse Jacobian via column coloring + JVPs."""
+    seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
 
-    Returns ``(f(x), J)`` — the primal is free from the JVP forward pass.
+    def single_jvp(seed: jax.Array) -> jax.Array:
+        _, jvp_out = jax.jvp(f, (x,), (seed.reshape(x.shape),))
+        return jvp_out.ravel()
+
+    return _decompress(coloring, jax.vmap(single_jvp)(seeds))
+
+
+def _value_and_jacobian_cols(
+    f: Callable[[ArrayLike], ArrayLike],
+    x: jax.Array,
+    coloring: ColoredPattern,
+) -> tuple[jax.Array, BCOO]:
+    """Compute value and sparse Jacobian via column coloring + JVPs.
+
+    The primal is free from the JVP forward pass.
     """
     seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
 
@@ -474,8 +504,46 @@ def _compute_hvps(
     f: Callable[[ArrayLike], ArrayLike],
     x: jax.Array,
     coloring: ColoredPattern,
-) -> tuple[jax.Array, jax.Array]:
+) -> jax.Array:
     """Compute one HVP per color using pre-computed seed matrix.
+
+    Returns ``hvps`` of shape ``(num_colors, n)``.
+    """
+    seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
+
+    _assert_hessian_mode(coloring.mode)
+    match coloring.mode:
+        case "fwd_over_rev":
+            _, hvp_fn = jax.linearize(jax.grad(f), x)
+
+            def single_hvp(v: jax.Array) -> jax.Array:
+                return hvp_fn(v.reshape(x.shape)).ravel()
+
+        case "rev_over_fwd":
+
+            def single_hvp(v: jax.Array) -> jax.Array:
+                return jax.grad(lambda p: jax.jvp(f, (p,), (v.reshape(x.shape),))[1])(
+                    x
+                ).ravel()
+
+        case "rev_over_rev":
+            _, vjp_fn = jax.vjp(jax.grad(f), x)
+
+            def single_hvp(v: jax.Array) -> jax.Array:
+                return vjp_fn(v.reshape(x.shape))[0].ravel()
+
+        case _ as unreachable:
+            assert_never(unreachable)  # type: ignore[type-assertion-failure]
+
+    return jax.vmap(single_hvp)(seeds)
+
+
+def _value_and_compute_hvps(
+    f: Callable[[ArrayLike], ArrayLike],
+    x: jax.Array,
+    coloring: ColoredPattern,
+) -> tuple[jax.Array, jax.Array]:
+    """Compute ``f(x)`` and one HVP per color using pre-computed seed matrix.
 
     Returns ``(f(x), hvps)`` where ``hvps`` has shape ``(num_colors, n)``.
     The primal is free for ``fwd_over_rev`` and ``rev_over_rev``;
