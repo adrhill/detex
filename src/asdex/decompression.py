@@ -469,9 +469,10 @@ def _jacobian_cols(
     """Compute sparse Jacobian via column coloring + JVPs."""
     seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
 
+    _, jvp_fn = jax.linearize(f, x)
+
     def single_jvp(seed: jax.Array) -> jax.Array:
-        _, jvp_out = jax.jvp(f, (x,), (seed.reshape(x.shape),))
-        return jvp_out.ravel()
+        return jvp_fn(seed.reshape(x.shape)).ravel()
 
     return _decompress(coloring, jax.vmap(single_jvp)(seeds))
 
@@ -483,17 +484,16 @@ def _value_and_jacobian_cols(
 ) -> tuple[jax.Array, BCOO]:
     """Compute value and sparse Jacobian via column coloring + JVPs.
 
-    The primal is free from the JVP forward pass.
+    Uses ``jax.linearize`` so the nonlinear forward pass runs only once.
     """
     seeds = jnp.asarray(coloring._seed_matrix, dtype=x.dtype)
 
-    def single_jvp(seed: jax.Array) -> tuple[jax.Array, jax.Array]:
-        primals_out, jvp_out = jax.jvp(f, (x,), (seed.reshape(x.shape),))
-        return primals_out, jvp_out.ravel()
+    y, jvp_fn = jax.linearize(f, x)
 
-    all_primals, tangents = jax.vmap(single_jvp)(seeds)
-    # All primals are identical; take the first one.
-    y = jax.tree.map(lambda a: a[0], all_primals)
+    def single_jvp(seed: jax.Array) -> jax.Array:
+        return jvp_fn(seed.reshape(x.shape)).ravel()
+
+    tangents = jax.vmap(single_jvp)(seeds)
     return y, _decompress(coloring, tangents)
 
 
@@ -569,10 +569,11 @@ def _value_and_compute_hvps(
                 ).ravel()
 
         case "rev_over_rev":
-            (value, _grad_at_x), vjp_fn = jax.vjp(jax.value_and_grad(f), x)
+            value = jnp.asarray(f(x))
+            _, vjp_fn = jax.vjp(jax.grad(f), x)
 
             def single_hvp(v: jax.Array) -> jax.Array:
-                return vjp_fn((jnp.zeros_like(value), v.reshape(x.shape)))[0].ravel()
+                return vjp_fn(v.reshape(x.shape))[0].ravel()
 
         case _ as unreachable:
             assert_never(unreachable)  # type: ignore[type-assertion-failure]
