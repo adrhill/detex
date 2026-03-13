@@ -73,7 +73,7 @@
       }
       .benchmark-graphs {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 8px;
         width: 100%;
       }
@@ -270,12 +270,13 @@
             setElem.appendChild(graphsElem);
 
             const problems = ['heat', 'convnet', 'rosenbrock'];
-            const phases = ['detection', 'coloring', 'materialization', 'end_to_end'];
+            const phases = ['detection', 'coloring', 'materialization', 'value_and_materialization', 'end_to_end'];
 
-            for (const problem of problems) {
-              for (const phase of phases) {
+            for (const phase of phases) {
+              for (const problem of problems) {
+                const key = `::test_${problem}_${phase}`;
                 for (const [benchName, benches] of benchSet.entries()) {
-                  if (benchName.includes(problem) && benchName.includes(phase)) {
+                  if (benchName.endsWith(key)) {
                     renderGraph(graphsElem, benchName, benches);
                   }
                 }
