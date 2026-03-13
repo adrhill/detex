@@ -1,0 +1,100 @@
+docs_dir: .
+site_dir: ../site
+site_name: asdex
+site_url: https://adrianhill.de/asdex/
+site_description: Automatic Sparse Differentiation in JAX
+repo_url: https://github.com/adrhill/asdex
+repo_name: adrhill/asdex
+
+theme:
+  name: material
+  custom_dir: overrides
+  favicon: assets/logo.svg
+  icon:
+    logo: custom/logo
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+nav:
+  - Home:
+      - Overview: index.md
+  - Tutorials:
+      - Getting Started: tutorials/getting-started.md
+  - How-To Guides:
+      - Sparse Jacobians: how-to/jacobians.md
+      - Sparse Hessians: how-to/hessians.md
+      - "Example: Brusselator PDE": how-to/brusselator.md
+  - Explanation:
+      - Automatic Sparse Differentiation: explanation/asd.md
+      - Global Sparsity Patterns: explanation/global-sparsity.md
+      - Sparsity Detection: explanation/sparsity-detection.md
+      - Graph Coloring: explanation/coloring.md
+  - Reference:
+      - Full API: reference/index.md
+      - Jacobian: reference/jacobian.md
+      - Hessian: reference/hessian.md
+      - Sparsity Detection: reference/sparsity.md
+      - Coloring: reference/coloring.md
+      - Data Structures: reference/data-structures.md
+  - Benchmarks: https://adrianhill.de/asdex/dev/bench/
+
+not_in_nav: |
+  /CLAUDE.md
+exclude_docs: |
+  CLAUDE.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_div_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.arithmatex:
+      generic: true
+  - toc:
+      permalink: true
+  - attr_list
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+plugins:
+  - search
+  - markdown-exec
+  - autorefs:
+      resolve_closest: true
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [../src]
+          options:
+            docstring_style: google
+            show_root_heading: true
+            show_source: false
+            members_order: source
