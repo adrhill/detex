@@ -189,9 +189,15 @@ def _render_braille(
     if pattern.m == 0 or pattern.n == 0:
         return "(empty)"
 
-    # Target size in dot space (each braille char is 4 rows × 2 cols)
-    scale_height = min(pattern.m, max_height * 4)
-    scale_width = min(pattern.n, max_width * 2)
+    # Uniform scale preserving the aspect ratio (matches Julia's SparseArrays).
+    # Pick the tighter constraint so neither dimension overflows.
+    if pattern.m > 4 * max_height or pattern.n > 2 * max_width:
+        s = min(2 * max_width / pattern.n, 4 * max_height / pattern.m)
+        scale_height = max(int(s * pattern.m), 8)
+        scale_width = max(int(s * pattern.n), 4)
+    else:
+        scale_height = max(pattern.m, 8)
+        scale_width = max(pattern.n, 4)
 
     # Output braille grid dimensions
     out_rows = (scale_height - 1) // 4 + 1
