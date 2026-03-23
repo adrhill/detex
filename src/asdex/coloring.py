@@ -17,6 +17,7 @@ from collections.abc import Callable
 from typing import assert_never
 
 import numpy as np
+from jax.experimental.sparse import BCOO
 from numpy.typing import NDArray
 
 from asdex.detection import hessian_sparsity as _detect_hessian_sparsity
@@ -94,11 +95,34 @@ def hessian_coloring(
     return hessian_coloring_from_sparsity(sparsity, symmetric=symmetric, mode=mode)
 
 
+def _coerce_sparsity(
+    sparsity: SparsityPattern | NDArray | BCOO, caller: str
+) -> SparsityPattern:
+    """Convert a sparsity-like input to a SparsityPattern.
+
+    Args:
+        sparsity: A SparsityPattern, NumPy array, or JAX BCOO matrix.
+        caller: ``"jacobian"`` or ``"hessian"``, used in error messages.
+    """
+    if isinstance(sparsity, SparsityPattern):
+        return sparsity
+    if isinstance(sparsity, np.ndarray):
+        return SparsityPattern.from_dense(sparsity)
+    if isinstance(sparsity, BCOO):
+        return SparsityPattern.from_bcoo(sparsity)
+    msg = (
+        f"Expected a SparsityPattern, NumPy array, or JAX BCOO matrix, "
+        f"got {type(sparsity).__name__}. "
+        f"Use {caller}_sparsity() to detect the sparsity pattern first."
+    )
+    raise TypeError(msg)
+
+
 # Public API: pattern coloring
 
 
 def jacobian_coloring_from_sparsity(
-    sparsity: SparsityPattern,
+    sparsity: SparsityPattern | NDArray | BCOO,
     *,
     mode: JacobianMode | None = None,
     symmetric: bool = False,
@@ -109,7 +133,8 @@ def jacobian_coloring_from_sparsity(
     computed together in a single VJP (or JVP).
 
     Args:
-        sparsity: A [`SparsityPattern`][asdex.SparsityPattern] of shape ``(m, n)``.
+        sparsity: A [`SparsityPattern`][asdex.SparsityPattern], NumPy array,
+            or JAX BCOO matrix of shape ``(m, n)``.
         mode: AD mode.
             ``"fwd"`` uses JVPs (column coloring),
             ``"rev"`` uses VJPs (row coloring).
@@ -121,12 +146,7 @@ def jacobian_coloring_from_sparsity(
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian_from_coloring`][asdex.jacobian_from_coloring].
     """
-    if not isinstance(sparsity, SparsityPattern):
-        msg = (
-            f"Expected a SparsityPattern, got {type(sparsity).__name__}. "
-            "Use jacobian_sparsity() to detect the sparsity pattern first."
-        )
-        raise TypeError(msg)
+    sparsity = _coerce_sparsity(sparsity, "jacobian")
 
     if mode is not None:
         _assert_jacobian_mode(mode)
@@ -194,7 +214,7 @@ def jacobian_coloring_from_sparsity(
 
 
 def hessian_coloring_from_sparsity(
-    sparsity: SparsityPattern,
+    sparsity: SparsityPattern | NDArray | BCOO,
     *,
     mode: HessianMode | None = None,
     symmetric: bool = True,
@@ -202,7 +222,8 @@ def hessian_coloring_from_sparsity(
     """Color a sparsity pattern for sparse Hessian computation.
 
     Args:
-        sparsity: A [`SparsityPattern`][asdex.SparsityPattern] of shape ``(n, n)``.
+        sparsity: A [`SparsityPattern`][asdex.SparsityPattern], NumPy array,
+            or JAX BCOO matrix of shape ``(n, n)``.
         mode: AD composition strategy for Hessian-vector products.
             ``"fwd_over_rev"`` uses forward-over-reverse,
             ``"rev_over_fwd"`` uses reverse-over-forward,
@@ -214,12 +235,7 @@ def hessian_coloring_from_sparsity(
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian_from_coloring`][asdex.hessian_from_coloring].
     """
-    if not isinstance(sparsity, SparsityPattern):
-        msg = (
-            f"Expected a SparsityPattern, got {type(sparsity).__name__}. "
-            "Use hessian_sparsity() to detect the sparsity pattern first."
-        )
-        raise TypeError(msg)
+    sparsity = _coerce_sparsity(sparsity, "hessian")
 
     if sparsity.m != sparsity.n:
         msg = f"Hessian sparsity pattern must be square, got shape {sparsity.shape}."

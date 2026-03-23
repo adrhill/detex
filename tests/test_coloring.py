@@ -12,6 +12,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
+from jax.experimental.sparse import BCOO
 from numpy.testing import assert_allclose
 
 from asdex import (
@@ -1183,27 +1184,69 @@ def test_empty_hessian_symmetric_non_square_raises():
         hessian_coloring_from_sparsity(sparsity, symmetric=True)
 
 
-# Input validation tests
+# Input validation and coercion tests
 
 
 @pytest.mark.coloring
-def test_jacobian_coloring_from_sparsity_rejects_non_sparsity_pattern():
-    """jacobian_coloring_from_sparsity raises TypeError for non-SparsityPattern input."""
+def test_jacobian_coloring_from_sparsity_rejects_unsupported_type():
+    """jacobian_coloring_from_sparsity raises TypeError for unsupported input."""
     with pytest.raises(TypeError, match="Expected a SparsityPattern"):
         jacobian_coloring_from_sparsity((3, 3))  # type: ignore[arg-type]
 
-    with pytest.raises(TypeError, match="Expected a SparsityPattern"):
-        jacobian_coloring_from_sparsity(np.eye(3))  # type: ignore[arg-type]
-
 
 @pytest.mark.coloring
-def test_hessian_coloring_from_sparsity_rejects_non_sparsity_pattern():
-    """hessian_coloring_from_sparsity raises TypeError for non-SparsityPattern input."""
+def test_hessian_coloring_from_sparsity_rejects_unsupported_type():
+    """hessian_coloring_from_sparsity raises TypeError for unsupported input."""
     with pytest.raises(TypeError, match="Expected a SparsityPattern"):
         hessian_coloring_from_sparsity((3, 3))  # type: ignore[arg-type]
 
-    with pytest.raises(TypeError, match="Expected a SparsityPattern"):
-        hessian_coloring_from_sparsity(np.eye(3))  # type: ignore[arg-type]
+
+@pytest.mark.coloring
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
+def test_jacobian_coloring_from_sparsity_accepts_ndarray():
+    """jacobian_coloring_from_sparsity auto-converts a numpy array."""
+    dense = np.array([[1, 0], [0, 1], [1, 1]])  # (3, 2)
+    result = jacobian_coloring_from_sparsity(dense)
+
+    assert isinstance(result, ColoredPattern)
+    assert result.sparsity.shape == (3, 2)
+    assert result.sparsity.nnz == 4
+
+
+@pytest.mark.coloring
+def test_hessian_coloring_from_sparsity_accepts_ndarray():
+    """hessian_coloring_from_sparsity auto-converts a numpy array."""
+    dense = np.array([[1, 1, 0], [1, 1, 0], [0, 0, 1]])
+    result = hessian_coloring_from_sparsity(dense)
+
+    assert isinstance(result, ColoredPattern)
+    assert result.sparsity.shape == (3, 3)
+    assert result.sparsity.nnz == 5
+
+
+@pytest.mark.coloring
+@pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
+def test_jacobian_coloring_from_sparsity_accepts_bcoo():
+    """jacobian_coloring_from_sparsity auto-converts a JAX BCOO matrix."""
+    dense = jnp.array([[1, 0], [0, 1], [1, 1]])
+    bcoo = BCOO.fromdense(dense)
+    result = jacobian_coloring_from_sparsity(bcoo)
+
+    assert isinstance(result, ColoredPattern)
+    assert result.sparsity.shape == (3, 2)
+    assert result.sparsity.nnz == 4
+
+
+@pytest.mark.coloring
+def test_hessian_coloring_from_sparsity_accepts_bcoo():
+    """hessian_coloring_from_sparsity auto-converts a JAX BCOO matrix."""
+    dense = jnp.array([[1, 1, 0], [1, 1, 0], [0, 0, 1]])
+    bcoo = BCOO.fromdense(dense)
+    result = hessian_coloring_from_sparsity(bcoo)
+
+    assert isinstance(result, ColoredPattern)
+    assert result.sparsity.shape == (3, 3)
+    assert result.sparsity.nnz == 5
 
 
 @pytest.mark.coloring
@@ -1213,6 +1256,15 @@ def test_hessian_coloring_from_sparsity_rejects_non_square():
 
     with pytest.raises(ValueError, match="square"):
         hessian_coloring_from_sparsity(sparsity)
+
+
+@pytest.mark.coloring
+def test_hessian_coloring_from_sparsity_rejects_non_square_ndarray():
+    """hessian_coloring_from_sparsity raises ValueError for non-square numpy array."""
+    dense = np.array([[1, 0, 0], [0, 1, 0]])  # (2, 3)
+
+    with pytest.raises(ValueError, match="square"):
+        hessian_coloring_from_sparsity(dense)
 
 
 @pytest.mark.coloring
