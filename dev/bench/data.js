@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1774293598142,
+  "lastUpdate": 1774294508944,
   "repoUrl": "https://github.com/adrhill/asdex",
   "entries": {
     "Benchmark": [
@@ -11634,6 +11634,135 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00038982704695880314",
             "extra": "mean: 34.58990225000034 msec\nrounds: 28"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "adrian.hill@mailbox.org",
+            "name": "Adrian Hill",
+            "username": "adrhill"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bc83e433249781e691454f2e97ba3a3f573d6264",
+          "message": "ci(prek): add typos and standard hooks to pre-commit config  (#93)\n\n* ci(prek): add `typos` and standard hooks to pre-commit config\n\nAdd `typos` spell checker and standard `pre-commit-hooks`\n(trailing-whitespace, end-of-file-fixer, check-merge-conflict,\ncheck-added-large-files, check-toml, check-yaml).\n\nFix trailing whitespace and missing final newlines caught by the\nnew hooks.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 4.6 (1M context) <noreply@anthropic.com>",
+          "timestamp": "2026-03-23T20:34:32+01:00",
+          "tree_id": "1e2adf241d11f300e911bc5387831ce52acddc1c",
+          "url": "https://github.com/adrhill/asdex/commit/bc83e433249781e691454f2e97ba3a3f573d6264"
+        },
+        "date": 1774294508236,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/test_benchmarks.py::test_heat_detection",
+            "value": 745.6772656153832,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004661209915188513",
+            "extra": "mean: 1.341062744047497 msec\nrounds: 168"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_coloring",
+            "value": 3283.7824458476293,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000038409624891587766",
+            "extra": "mean: 304.5268730468148 usec\nrounds: 2048"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_materialization",
+            "value": 68.3158056609261,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006784177290028293",
+            "extra": "mean: 14.637901000001818 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_value_and_materialization",
+            "value": 68.98242228446952,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0013017413311289406",
+            "extra": "mean: 14.496446585714295 msec\nrounds: 70"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_heat_end_to_end",
+            "value": 80.20849588921688,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0016072761623340808",
+            "extra": "mean: 12.467507200000227 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_detection",
+            "value": 22.743892527474834,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012157840105679973",
+            "extra": "mean: 43.96784757894853 msec\nrounds: 19"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_coloring",
+            "value": 254.30162721542524,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002825931132444777",
+            "extra": "mean: 3.9323381881189263 msec\nrounds: 202"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_materialization",
+            "value": 34.17488789731484,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007296533948644935",
+            "extra": "mean: 29.261251799997012 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_value_and_materialization",
+            "value": 33.26482850782315,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002443887258088065",
+            "extra": "mean: 30.061781312500145 msec\nrounds: 32"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_convnet_end_to_end",
+            "value": 39.036360582017714,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011631702139563616",
+            "extra": "mean: 25.61714219999942 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_detection",
+            "value": 126.7506830752634,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002462838571125196",
+            "extra": "mean: 7.889503833334052 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_coloring",
+            "value": 3344.892100176205,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00000856876390658686",
+            "extra": "mean: 298.9633058559112 usec\nrounds: 2220"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_materialization",
+            "value": 28.56072238063846,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00063113964662437",
+            "extra": "mean: 35.0131200000007 msec\nrounds: 5"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_value_and_materialization",
+            "value": 30.41950687850049,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004934335284945046",
+            "extra": "mean: 32.873642692307 msec\nrounds: 13"
+          },
+          {
+            "name": "tests/test_benchmarks.py::test_rosenbrock_end_to_end",
+            "value": 27.811307926357717,
+            "unit": "iter/sec",
+            "range": "stddev: 0.003663126390920845",
+            "extra": "mean: 35.95659731818172 msec\nrounds: 22"
           }
         ]
       }
