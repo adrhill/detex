@@ -337,8 +337,14 @@ def test_save_load_sparsity_roundtrip(tmp_path):
 
 @pytest.mark.parametrize(
     ("symmetric", "mode"),
-    [(False, "fwd"), (False, "rev"), (True, "fwd_over_rev")],
-    ids=["fwd", "rev", "symmetric"],
+    [
+        (False, "fwd"),
+        (False, "rev"),
+        (True, "fwd_over_rev"),
+        (True, "rev_over_fwd"),
+        (True, "rev_over_rev"),
+    ],
+    ids=["fwd", "rev", "fwd_over_rev", "rev_over_fwd", "rev_over_rev"],
 )
 def test_save_load_colored_roundtrip(tmp_path, symmetric, mode):
     """ColoredPattern survives a save/load roundtrip for each mode."""
