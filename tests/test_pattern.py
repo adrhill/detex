@@ -246,6 +246,22 @@ class TestVisualization:
         assert len(lines) <= 10
         assert all(len(line) <= 20 for line in lines)
 
+    def test_braille_preserves_aspect_ratio(self):
+        """Tall, slim matrices produce narrow braille output."""
+        # 20000×20 should not render as a nearly-square grid.
+        # With uniform scaling, the width should be much smaller than max_width.
+        rows = list(range(0, 20000, 100))
+        cols = [i % 20 for i in range(len(rows))]
+        sparsity = SparsityPattern.from_coo(rows, cols, (20000, 20))
+
+        braille = _render_braille(sparsity, max_height=20, max_width=40)
+        lines = braille.split("\n")
+
+        # Height should use most of the available space
+        assert len(lines) >= 15
+        # Width should be narrow (2 braille chars), not stretched to 40
+        assert all(len(line) <= 5 for line in lines)
+
     def test_large_zero_dim_matrix_str(self):
         """Large matrix with zero dimension uses braille "(empty)" fallback in __str__.
 
