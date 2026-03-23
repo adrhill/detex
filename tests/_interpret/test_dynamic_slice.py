@@ -38,12 +38,14 @@ def test_dynamic_slice_static_start():
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_dynamic_slice_dynamic_start():
     """dynamic_slice with bounded dynamic start enumerates possible windows.
 
-    idx = argmax(x[:2]) can only be 0 or 1,
-    so the slice window covers x[0:3] or x[1:4].
-    The union gives each output element at most two input dependencies.
+    TODO(dynamic_slice): the actual slice selects exactly one window,
+    so each output depends on exactly one input (shifted identity).
+    Detection takes the union over all possible start positions,
+    reporting up to two dependencies per output element.
     """
 
     def f(x):
@@ -108,11 +110,14 @@ def test_dynamic_update_slice_static_start():
 
 
 @pytest.mark.array_ops
+@pytest.mark.fallback
 def test_dynamic_update_slice_dynamic_start():
     """dynamic_update_slice with bounded dynamic start enumerates possible windows.
 
-    idx = argmax(x[:2]) can only be 0 or 1,
-    and the update replaces a 2-element window with x[2:4].
+    TODO(dynamic_update_slice): the actual update targets exactly one window,
+    so each output depends on at most one update element.
+    Detection takes the union over all possible start positions,
+    reporting dependencies from both possible windows.
     """
 
     def f(x):
