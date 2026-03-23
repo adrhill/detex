@@ -1183,6 +1183,38 @@ def test_empty_hessian_symmetric_non_square_raises():
         hessian_coloring_from_sparsity(sparsity, symmetric=True)
 
 
+# Input validation tests
+
+
+@pytest.mark.coloring
+def test_jacobian_coloring_from_sparsity_rejects_non_sparsity_pattern():
+    """jacobian_coloring_from_sparsity raises TypeError for non-SparsityPattern input."""
+    with pytest.raises(TypeError, match="Expected a SparsityPattern"):
+        jacobian_coloring_from_sparsity((3, 3))  # type: ignore[arg-type]
+
+    with pytest.raises(TypeError, match="Expected a SparsityPattern"):
+        jacobian_coloring_from_sparsity(np.eye(3))  # type: ignore[arg-type]
+
+
+@pytest.mark.coloring
+def test_hessian_coloring_from_sparsity_rejects_non_sparsity_pattern():
+    """hessian_coloring_from_sparsity raises TypeError for non-SparsityPattern input."""
+    with pytest.raises(TypeError, match="Expected a SparsityPattern"):
+        hessian_coloring_from_sparsity((3, 3))  # type: ignore[arg-type]
+
+    with pytest.raises(TypeError, match="Expected a SparsityPattern"):
+        hessian_coloring_from_sparsity(np.eye(3))  # type: ignore[arg-type]
+
+
+@pytest.mark.coloring
+def test_hessian_coloring_from_sparsity_rejects_non_square():
+    """hessian_coloring_from_sparsity raises ValueError for non-square pattern."""
+    sparsity = _make_pattern([0, 1], [0, 1], (2, 3))
+
+    with pytest.raises(ValueError, match="square"):
+        hessian_coloring_from_sparsity(sparsity)
+
+
 @pytest.mark.coloring
 @pytest.mark.filterwarnings("ignore::asdex.DenseColoringWarning")
 def test_color_zero_row_pattern():

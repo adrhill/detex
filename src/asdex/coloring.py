@@ -109,7 +109,7 @@ def jacobian_coloring_from_sparsity(
     computed together in a single VJP (or JVP).
 
     Args:
-        sparsity: Sparsity pattern of shape (m, n).
+        sparsity: A [`SparsityPattern`][asdex.SparsityPattern] of shape ``(m, n)``.
         mode: AD mode.
             ``"fwd"`` uses JVPs (column coloring),
             ``"rev"`` uses VJPs (row coloring).
@@ -121,6 +121,13 @@ def jacobian_coloring_from_sparsity(
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`jacobian_from_coloring`][asdex.jacobian_from_coloring].
     """
+    if not isinstance(sparsity, SparsityPattern):
+        msg = (
+            f"Expected a SparsityPattern, got {type(sparsity).__name__}. "
+            "Use jacobian_sparsity() to detect the sparsity pattern first."
+        )
+        raise TypeError(msg)
+
     if mode is not None:
         _assert_jacobian_mode(mode)
 
@@ -195,7 +202,7 @@ def hessian_coloring_from_sparsity(
     """Color a sparsity pattern for sparse Hessian computation.
 
     Args:
-        sparsity: Sparsity pattern of shape (n, n).
+        sparsity: A [`SparsityPattern`][asdex.SparsityPattern] of shape ``(n, n)``.
         mode: AD composition strategy for Hessian-vector products.
             ``"fwd_over_rev"`` uses forward-over-reverse,
             ``"rev_over_fwd"`` uses reverse-over-forward,
@@ -207,6 +214,17 @@ def hessian_coloring_from_sparsity(
     Returns:
         A [`ColoredPattern`][asdex.ColoredPattern] ready for [`hessian_from_coloring`][asdex.hessian_from_coloring].
     """
+    if not isinstance(sparsity, SparsityPattern):
+        msg = (
+            f"Expected a SparsityPattern, got {type(sparsity).__name__}. "
+            "Use hessian_sparsity() to detect the sparsity pattern first."
+        )
+        raise TypeError(msg)
+
+    if sparsity.m != sparsity.n:
+        msg = f"Hessian sparsity pattern must be square, got shape {sparsity.shape}."
+        raise ValueError(msg)
+
     resolved_mode: HessianMode = mode if mode is not None else "fwd_over_rev"
     if mode is not None:
         _assert_hessian_mode(mode)
